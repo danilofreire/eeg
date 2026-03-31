@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-03-31">
+<meta name="description" content="Why and how to resample EEG data, the Nyquist theorem, anti-aliasing, using MNE’s raw.resample(), common target sampling rates, and where resampling fits in the preprocessing pipeline.">
+
+<title>Resampling EEG data – EEG with Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">EEG with Python</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-modules" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Modules</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-modules">    
+        <li>
+    <a class="dropdown-item" href="../modules/01-getting-started.html">
+ <span class="dropdown-text">1. Getting started</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/02-preprocessing.html">
+ <span class="dropdown-text">2. Preprocessing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/03-artifacts.html">
+ <span class="dropdown-text">3. Artifact rejection</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/04-spectral-analysis.html">
+ <span class="dropdown-text">4. Spectral analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/05-metastability.html">
+ <span class="dropdown-text">5. Connectivity and metastability</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../topics/index.html"> 
+<span class="menu-text">Topics</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../exercises/index.html"> 
+<span class="menu-text">Exercises</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#why-resample" id="toc-why-resample" class="nav-link active" data-scroll-target="#why-resample">Why resample?</a></li>
+  <li><a href="#the-nyquist-theorem" id="toc-the-nyquist-theorem" class="nav-link" data-scroll-target="#the-nyquist-theorem">The Nyquist theorem</a></li>
+  <li><a href="#anti-aliasing" id="toc-anti-aliasing" class="nav-link" data-scroll-target="#anti-aliasing">Anti-aliasing</a></li>
+  <li><a href="#using-raw.resample-in-mne" id="toc-using-raw.resample-in-mne" class="nav-link" data-scroll-target="#using-raw.resample-in-mne">Using raw.resample() in MNE</a>
+  <ul class="collapse">
+  <li><a href="#basic-usage" id="toc-basic-usage" class="nav-link" data-scroll-target="#basic-usage">Basic usage</a></li>
+  <li><a href="#with-event-handling" id="toc-with-event-handling" class="nav-link" data-scroll-target="#with-event-handling">With event handling</a></li>
+  <li><a href="#full-parameter-control" id="toc-full-parameter-control" class="nav-link" data-scroll-target="#full-parameter-control">Full parameter control</a></li>
+  </ul></li>
+  <li><a href="#common-target-sampling-rates" id="toc-common-target-sampling-rates" class="nav-link" data-scroll-target="#common-target-sampling-rates">Common target sampling rates</a></li>
+  <li><a href="#when-to-resample-in-the-pipeline" id="toc-when-to-resample-in-the-pipeline" class="nav-link" data-scroll-target="#when-to-resample-in-the-pipeline">When to resample in the pipeline</a>
+  <ul class="collapse">
+  <li><a href="#resampling-after-epoching" id="toc-resampling-after-epoching" class="nav-link" data-scroll-target="#resampling-after-epoching">Resampling after epoching</a></li>
+  </ul></li>
+  <li><a href="#working-example" id="toc-working-example" class="nav-link" data-scroll-target="#working-example">Working example</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways">Key takeaways</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Resampling EEG data</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">preprocessing</div>
+    <div class="quarto-category">sampling</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    Why and how to resample EEG data, the Nyquist theorem, anti-aliasing, using MNE’s raw.resample(), common target sampling rates, and where resampling fits in the preprocessing pipeline.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">31 March 2026</p>
+    </div>
+  </div>
+  
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">31 March 2026</p>
+    </div>
+  </div>
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="why-resample" class="level2">
+<h2 class="anchored" data-anchor-id="why-resample">Why resample?</h2>
+<p>EEG amplifiers often record at high sampling rates: 1000, 2048, or even 5000 Hz. These rates are useful during recording because they capture the full bandwidth of the signal and allow you to detect very short-lived events. But for most analyses, you do not need that much temporal resolution.</p>
+<p>If you are studying alpha oscillations (8–13 Hz), you do not need 5000 samples per second. A sampling rate of 256 Hz gives you more than enough resolution for frequencies up to 128 Hz (well above alpha). And working with lower sampling rates has real practical benefits:</p>
+<ul>
+<li><strong>Smaller file sizes</strong>: a 64-channel recording at 1000 Hz produces about 500 MB per hour. At 256 Hz, the same recording is about 125 MB. With large datasets, this difference matters.</li>
+<li><strong>Faster processing</strong>: filtering, ICA, and time-frequency analyses all run faster with fewer samples. ICA in particular can take much longer at high sampling rates because the number of time points directly affects computation time.</li>
+<li><strong>Reduced memory usage</strong>: if you are processing data in memory (as MNE does by default), lower sampling rates mean your arrays are smaller.</li>
+</ul>
+<p>The trade-off is that resampling to a lower rate discards information above the new Nyquist frequency. If you resample to 256 Hz, you cannot analyse frequencies above 128 Hz. Make sure your target rate is high enough for the frequencies you care about.</p>
+</section>
+<section id="the-nyquist-theorem" class="level2">
+<h2 class="anchored" data-anchor-id="the-nyquist-theorem">The Nyquist theorem</h2>
+<p>The Nyquist theorem states that to faithfully represent a signal at frequency f, you need to sample at a rate of at least 2f. This minimum rate, 2f, is called the Nyquist rate. The maximum frequency that can be represented at a given sampling rate is called the Nyquist frequency, and it equals half the sampling rate.</p>
+<p>For example:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Sampling rate</th>
+<th style="text-align: left;">Nyquist frequency</th>
+<th style="text-align: left;">Can represent up to</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">256 Hz</td>
+<td style="text-align: left;">128 Hz</td>
+<td style="text-align: left;">128 Hz</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">512 Hz</td>
+<td style="text-align: left;">256 Hz</td>
+<td style="text-align: left;">256 Hz</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">1000 Hz</td>
+<td style="text-align: left;">500 Hz</td>
+<td style="text-align: left;">500 Hz</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2048 Hz</td>
+<td style="text-align: left;">1024 Hz</td>
+<td style="text-align: left;">1024 Hz</td>
+</tr>
+</tbody>
+</table>
+<p>In practice, you want some margin above the highest frequency of interest. If you need to analyse gamma activity up to 100 Hz, a sampling rate of 256 Hz (Nyquist at 128 Hz) gives you a 28 Hz margin, which is enough for most filter designs to work well.</p>
+</section>
+<section id="anti-aliasing" class="level2">
+<h2 class="anchored" data-anchor-id="anti-aliasing">Anti-aliasing</h2>
+<p>If you simply throw away every other sample to halve the sampling rate (a process called decimation), any frequency above the new Nyquist frequency gets “folded back” into the lower frequency range. This phenomenon is called <strong>aliasing</strong>, and it creates false signals at frequencies where no real signal exists.</p>
+<p>To prevent aliasing, you must apply a low-pass filter before reducing the sampling rate. This anti-aliasing filter removes all frequencies above the new Nyquist frequency so that there is nothing left to fold back. MNE’s <code>resample()</code> method does this automatically, so you do not need to apply a separate low-pass filter before resampling.</p>
+<p>Here is a concrete example. Suppose your data is at 1000 Hz and you want to resample to 250 Hz. The new Nyquist frequency is 125 Hz. Before decimation, MNE applies a low-pass filter that removes everything above 125 Hz. Then it reduces the sampling rate. The result is a clean 250 Hz signal with no aliasing artifacts.</p>
+</section>
+<section id="using-raw.resample-in-mne" class="level2">
+<h2 class="anchored" data-anchor-id="using-raw.resample-in-mne">Using raw.resample() in MNE</h2>
+<section id="basic-usage" class="level3">
+<h3 class="anchored" data-anchor-id="basic-usage">Basic usage</h3>
+<div id="b9507a54" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load data (recorded at 1000 Hz, for example)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.read_raw_edf(<span class="st">"recording.edf"</span>, preload<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Original sampling rate: </span><span class="sc">{</span>raw<span class="sc">.</span>info[<span class="st">'sfreq'</span>]<span class="sc">}</span><span class="ss"> Hz"</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Original number of samples: </span><span class="sc">{</span>raw<span class="sc">.</span>n_times<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Resample to 256 Hz</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>raw.resample(sfreq<span class="op">=</span><span class="dv">256</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"New sampling rate: </span><span class="sc">{</span>raw<span class="sc">.</span>info[<span class="st">'sfreq'</span>]<span class="sc">}</span><span class="ss"> Hz"</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"New number of samples: </span><span class="sc">{</span>raw<span class="sc">.</span>n_times<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="with-event-handling" class="level3">
+<h3 class="anchored" data-anchor-id="with-event-handling">With event handling</h3>
+<p>If your data has event markers (annotations or stim channels), resampling can shift event times slightly because the new time points may not align exactly with the old ones. MNE handles annotations automatically (it adjusts their onset times), but if you are working with events arrays, you should extract them before resampling and pass them to the <code>events</code> parameter:</p>
+<div id="b8db39b9" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract events before resampling</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>events <span class="op">=</span> mne.find_events(raw, stim_channel<span class="op">=</span><span class="st">"Status"</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Resample data and events together</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>raw_resampled, events_resampled <span class="op">=</span> raw.resample(</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    sfreq<span class="op">=</span><span class="dv">256</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    events<span class="op">=</span>events</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>This ensures that event sample indices are adjusted to match the new sampling rate.</p>
+</section>
+<section id="full-parameter-control" class="level3">
+<h3 class="anchored" data-anchor-id="full-parameter-control">Full parameter control</h3>
+<div id="f36c42e7" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>raw.resample(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    sfreq<span class="op">=</span><span class="dv">256</span>,             <span class="co"># target sampling rate</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    npad<span class="op">=</span><span class="st">"auto"</span>,           <span class="co"># padding to reduce edge artifacts</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    window<span class="op">=</span><span class="st">"boxcar"</span>,       <span class="co"># window function for anti-aliasing</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    events<span class="op">=</span><span class="va">None</span>,           <span class="co"># events array to adjust (optional)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    pad<span class="op">=</span><span class="st">"reflect_limited"</span>, <span class="co"># padding method</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    verbose<span class="op">=</span><span class="va">True</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="common-target-sampling-rates" class="level2">
+<h2 class="anchored" data-anchor-id="common-target-sampling-rates">Common target sampling rates</h2>
+<p>The choice of target sampling rate depends on what frequencies you need and what processing you plan to do. Here are the most common choices:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 23%">
+<col style="width: 25%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Target rate</th>
+<th style="text-align: left;">Nyquist</th>
+<th style="text-align: left;">Good for</th>
+<th style="text-align: left;">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">250 Hz</td>
+<td style="text-align: left;">125 Hz</td>
+<td style="text-align: left;">Most ERP and oscillation studies</td>
+<td style="text-align: left;">Common in BCI and clinical EEG</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">256 Hz</td>
+<td style="text-align: left;">128 Hz</td>
+<td style="text-align: left;">Same as 250 Hz</td>
+<td style="text-align: left;">Power of 2, slightly faster FFT computation</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">500 Hz</td>
+<td style="text-align: left;">250 Hz</td>
+<td style="text-align: left;">Gamma studies, high temporal precision</td>
+<td style="text-align: left;">Good compromise between speed and bandwidth</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">512 Hz</td>
+<td style="text-align: left;">256 Hz</td>
+<td style="text-align: left;">Same as 500 Hz</td>
+<td style="text-align: left;">Power of 2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">1000 Hz</td>
+<td style="text-align: left;">500 Hz</td>
+<td style="text-align: left;">Very high-frequency analysis</td>
+<td style="text-align: left;">Rarely needed for scalp EEG</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Powers of 2</strong> (256, 512, 1024) are slightly more efficient for FFT-based analyses because the FFT algorithm is fastest when the number of samples is a power of 2. In practice, the difference is small, and you should not choose a sampling rate solely for this reason.</p>
+<p><strong>250 vs 256 Hz</strong>: both are common, and the choice rarely matters. Some labs prefer 256 because of the FFT advantage; others use 250 because it divides evenly into seconds (250 samples per second). Either is fine.</p>
+</section>
+<section id="when-to-resample-in-the-pipeline" class="level2">
+<h2 class="anchored" data-anchor-id="when-to-resample-in-the-pipeline">When to resample in the pipeline</h2>
+<p>Resampling interacts with other preprocessing steps, so the order matters. Here is the recommended sequence:</p>
+<ol type="1">
+<li><strong>Load data</strong></li>
+<li><strong>Set channel types and montage</strong></li>
+<li><strong>Filter</strong> (band-pass and/or notch): filter before resampling, not after. Filtering at the higher original sampling rate gives you better control over the filter design. If you filter after resampling, the lower Nyquist frequency constrains your filter options.</li>
+<li><strong>Resample</strong>: now that high-frequency content has been removed by the band-pass filter, you can safely reduce the sampling rate.</li>
+<li><strong>Run ICA, epoch, average, etc.</strong></li>
+</ol>
+<p>Some guides suggest resampling before filtering because it is faster (less data to filter). This can work if the anti-aliasing filter in <code>resample()</code> is sufficient for your needs, but the safer approach is to filter first so you have full control over the filter parameters.</p>
+<section id="resampling-after-epoching" class="level3">
+<h3 class="anchored" data-anchor-id="resampling-after-epoching">Resampling after epoching</h3>
+<p>You can also resample epoched data. This is useful if you want to keep the full sampling rate for the continuous data (e.g., for accurate event detection) but reduce it for the epoched data (to speed up time-frequency analysis):</p>
+<div id="1c886bd9" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Resample epochs</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>epochs <span class="op">=</span> mne.Epochs(raw, events, event_id<span class="op">=</span><span class="dv">1</span>, tmin<span class="op">=-</span><span class="fl">0.2</span>, tmax<span class="op">=</span><span class="fl">0.8</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>epochs.resample(sfreq<span class="op">=</span><span class="dv">256</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="working-example" class="level2">
+<h2 class="anchored" data-anchor-id="working-example">Working example</h2>
+<div id="2a54df6e" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Create simulated data at 1000 Hz ────────────────────────</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>sfreq <span class="op">=</span> <span class="dv">1000</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>duration <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> sfreq <span class="op">*</span> duration</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>times <span class="op">=</span> np.arange(n_samples) <span class="op">/</span> sfreq</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Pink noise + 10 Hz alpha</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>white <span class="op">=</span> rng.standard_normal(n_samples)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>freqs_fft <span class="op">=</span> np.fft.rfftfreq(n_samples, d<span class="op">=</span><span class="dv">1</span> <span class="op">/</span> sfreq)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>freqs_fft[<span class="dv">0</span>] <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>pink <span class="op">=</span> np.fft.irfft(np.fft.rfft(white) <span class="op">/</span> np.sqrt(freqs_fft), n<span class="op">=</span>n_samples)</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>signal <span class="op">=</span> pink <span class="op">*</span> <span class="fl">20e-6</span> <span class="op">/</span> pink.std()</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>signal <span class="op">+=</span> <span class="fl">5e-6</span> <span class="op">*</span> np.sin(<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> <span class="dv">10</span> <span class="op">*</span> times)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrap in MNE Raw</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>info <span class="op">=</span> mne.create_info(ch_names<span class="op">=</span>[<span class="st">"Oz"</span>], sfreq<span class="op">=</span>sfreq, ch_types<span class="op">=</span>[<span class="st">"eeg"</span>])</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.RawArray(signal.reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>), info)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Compare original and resampled data ──────────────────────</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>raw_256 <span class="op">=</span> raw.copy().resample(sfreq<span class="op">=</span><span class="dv">256</span>)</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Original: </span><span class="sc">{</span>raw<span class="sc">.</span>info[<span class="st">'sfreq'</span>]<span class="sc">}</span><span class="ss"> Hz, </span><span class="sc">{</span>raw<span class="sc">.</span>n_times<span class="sc">}</span><span class="ss"> samples"</span>)</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Resampled: </span><span class="sc">{</span>raw_256<span class="sc">.</span>info[<span class="st">'sfreq'</span>]<span class="sc">}</span><span class="ss"> Hz, </span><span class="sc">{</span>raw_256<span class="sc">.</span>n_times<span class="sc">}</span><span class="ss"> samples"</span>)</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Size reduction: </span><span class="sc">{</span><span class="dv">1</span> <span class="op">-</span> raw_256<span class="sc">.</span>n_times <span class="op">/</span> raw<span class="sc">.</span>n_times<span class="sc">:.1%}</span><span class="ss">"</span>)</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Compare PSDs ─────────────────────────────────────────────</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">4</span>))</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>raw.compute_psd(fmax<span class="op">=</span><span class="dv">200</span>).plot(axes<span class="op">=</span>axes[<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].set_title(<span class="ss">f"Original (</span><span class="sc">{</span><span class="bu">int</span>(raw.info[<span class="st">'sfreq'</span>])<span class="sc">}</span><span class="ss"> Hz)"</span>)</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>raw_256.compute_psd(fmax<span class="op">=</span><span class="dv">120</span>).plot(axes<span class="op">=</span>axes[<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].set_title(<span class="ss">f"Resampled (</span><span class="sc">{</span><span class="bu">int</span>(raw_256.info[<span class="st">'sfreq'</span>])<span class="sc">}</span><span class="ss"> Hz)"</span>)</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="key-takeaways" class="level2">
+<h2 class="anchored" data-anchor-id="key-takeaways">Key takeaways</h2>
+<ul>
+<li>Resample to reduce file size, speed up processing, and save memory. The most common target rates for EEG are 250 or 256 Hz (for studies up to ~100 Hz) and 500 or 512 Hz (for gamma studies).</li>
+<li>The Nyquist theorem says you need at least 2 samples per cycle. Your sampling rate must be at least twice the highest frequency you want to analyse.</li>
+<li>MNE’s <code>resample()</code> applies an anti-aliasing filter automatically, so frequencies above the new Nyquist frequency are removed before the sampling rate is reduced. You do not need to low-pass filter separately.</li>
+<li>Filter before resampling in your pipeline. This gives you full control over filter design at the higher original sampling rate.</li>
+<li>If your data has events, pass them to <code>resample(events=events)</code> so that event sample indices are adjusted to the new sampling rate.</li>
+<li>Avoid resampling to a rate that is too low for your analysis. If you need gamma activity up to 80 Hz, do not resample below 200 Hz.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Built with <a href="https://quarto.org">Quarto</a> and <a href="https://mne.tools">MNE-Python</a></p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

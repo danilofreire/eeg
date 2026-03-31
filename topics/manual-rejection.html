@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-03-31">
+<meta name="description" content="When manual rejection is appropriate, how to use MNE’s interactive data browsers for raw data and epochs, marking bad segments with annotations, marking bad epochs, and guidelines for deciding what to reject.">
+
+<title>Visual inspection and manual rejection – EEG with Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">EEG with Python</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-modules" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Modules</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-modules">    
+        <li>
+    <a class="dropdown-item" href="../modules/01-getting-started.html">
+ <span class="dropdown-text">1. Getting started</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/02-preprocessing.html">
+ <span class="dropdown-text">2. Preprocessing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/03-artifacts.html">
+ <span class="dropdown-text">3. Artifact rejection</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/04-spectral-analysis.html">
+ <span class="dropdown-text">4. Spectral analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/05-metastability.html">
+ <span class="dropdown-text">5. Connectivity and metastability</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../topics/index.html"> 
+<span class="menu-text">Topics</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../exercises/index.html"> 
+<span class="menu-text">Exercises</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#why-this-topic-matters" id="toc-why-this-topic-matters" class="nav-link active" data-scroll-target="#why-this-topic-matters">Why this topic matters</a></li>
+  <li><a href="#when-manual-rejection-is-the-right-tool" id="toc-when-manual-rejection-is-the-right-tool" class="nav-link" data-scroll-target="#when-manual-rejection-is-the-right-tool">When manual rejection is the right tool</a></li>
+  <li><a href="#browsing-raw-data-with-raw.plot" id="toc-browsing-raw-data-with-raw.plot" class="nav-link" data-scroll-target="#browsing-raw-data-with-raw.plot">Browsing raw data with <code>raw.plot()</code></a></li>
+  <li><a href="#browsing-epochs-with-epochs.plot" id="toc-browsing-epochs-with-epochs.plot" class="nav-link" data-scroll-target="#browsing-epochs-with-epochs.plot">Browsing epochs with <code>epochs.plot()</code></a></li>
+  <li><a href="#marking-bad-segments-with-annotations" id="toc-marking-bad-segments-with-annotations" class="nav-link" data-scroll-target="#marking-bad-segments-with-annotations">Marking bad segments with annotations</a></li>
+  <li><a href="#guidelines-for-what-to-reject" id="toc-guidelines-for-what-to-reject" class="nav-link" data-scroll-target="#guidelines-for-what-to-reject">Guidelines for what to reject</a>
+  <ul class="collapse">
+  <li><a href="#reject-these" id="toc-reject-these" class="nav-link" data-scroll-target="#reject-these">Reject these</a></li>
+  <li><a href="#think-carefully-before-rejecting" id="toc-think-carefully-before-rejecting" class="nav-link" data-scroll-target="#think-carefully-before-rejecting">Think carefully before rejecting</a></li>
+  <li><a href="#how-much-rejection-is-too-much" id="toc-how-much-rejection-is-too-much" class="nav-link" data-scroll-target="#how-much-rejection-is-too-much">How much rejection is too much?</a></li>
+  </ul></li>
+  <li><a href="#working-example" id="toc-working-example" class="nav-link" data-scroll-target="#working-example">Working example</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways">Key takeaways</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Visual inspection and manual rejection</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">artifacts</div>
+    <div class="quarto-category">quality-control</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    When manual rejection is appropriate, how to use MNE’s interactive data browsers for raw data and epochs, marking bad segments with annotations, marking bad epochs, and guidelines for deciding what to reject.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">31 March 2026</p>
+    </div>
+  </div>
+  
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">31 March 2026</p>
+    </div>
+  </div>
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="why-this-topic-matters" class="level2">
+<h2 class="anchored" data-anchor-id="why-this-topic-matters">Why this topic matters</h2>
+<p>Automated methods for artifact removal (ICA, threshold-based rejection) are powerful, but they are not infallible. Sometimes they miss subtle artifacts, and sometimes they flag clean data as bad. Visual inspection is the quality-control step that catches what automation misses. Even in a fully automated pipeline, you should look at your data at some point to check that nothing has gone wrong.</p>
+<p>Manual rejection is also the most appropriate strategy when you have a small number of clearly contaminated segments. If three out of two hundred epochs contain a large muscle burst, it is faster and more reliable to mark those three epochs as bad by eye than to tune an automated algorithm to catch them.</p>
+</section>
+<section id="when-manual-rejection-is-the-right-tool" class="level2">
+<h2 class="anchored" data-anchor-id="when-manual-rejection-is-the-right-tool">When manual rejection is the right tool</h2>
+<p>Manual rejection works best in these situations:</p>
+<ul>
+<li><strong>Small to moderate datasets</strong>: if you have a handful of participants with a few hundred epochs each, visual inspection is practical. If you have 200 participants, you need automation.</li>
+<li><strong>Unusual artifacts</strong>: movement artifacts, electrode pops, and equipment glitches often have idiosyncratic shapes that automated methods do not recognise. Your eyes can spot them instantly.</li>
+<li><strong>Quality control after automated cleaning</strong>: even when you use ICA or threshold rejection, you should visually inspect the results to verify that the cleaning worked. Did ICA remove all the blinks? Did the threshold reject the right epochs?</li>
+<li><strong>Pilot data or method development</strong>: when you are still figuring out what your data look like and what preprocessing steps are needed, manual inspection is invaluable.</li>
+</ul>
+</section>
+<section id="browsing-raw-data-with-raw.plot" class="level2">
+<h2 class="anchored" data-anchor-id="browsing-raw-data-with-raw.plot">Browsing raw data with <code>raw.plot()</code></h2>
+<p>MNE-Python provides an interactive browser for continuous (raw) EEG data. You can scroll through the recording, zoom in and out, and mark bad segments.</p>
+<div id="c7ee192c" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load and preprocess data</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.read_raw_edf(<span class="st">"recording.edf"</span>, preload<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">0.5</span>, h_freq<span class="op">=</span><span class="fl">45.0</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Open the interactive browser</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>raw.plot(</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    n_channels<span class="op">=</span><span class="dv">20</span>,       <span class="co"># show 20 channels at a time</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    scalings<span class="op">=</span><span class="st">"auto"</span>,     <span class="co"># automatic scaling per channel type</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    duration<span class="op">=</span><span class="fl">10.0</span>,       <span class="co"># show 10 seconds per screen</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    block<span class="op">=</span><span class="va">True</span>           <span class="co"># pause execution until window is closed</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>In the browser window, you can:</p>
+<ul>
+<li><strong>Scroll through time</strong> using the left/right arrow keys or the scrollbar at the bottom.</li>
+<li><strong>Mark bad segments</strong>: click and drag to highlight a time region. This creates an annotation of type “BAD_” that tells MNE to exclude this segment from later analyses (epoching, ICA fitting, etc.).</li>
+<li><strong>Mark bad channels</strong>: click on a channel name to toggle it as “bad”. Bad channels turn grey and are excluded from analyses.</li>
+<li><strong>Zoom</strong>: use the + and - keys (or the up/down arrows) to change the vertical scale.</li>
+</ul>
+<p>The annotations you create are stored in <code>raw.annotations</code> and can be saved with the data.</p>
+</section>
+<section id="browsing-epochs-with-epochs.plot" class="level2">
+<h2 class="anchored" data-anchor-id="browsing-epochs-with-epochs.plot">Browsing epochs with <code>epochs.plot()</code></h2>
+<p>After epoching, you can inspect individual epochs using the epoch browser:</p>
+<div id="5dc4a4d9" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create epochs</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>events <span class="op">=</span> mne.find_events(raw)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>epochs <span class="op">=</span> mne.Epochs(raw, events, tmin<span class="op">=-</span><span class="fl">0.2</span>, tmax<span class="op">=</span><span class="fl">0.5</span>, preload<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Open the epoch browser</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>epochs.plot(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    n_channels<span class="op">=</span><span class="dv">20</span>,       <span class="co"># channels to display</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    n_epochs<span class="op">=</span><span class="dv">5</span>,          <span class="co"># epochs per screen</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    scalings<span class="op">=</span><span class="st">"auto"</span>,     <span class="co"># automatic scaling</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    block<span class="op">=</span><span class="va">True</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>In the epoch browser:</p>
+<ul>
+<li><strong>Click on an epoch</strong> to toggle it as bad (it will turn dark/greyed out). Bad epochs are excluded when you call <code>epochs.drop_bad()</code> or when you compute averages.</li>
+<li><strong>Scroll through epochs</strong> using the arrow keys.</li>
+<li><strong>Click on a channel name</strong> to mark it as bad across all epochs.</li>
+</ul>
+</section>
+<section id="marking-bad-segments-with-annotations" class="level2">
+<h2 class="anchored" data-anchor-id="marking-bad-segments-with-annotations">Marking bad segments with annotations</h2>
+<p>You can also create annotations programmatically. This is useful when you have a list of known bad time periods (e.g., from a log file or from a previous inspection pass):</p>
+<div id="0715655b" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Mark a segment from 10 s to 12 s as bad</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>onset <span class="op">=</span> <span class="fl">10.0</span>       <span class="co"># start time in seconds</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>duration <span class="op">=</span> <span class="fl">2.0</span>     <span class="co"># duration in seconds</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>description <span class="op">=</span> <span class="st">"BAD_movement"</span>  <span class="co"># any string starting with "BAD_"</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>raw.annotations.append(onset, duration, description)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Mark multiple segments at once</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>onsets <span class="op">=</span> [<span class="fl">25.0</span>, <span class="fl">48.5</span>, <span class="fl">102.3</span>]</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>durations <span class="op">=</span> [<span class="fl">1.5</span>, <span class="fl">3.0</span>, <span class="fl">0.8</span>]</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>descriptions <span class="op">=</span> [<span class="st">"BAD_muscle"</span>, <span class="st">"BAD_blink"</span>, <span class="st">"BAD_electrode_pop"</span>]</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> o, d, desc <span class="kw">in</span> <span class="bu">zip</span>(onsets, durations, descriptions):</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    raw.annotations.append(o, d, desc)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Any annotation whose description starts with “BAD_” (or just “BAD”) is treated as a bad segment by MNE. When you create epochs, any epoch that overlaps with a BAD annotation is automatically excluded.</p>
+</section>
+<section id="guidelines-for-what-to-reject" class="level2">
+<h2 class="anchored" data-anchor-id="guidelines-for-what-to-reject">Guidelines for what to reject</h2>
+<p>Knowing what to reject takes practice. Here are some practical guidelines:</p>
+<section id="reject-these" class="level3">
+<h3 class="anchored" data-anchor-id="reject-these">Reject these</h3>
+<ul>
+<li><strong>Eye blinks that ICA did not fully remove</strong>: look for residual frontal deflections that are clearly non-neural. If you ran ICA and some blinks are still visible, reject the affected epochs.</li>
+<li><strong>Large muscle bursts</strong>: if a segment shows high-frequency, large-amplitude noise that obscures the brain signal, reject it. Small amounts of muscle activity in temporal channels may be tolerable depending on your analysis.</li>
+<li><strong>Electrode pops and jumps</strong>: sudden, sharp spikes in a single channel that look nothing like brain activity. These are often caused by momentary loss of electrode contact.</li>
+<li><strong>Movement artifacts</strong>: large, slow drifts that shift the baseline of multiple channels simultaneously. These often correspond to the participant moving their head.</li>
+<li><strong>Amplifier saturation</strong>: if a channel hits the maximum or minimum voltage and “flat-lines” at the rail, that segment is unusable.</li>
+</ul>
+</section>
+<section id="think-carefully-before-rejecting" class="level3">
+<h3 class="anchored" data-anchor-id="think-carefully-before-rejecting">Think carefully before rejecting</h3>
+<ul>
+<li><strong>Mild, widespread noise</strong>: if all channels are slightly noisier during a period but the signal is still visible, consider keeping the data and relying on averaging to reduce the noise.</li>
+<li><strong>Single bad channel</strong>: if only one channel is contaminated, it may be better to interpolate that channel rather than reject the entire epoch. You lose less data that way.</li>
+<li><strong>Ambiguous segments</strong>: if you are not sure whether something is artifact or an unusual brain response, keep it. Over-rejection can bias your results by systematically removing trials with large brain responses.</li>
+</ul>
+</section>
+<section id="how-much-rejection-is-too-much" class="level3">
+<h3 class="anchored" data-anchor-id="how-much-rejection-is-too-much">How much rejection is too much?</h3>
+<p>There is no fixed rule, but losing more than 30% of your epochs is a warning sign. If you are rejecting that many trials, something is wrong upstream: the data quality may be poor, the recording setup may need adjustment, or your rejection criteria may be too strict. A well-recorded dataset with good preprocessing should need less than 10-15% manual rejection.</p>
+</section>
+</section>
+<section id="working-example" class="level2">
+<h2 class="anchored" data-anchor-id="working-example">Working example</h2>
+<p>The code below creates simulated epochs with different artifact types, demonstrates how to mark some as bad, and shows the rejection workflow.</p>
+<div id="174643ef" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Simulation parameters ─────────────────────────────────────</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>sfreq <span class="op">=</span> <span class="dv">256</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>n_epochs <span class="op">=</span> <span class="dv">20</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>epoch_duration <span class="op">=</span> <span class="fl">0.6</span>  <span class="co"># seconds (like a -0.1 to 0.5 s epoch)</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> <span class="bu">int</span>(epoch_duration <span class="op">*</span> sfreq)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>times <span class="op">=</span> np.linspace(<span class="op">-</span><span class="fl">0.1</span>, <span class="fl">0.5</span>, n_samples)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Generate epochs ───────────────────────────────────────────</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>epochs_data <span class="op">=</span> np.zeros((n_epochs, n_samples))</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_epochs):</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Brain signal: ERP-like component (P100 + N170 + P300)</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    erp <span class="op">=</span> (</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        <span class="fl">8e-6</span> <span class="op">*</span> np.exp(<span class="op">-</span>((times <span class="op">-</span> <span class="fl">0.10</span>) <span class="op">**</span> <span class="dv">2</span>) <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> <span class="fl">0.015</span> <span class="op">**</span> <span class="dv">2</span>))   <span class="co"># P100</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="op">-</span> <span class="fl">6e-6</span> <span class="op">*</span> np.exp(<span class="op">-</span>((times <span class="op">-</span> <span class="fl">0.17</span>) <span class="op">**</span> <span class="dv">2</span>) <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> <span class="fl">0.020</span> <span class="op">**</span> <span class="dv">2</span>)) <span class="co"># N170</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">+</span> <span class="fl">5e-6</span> <span class="op">*</span> np.exp(<span class="op">-</span>((times <span class="op">-</span> <span class="fl">0.30</span>) <span class="op">**</span> <span class="dv">2</span>) <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> <span class="fl">0.040</span> <span class="op">**</span> <span class="dv">2</span>)) <span class="co"># P300</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    noise <span class="op">=</span> <span class="fl">3e-6</span> <span class="op">*</span> rng.standard_normal(n_samples)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    epochs_data[i] <span class="op">=</span> erp <span class="op">+</span> noise</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Inject artifacts into some epochs ─────────────────────────</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>bad_epochs <span class="op">=</span> []</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Epoch 3: eye blink artifact</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>blink_start <span class="op">=</span> <span class="bu">int</span>(<span class="fl">0.15</span> <span class="op">*</span> sfreq) <span class="op">+</span> <span class="bu">int</span>(<span class="fl">0.1</span> <span class="op">*</span> sfreq)  <span class="co"># offset for -0.1 start</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>blink_width <span class="op">=</span> <span class="bu">int</span>(<span class="fl">0.15</span> <span class="op">*</span> sfreq)</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>t_bl <span class="op">=</span> np.arange(blink_width) <span class="op">/</span> sfreq</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>epochs_data[<span class="dv">3</span>, blink_start:blink_start <span class="op">+</span> blink_width] <span class="op">+=</span> (</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>    <span class="fl">50e-6</span> <span class="op">*</span> np.sin(np.pi <span class="op">*</span> t_bl <span class="op">/</span> (blink_width <span class="op">/</span> sfreq))</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>bad_epochs.append(<span class="dv">3</span>)</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Epoch 8: muscle burst</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>emg_start <span class="op">=</span> <span class="bu">int</span>(<span class="fl">0.05</span> <span class="op">*</span> sfreq) <span class="op">+</span> <span class="bu">int</span>(<span class="fl">0.1</span> <span class="op">*</span> sfreq)</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>emg_length <span class="op">=</span> <span class="bu">int</span>(<span class="fl">0.3</span> <span class="op">*</span> sfreq)</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>emg_burst <span class="op">=</span> <span class="fl">20e-6</span> <span class="op">*</span> rng.standard_normal(emg_length)</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> freq <span class="kw">in</span> np.arange(<span class="dv">30</span>, <span class="dv">70</span>, <span class="dv">10</span>):</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>    emg_burst <span class="op">+=</span> <span class="fl">8e-6</span> <span class="op">*</span> np.sin(</span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>        <span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> freq <span class="op">*</span> np.arange(emg_length) <span class="op">/</span> sfreq</span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>epochs_data[<span class="dv">8</span>, emg_start:emg_start <span class="op">+</span> emg_length] <span class="op">+=</span> emg_burst</span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>bad_epochs.append(<span class="dv">8</span>)</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Epoch 14: electrode pop (single sharp spike)</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>pop_idx <span class="op">=</span> <span class="bu">int</span>(<span class="fl">0.25</span> <span class="op">*</span> sfreq) <span class="op">+</span> <span class="bu">int</span>(<span class="fl">0.1</span> <span class="op">*</span> sfreq)</span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>epochs_data[<span class="dv">14</span>, pop_idx:pop_idx <span class="op">+</span> <span class="dv">3</span>] <span class="op">+=</span> <span class="fl">80e-6</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>epochs_data[<span class="dv">14</span>, pop_idx <span class="op">+</span> <span class="dv">3</span>:pop_idx <span class="op">+</span> <span class="dv">6</span>] <span class="op">-=</span> <span class="fl">40e-6</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>bad_epochs.append(<span class="dv">14</span>)</span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="co"># Epoch 17: movement drift</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>drift <span class="op">=</span> np.linspace(<span class="dv">0</span>, <span class="fl">40e-6</span>, n_samples)</span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>epochs_data[<span class="dv">17</span>] <span class="op">+=</span> drift</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>bad_epochs.append(<span class="dv">17</span>)</span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Identify good epochs ──────────────────────────────────────</span></span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>good_epochs <span class="op">=</span> [i <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_epochs) <span class="cf">if</span> i <span class="kw">not</span> <span class="kw">in</span> bad_epochs]</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>scale <span class="op">=</span> <span class="fl">1e6</span>  <span class="co"># convert to microvolts</span></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Visualisation ─────────────────────────────────────────────</span></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="dv">13</span>, <span class="dv">7</span>))</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a><span class="co"># Panel 1: all epochs overlaid, bad ones highlighted</span></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> axes[<span class="dv">0</span>]</span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_epochs):</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> i <span class="kw">in</span> bad_epochs:</span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>        ax.plot(times, epochs_data[i] <span class="op">*</span> scale, color<span class="op">=</span><span class="st">"#e74c3c"</span>,</span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a>                linewidth<span class="op">=</span><span class="fl">0.8</span>, alpha<span class="op">=</span><span class="fl">0.7</span>)</span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>        ax.plot(times, epochs_data[i] <span class="op">*</span> scale, color<span class="op">=</span><span class="st">"#2c3e50"</span>,</span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>                linewidth<span class="op">=</span><span class="fl">0.3</span>, alpha<span class="op">=</span><span class="fl">0.4</span>)</span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot mean of all epochs (including bad)</span></span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>mean_all <span class="op">=</span> epochs_data.mean(axis<span class="op">=</span><span class="dv">0</span>) <span class="op">*</span> scale</span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>ax.plot(times, mean_all, color<span class="op">=</span><span class="st">"#e67e22"</span>, linewidth<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a>        label<span class="op">=</span><span class="ss">f"Mean of all </span><span class="sc">{</span>n_epochs<span class="sc">}</span><span class="ss"> epochs"</span>)</span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>ax.axhline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"grey"</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>, linestyle<span class="op">=</span><span class="st">":"</span>)</span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a>ax.axvline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"grey"</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>, linestyle<span class="op">=</span><span class="st">":"</span>)</span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="vs">r"Amplitude </span><span class="kw">(</span><span class="dv">$\m</span><span class="vs">u</span><span class="dv">$</span><span class="vs">V</span><span class="kw">)</span><span class="vs">"</span>)</span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="ss">f"Before rejection: all </span><span class="sc">{</span>n_epochs<span class="sc">}</span><span class="ss"> epochs "</span></span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>             <span class="ss">f"(red = </span><span class="sc">{</span><span class="bu">len</span>(bad_epochs)<span class="sc">}</span><span class="ss"> bad epochs)"</span>)</span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>ax.legend(fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a><span class="co"># Panel 2: only good epochs, with clean average</span></span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> axes[<span class="dv">1</span>]</span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>good_data <span class="op">=</span> epochs_data[good_epochs]</span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(good_epochs)):</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>    ax.plot(times, good_data[i] <span class="op">*</span> scale, color<span class="op">=</span><span class="st">"#2c3e50"</span>,</span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>            linewidth<span class="op">=</span><span class="fl">0.3</span>, alpha<span class="op">=</span><span class="fl">0.4</span>)</span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>mean_good <span class="op">=</span> good_data.mean(axis<span class="op">=</span><span class="dv">0</span>) <span class="op">*</span> scale</span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>ax.plot(times, mean_good, color<span class="op">=</span><span class="st">"#27ae60"</span>, linewidth<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>        label<span class="op">=</span><span class="ss">f"Mean of </span><span class="sc">{</span><span class="bu">len</span>(good_epochs)<span class="sc">}</span><span class="ss"> good epochs"</span>)</span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>ax.axhline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"grey"</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>, linestyle<span class="op">=</span><span class="st">":"</span>)</span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a>ax.axvline(<span class="dv">0</span>, color<span class="op">=</span><span class="st">"grey"</span>, linewidth<span class="op">=</span><span class="fl">0.5</span>, linestyle<span class="op">=</span><span class="st">":"</span>)</span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Time (s)"</span>)</span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="vs">r"Amplitude </span><span class="kw">(</span><span class="dv">$\m</span><span class="vs">u</span><span class="dv">$</span><span class="vs">V</span><span class="kw">)</span><span class="vs">"</span>)</span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="ss">f"After rejection: </span><span class="sc">{</span><span class="bu">len</span>(good_epochs)<span class="sc">}</span><span class="ss"> clean epochs "</span></span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>             <span class="ss">f"(</span><span class="sc">{</span><span class="bu">len</span>(bad_epochs)<span class="sc">}</span><span class="ss"> rejected)"</span>)</span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a>ax.legend(fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Rejected epochs: </span><span class="sc">{</span>bad_epochs<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Rejection rate: </span><span class="sc">{</span><span class="bu">len</span>(bad_epochs)<span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>n_epochs<span class="sc">}</span><span class="ss"> "</span></span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f"= </span><span class="sc">{</span><span class="dv">100</span> <span class="op">*</span> <span class="bu">len</span>(bad_epochs) <span class="op">/</span> n_epochs<span class="sc">:.0f}</span><span class="ss">%"</span>)</span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Surviving epochs: </span><span class="sc">{</span><span class="bu">len</span>(good_epochs)<span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>n_epochs<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="manual-rejection_files/figure-html/cell-5-output-1.png" width="1235" height="660" class="figure-img"></p>
+<figcaption>Simulated epochs with artifacts. The top panel shows all epochs overlaid, with contaminated epochs highlighted in red. The bottom panel shows the clean epochs after rejection, producing a cleaner average.</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rejected epochs: [3, 8, 14, 17]
+Rejection rate: 4/20 = 20%
+Surviving epochs: 16/20</code></pre>
+</div>
+</div>
+<p>In the top panel, you can see the four contaminated epochs (red traces) distorting the average (orange line). The blink artifact in epoch 3 and the electrode pop in epoch 14 pull the average upward, making the ERP components harder to identify. In the bottom panel, after removing the four bad epochs, the average (green line) shows cleaner P100, N170, and P300 components. The rejection rate here is 20%, which is within acceptable limits for a small dataset.</p>
+</section>
+<section id="key-takeaways" class="level2">
+<h2 class="anchored" data-anchor-id="key-takeaways">Key takeaways</h2>
+<ul>
+<li>Visual inspection is an important quality-control step even when you use automated artifact removal methods. It catches unusual artifacts that algorithms miss and verifies that automated cleaning worked correctly.</li>
+<li>Use <code>raw.plot()</code> to browse continuous data and mark bad segments with BAD annotations. Use <code>epochs.plot()</code> to browse individual epochs and mark bad ones by clicking.</li>
+<li>Any annotation starting with “BAD_” tells MNE to exclude that segment from further analyses (epoching, ICA fitting, averaging).</li>
+<li>Reject epochs with clear artifacts (blinks, muscle bursts, electrode pops, movement) but be cautious about over-rejection. If you are losing more than 30% of your data, reconsider your preprocessing approach.</li>
+<li>When only a single channel is bad, consider interpolation rather than rejecting the entire epoch.</li>
+<li>Manual rejection is most practical for small to moderate datasets. For large studies, use it as a quality-control check on top of automated methods.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Built with <a href="https://quarto.org">Quarto</a> and <a href="https://mne.tools">MNE-Python</a></p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

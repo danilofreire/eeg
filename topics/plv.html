@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-03-31">
+<meta name="description" content="What PLV measures, the formula, computing PLV from instantaneous phase, interpreting values (0 = no coupling, 1 = perfect coupling), PLV vs coherence, limitations, connectivity matrices, and plotting.">
+
+<title>Phase-locking value (PLV) – EEG with Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">EEG with Python</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-modules" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Modules</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-modules">    
+        <li>
+    <a class="dropdown-item" href="../modules/01-getting-started.html">
+ <span class="dropdown-text">1. Getting started</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/02-preprocessing.html">
+ <span class="dropdown-text">2. Preprocessing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/03-artifacts.html">
+ <span class="dropdown-text">3. Artifact rejection</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/04-spectral-analysis.html">
+ <span class="dropdown-text">4. Spectral analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/05-metastability.html">
+ <span class="dropdown-text">5. Connectivity and metastability</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../topics/index.html"> 
+<span class="menu-text">Topics</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../exercises/index.html"> 
+<span class="menu-text">Exercises</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#why-this-topic-matters" id="toc-why-this-topic-matters" class="nav-link active" data-scroll-target="#why-this-topic-matters">Why this topic matters</a></li>
+  <li><a href="#what-plv-measures" id="toc-what-plv-measures" class="nav-link" data-scroll-target="#what-plv-measures">What PLV measures</a></li>
+  <li><a href="#the-formula" id="toc-the-formula" class="nav-link" data-scroll-target="#the-formula">The formula</a>
+  <ul class="collapse">
+  <li><a href="#trial-based-plv" id="toc-trial-based-plv" class="nav-link" data-scroll-target="#trial-based-plv">Trial-based PLV</a></li>
+  </ul></li>
+  <li><a href="#computing-plv-step-by-step" id="toc-computing-plv-step-by-step" class="nav-link" data-scroll-target="#computing-plv-step-by-step">Computing PLV step by step</a>
+  <ul class="collapse">
+  <li><a href="#vectorised-version" id="toc-vectorised-version" class="nav-link" data-scroll-target="#vectorised-version">Vectorised version</a></li>
+  </ul></li>
+  <li><a href="#interpreting-plv-values" id="toc-interpreting-plv-values" class="nav-link" data-scroll-target="#interpreting-plv-values">Interpreting PLV values</a></li>
+  <li><a href="#plv-vs-coherence" id="toc-plv-vs-coherence" class="nav-link" data-scroll-target="#plv-vs-coherence">PLV vs coherence</a></li>
+  <li><a href="#limitations-of-plv" id="toc-limitations-of-plv" class="nav-link" data-scroll-target="#limitations-of-plv">Limitations of PLV</a>
+  <ul class="collapse">
+  <li><a href="#volume-conduction" id="toc-volume-conduction" class="nav-link" data-scroll-target="#volume-conduction">Volume conduction</a></li>
+  <li><a href="#reference-dependence" id="toc-reference-dependence" class="nav-link" data-scroll-target="#reference-dependence">Reference dependence</a></li>
+  <li><a href="#window-length" id="toc-window-length" class="nav-link" data-scroll-target="#window-length">Window length</a></li>
+  </ul></li>
+  <li><a href="#building-and-plotting-connectivity-matrices" id="toc-building-and-plotting-connectivity-matrices" class="nav-link" data-scroll-target="#building-and-plotting-connectivity-matrices">Building and plotting connectivity matrices</a></li>
+  <li><a href="#working-example" id="toc-working-example" class="nav-link" data-scroll-target="#working-example">Working example</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways">Key takeaways</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Phase-locking value (PLV)</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">connectivity</div>
+    <div class="quarto-category">phase</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    What PLV measures, the formula, computing PLV from instantaneous phase, interpreting values (0 = no coupling, 1 = perfect coupling), PLV vs coherence, limitations, connectivity matrices, and plotting.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">31 March 2026</p>
+    </div>
+  </div>
+  
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">31 March 2026</p>
+    </div>
+  </div>
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="why-this-topic-matters" class="level2">
+<h2 class="anchored" data-anchor-id="why-this-topic-matters">Why this topic matters</h2>
+<p>If you want to know whether two brain regions are communicating, one approach is to ask: do they oscillate together? More precisely, is the phase relationship between their oscillations consistent over time? The phase-locking value (PLV) answers exactly this question. It measures how stable the phase difference between two signals is across a time window, giving a value between 0 (no consistent relationship) and 1 (perfectly locked phases).</p>
+<p>PLV is one of the most widely used connectivity measures in EEG and MEG research. It is conceptually simple, computationally straightforward, and directly interpretable. It also forms the foundation for more advanced measures like the phase alignment matrix and metastability analysis.</p>
+</section>
+<section id="what-plv-measures" class="level2">
+<h2 class="anchored" data-anchor-id="what-plv-measures">What PLV measures</h2>
+<p>PLV quantifies the consistency of the phase difference between two signals over time. It does not measure whether the signals have the same amplitude, or whether one leads or lags the other by a specific amount. It only asks: whatever the phase difference is, does it stay the same?</p>
+<p>Two signals can be phase-locked at any phase difference. If signal A always leads signal B by 90 degrees, that is perfect phase locking (PLV = 1), even though the signals are not in phase. If the phase difference drifts randomly from trial to trial or from moment to moment, PLV approaches 0.</p>
+</section>
+<section id="the-formula" class="level2">
+<h2 class="anchored" data-anchor-id="the-formula">The formula</h2>
+<p>For two channels <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> with instantaneous phases <span class="math inline">\(\phi_i(t)\)</span> and <span class="math inline">\(\phi_j(t)\)</span> extracted via the Hilbert transform, the PLV over a time window of <span class="math inline">\(T\)</span> samples is:</p>
+<p><span class="math display">\[\text{PLV}_{ij} = \left| \frac{1}{T} \sum_{t=1}^{T} e^{i(\phi_i(t) - \phi_j(t))} \right|\]</span></p>
+<p>The phase difference <span class="math inline">\(\Delta\phi(t) = \phi_i(t) - \phi_j(t)\)</span> at each time point is represented as a unit vector on the complex plane via <span class="math inline">\(e^{i\Delta\phi(t)}\)</span>. These unit vectors are averaged, and the magnitude of the average is taken.</p>
+<p>The intuition is geometric. Each unit vector points in the direction of the phase difference at that time point. If the phase difference is constant, all vectors point the same way, and their average has magnitude 1. If the phase difference varies randomly, the vectors point in all directions and their average is close to 0.</p>
+<section id="trial-based-plv" class="level3">
+<h3 class="anchored" data-anchor-id="trial-based-plv">Trial-based PLV</h3>
+<p>In event-related designs, you can compute PLV across trials instead of across time. For each trial <span class="math inline">\(k\)</span>, extract the phase difference at a specific time point (or averaged over a short window), then compute:</p>
+<p><span class="math display">\[\text{PLV}_{ij}(t) = \left| \frac{1}{K} \sum_{k=1}^{K} e^{i(\phi_i^k(t) - \phi_j^k(t))} \right|\]</span></p>
+<p>This gives a time-resolved PLV that shows how inter-trial phase consistency changes over the course of a trial.</p>
+</section>
+</section>
+<section id="computing-plv-step-by-step" class="level2">
+<h2 class="anchored" data-anchor-id="computing-plv-step-by-step">Computing PLV step by step</h2>
+<p>The computation follows a clear pipeline:</p>
+<ol type="1">
+<li><strong>Band-pass filter</strong> the signal to the frequency band of interest (e.g., 8–13 Hz for alpha).</li>
+<li><strong>Apply the Hilbert transform</strong> to obtain the instantaneous phase for each channel.</li>
+<li><strong>Compute phase differences</strong> between all channel pairs.</li>
+<li><strong>Average the complex exponentials</strong> of the phase differences over the time window.</li>
+<li><strong>Take the magnitude</strong> of the average.</li>
+</ol>
+<div id="24fa0f35" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hilbert, butter, filtfilt</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Assume data has shape (n_channels, n_samples)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>sfreq <span class="op">=</span> <span class="dv">256</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>n_channels <span class="op">=</span> data.shape[<span class="dv">0</span>]</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1: band-pass filter to alpha</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>b, a <span class="op">=</span> butter(<span class="dv">4</span>, [<span class="dv">8</span>, <span class="dv">13</span>], btype<span class="op">=</span><span class="st">"band"</span>, fs<span class="op">=</span>sfreq)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>filtered <span class="op">=</span> np.zeros_like(data)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ch <span class="kw">in</span> <span class="bu">range</span>(n_channels):</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    filtered[ch] <span class="op">=</span> filtfilt(b, a, data[ch])</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 2: Hilbert transform to get phase</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>phases <span class="op">=</span> np.zeros_like(filtered)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ch <span class="kw">in</span> <span class="bu">range</span>(n_channels):</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    phases[ch] <span class="op">=</span> np.angle(hilbert(filtered[ch]))</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Steps 3-5: compute PLV matrix</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>plv_matrix <span class="op">=</span> np.zeros((n_channels, n_channels))</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> data.shape[<span class="dv">1</span>]</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_channels):</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(i <span class="op">+</span> <span class="dv">1</span>, n_channels):</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        phase_diff <span class="op">=</span> phases[i] <span class="op">-</span> phases[j]</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        plv <span class="op">=</span> np.<span class="bu">abs</span>(np.mean(np.exp(<span class="ot">1j</span> <span class="op">*</span> phase_diff)))</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        plv_matrix[i, j] <span class="op">=</span> plv</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        plv_matrix[j, i] <span class="op">=</span> plv</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>np.fill_diagonal(plv_matrix, <span class="fl">1.0</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="vectorised-version" class="level3">
+<h3 class="anchored" data-anchor-id="vectorised-version">Vectorised version</h3>
+<p>The loop above is clear but slow for many channels. A vectorised version computes all pairs at once:</p>
+<div id="7c5c66cd" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Vectorised PLV computation</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>complex_phase <span class="op">=</span> np.exp(<span class="ot">1j</span> <span class="op">*</span> phases)  <span class="co"># shape: (n_channels, n_samples)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Outer product of complex phases, averaged over time</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>plv_matrix <span class="op">=</span> np.<span class="bu">abs</span>(</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    complex_phase <span class="op">@</span> complex_phase.conj().T <span class="op">/</span> n_samples</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>This is much faster because it uses matrix multiplication instead of nested loops.</p>
+</section>
+</section>
+<section id="interpreting-plv-values" class="level2">
+<h2 class="anchored" data-anchor-id="interpreting-plv-values">Interpreting PLV values</h2>
+<ul>
+<li><strong>PLV = 0</strong>: no phase locking. The phase difference between the two signals is uniformly distributed; there is no consistent temporal relationship.</li>
+<li><strong>PLV = 1</strong>: perfect phase locking. The phase difference is constant over the entire time window.</li>
+<li><strong>PLV between 0.2 and 0.5</strong>: typical range for meaningful connectivity in scalp EEG. Values in this range usually indicate that two regions are exchanging information or are driven by a common source.</li>
+<li><strong>PLV &gt; 0.8</strong>: unusually high for scalp EEG between distant electrodes. This could indicate volume conduction (the same source is picked up by both electrodes) or an artefact.</li>
+</ul>
+<p>Importantly, PLV has a positive bias: even for two completely independent signals, PLV will not be exactly zero because of finite sample size. With <span class="math inline">\(T\)</span> time points, the expected PLV for independent signals is approximately <span class="math inline">\(1/\sqrt{T}\)</span>. For a 10-second recording at 256 Hz (<span class="math inline">\(T = 2560\)</span>), this bias is about 0.02. For shorter windows, the bias can be substantial.</p>
+</section>
+<section id="plv-vs-coherence" class="level2">
+<h2 class="anchored" data-anchor-id="plv-vs-coherence">PLV vs coherence</h2>
+<p>PLV and coherence are related but not identical:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 36%">
+<col style="width: 20%">
+<col style="width: 44%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">PLV</th>
+<th style="text-align: left;">Coherence</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Input</td>
+<td style="text-align: left;">Instantaneous phase (narrowband)</td>
+<td style="text-align: left;">Raw signal (broadband)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">What it measures</td>
+<td style="text-align: left;">Phase consistency</td>
+<td style="text-align: left;">Phase + amplitude co-variation</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Amplitude sensitivity</td>
+<td style="text-align: left;">No (uses only phase)</td>
+<td style="text-align: left;">Yes (amplitude matters)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Frequency specificity</td>
+<td style="text-align: left;">Set by the band-pass filter</td>
+<td style="text-align: left;">Set by the FFT window</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Coherence</strong> is computed from the cross-spectral density and is sensitive to both phase consistency and correlated amplitude fluctuations. A change in coherence could reflect a change in phase locking, a change in amplitude correlation, or both. PLV isolates the phase component, which makes it easier to interpret but means it misses amplitude-based coupling.</p>
+<p>In practice, PLV is preferred when you care specifically about phase relationships (e.g., for studying neural synchronisation). Coherence is preferred when you want a more general measure of spectral similarity between two signals.</p>
+</section>
+<section id="limitations-of-plv" class="level2">
+<h2 class="anchored" data-anchor-id="limitations-of-plv">Limitations of PLV</h2>
+<section id="volume-conduction" class="level3">
+<h3 class="anchored" data-anchor-id="volume-conduction">Volume conduction</h3>
+<p>EEG signals are measured on the scalp, not at the brain surface. Because the skull and scalp spread electrical fields, a single neural source produces signals at multiple electrodes. Two nearby electrodes will have high PLV simply because they are both recording the same source, not because two different brain regions are communicating.</p>
+<p>This is the volume conduction problem, and it affects all connectivity measures computed from sensor-level EEG. Possible mitigations include:</p>
+<ul>
+<li>Using source-localised data (beamforming, minimum-norm estimates) before computing PLV.</li>
+<li>Using connectivity measures that are insensitive to zero-lag coupling, such as the imaginary part of coherence or the phase lag index (PLI).</li>
+<li>Interpreting high PLV between nearby electrodes with caution.</li>
+</ul>
+</section>
+<section id="reference-dependence" class="level3">
+<h3 class="anchored" data-anchor-id="reference-dependence">Reference dependence</h3>
+<p>PLV values change depending on the reference scheme used (average reference, linked mastoids, Cz reference, etc.). This is because re-referencing changes the phase of each channel. There is no universally “correct” reference, but the average reference is the most commonly used for connectivity analyses.</p>
+</section>
+<section id="window-length" class="level3">
+<h3 class="anchored" data-anchor-id="window-length">Window length</h3>
+<p>PLV is computed over a time window, and the result depends on the window length. Shorter windows give noisier estimates (higher positive bias) and may miss slow fluctuations in connectivity. Longer windows give more stable estimates but average over any changes that happen within the window.</p>
+<p>A sliding-window approach (computing PLV in overlapping windows across time) can reveal how connectivity changes over the course of a recording.</p>
+</section>
+</section>
+<section id="building-and-plotting-connectivity-matrices" class="level2">
+<h2 class="anchored" data-anchor-id="building-and-plotting-connectivity-matrices">Building and plotting connectivity matrices</h2>
+<p>A PLV connectivity matrix is an <span class="math inline">\(N \times N\)</span> symmetric matrix where each entry <span class="math inline">\((i, j)\)</span> is the PLV between channels <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. These matrices are the starting point for network analysis of brain connectivity.</p>
+<div id="81ee7d2a" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">7</span>))</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>im <span class="op">=</span> ax.imshow(plv_matrix, cmap<span class="op">=</span><span class="st">"viridis"</span>, vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>               interpolation<span class="op">=</span><span class="st">"nearest"</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>ax.set_xticks(<span class="bu">range</span>(n_channels))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>ax.set_yticks(<span class="bu">range</span>(n_channels))</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>ax.set_xticklabels(channel_names, rotation<span class="op">=</span><span class="dv">90</span>, fontsize<span class="op">=</span><span class="dv">7</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>ax.set_yticklabels(channel_names, fontsize<span class="op">=</span><span class="dv">7</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">"PLV connectivity matrix (alpha band)"</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>plt.colorbar(im, ax<span class="op">=</span>ax, label<span class="op">=</span><span class="st">"PLV"</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="working-example" class="level2">
+<h2 class="anchored" data-anchor-id="working-example">Working example</h2>
+<p>The code below simulates two groups of channels with different levels of phase coupling, computes the PLV matrix, and visualises the results.</p>
+<div id="788febd2" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hilbert, butter, filtfilt</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Simulation ──────────────────────────────────────────────</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>n_channels <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>sfreq <span class="op">=</span> <span class="dv">256</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>duration <span class="op">=</span> <span class="dv">30</span>  <span class="co"># seconds</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> sfreq <span class="op">*</span> duration</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>times <span class="op">=</span> np.arange(n_samples) <span class="op">/</span> sfreq</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>channel_names <span class="op">=</span> [<span class="st">"F3"</span>, <span class="st">"F4"</span>, <span class="st">"C3"</span>, <span class="st">"C4"</span>, <span class="st">"Pz"</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>                 <span class="st">"T7"</span>, <span class="st">"T8"</span>, <span class="st">"O1"</span>, <span class="st">"O2"</span>, <span class="st">"Fp1"</span>]</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Common oscillation (10 Hz) with slow phase drift</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>common_phase <span class="op">=</span> (<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> <span class="dv">10</span> <span class="op">*</span> times</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>                <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> np.cumsum(rng.standard_normal(n_samples) <span class="op">/</span> sfreq))</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>common_signal <span class="op">=</span> np.sin(common_phase)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> np.zeros((n_channels, n_samples))</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ch <span class="kw">in</span> <span class="bu">range</span>(n_channels):</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Independent oscillation</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    ind_phase <span class="op">=</span> (<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> <span class="dv">10</span> <span class="op">*</span> times</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>                 <span class="op">+</span> <span class="fl">3.0</span> <span class="op">*</span> np.cumsum(</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>                     rng.standard_normal(n_samples) <span class="op">/</span> sfreq))</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    ind_signal <span class="op">=</span> np.sin(ind_phase)</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> ch <span class="op">&lt;</span> <span class="dv">5</span>:</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Synchronised group: strong coupling to common signal</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>        coupling <span class="op">=</span> <span class="fl">0.85</span> <span class="op">+</span> rng.uniform(<span class="op">-</span><span class="fl">0.05</span>, <span class="fl">0.05</span>)</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        data[ch] <span class="op">=</span> (coupling <span class="op">*</span> common_signal</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>                    <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> coupling) <span class="op">*</span> ind_signal</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>                    <span class="op">+</span> <span class="fl">0.3</span> <span class="op">*</span> rng.standard_normal(n_samples))</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Independent group: weak coupling</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>        coupling <span class="op">=</span> <span class="fl">0.1</span> <span class="op">+</span> rng.uniform(<span class="op">-</span><span class="fl">0.05</span>, <span class="fl">0.05</span>)</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>        data[ch] <span class="op">=</span> (coupling <span class="op">*</span> common_signal</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>                    <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> coupling) <span class="op">*</span> ind_signal</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>                    <span class="op">+</span> <span class="fl">0.3</span> <span class="op">*</span> rng.standard_normal(n_samples))</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Band-pass filter and Hilbert transform ──────────────────</span></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>b, a <span class="op">=</span> butter(<span class="dv">4</span>, [<span class="dv">8</span>, <span class="dv">13</span>], btype<span class="op">=</span><span class="st">"band"</span>, fs<span class="op">=</span>sfreq)</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>phases <span class="op">=</span> np.zeros_like(data)</span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ch <span class="kw">in</span> <span class="bu">range</span>(n_channels):</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    filtered <span class="op">=</span> filtfilt(b, a, data[ch])</span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>    phases[ch] <span class="op">=</span> np.angle(hilbert(filtered))</span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Compute PLV matrix ─────────────────────────────────────</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>complex_phase <span class="op">=</span> np.exp(<span class="ot">1j</span> <span class="op">*</span> phases)</span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>plv_matrix <span class="op">=</span> np.<span class="bu">abs</span>(complex_phase <span class="op">@</span> complex_phase.conj().T <span class="op">/</span> n_samples)</span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Visualise ──────────────────────────────────────────────</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">13</span>, <span class="dv">5</span>))</span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a><span class="co"># Left: PLV matrix</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> axes[<span class="dv">0</span>]</span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>im <span class="op">=</span> ax.imshow(plv_matrix, cmap<span class="op">=</span><span class="st">"viridis"</span>, vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>               interpolation<span class="op">=</span><span class="st">"nearest"</span>)</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>ax.set_xticks(<span class="bu">range</span>(n_channels))</span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>ax.set_yticks(<span class="bu">range</span>(n_channels))</span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>ax.set_xticklabels(channel_names, rotation<span class="op">=</span><span class="dv">45</span>, ha<span class="op">=</span><span class="st">"right"</span>, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>ax.set_yticklabels(channel_names, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">"PLV connectivity matrix (alpha band)"</span>)</span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>plt.colorbar(im, ax<span class="op">=</span>ax, label<span class="op">=</span><span class="st">"PLV"</span>, shrink<span class="op">=</span><span class="fl">0.8</span>)</span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a><span class="co"># Draw group boundaries</span></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>ax.axhline(<span class="fl">4.5</span>, color<span class="op">=</span><span class="st">"white"</span>, linewidth<span class="op">=</span><span class="fl">1.5</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>ax.axvline(<span class="fl">4.5</span>, color<span class="op">=</span><span class="st">"white"</span>, linewidth<span class="op">=</span><span class="fl">1.5</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)</span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a><span class="co"># Right: histogram of PLV values</span></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> axes[<span class="dv">1</span>]</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract upper triangle (excluding diagonal)</span></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>upper_tri <span class="op">=</span> plv_matrix[np.triu_indices(n_channels, k<span class="op">=</span><span class="dv">1</span>)]</span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>within_sync <span class="op">=</span> []</span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>within_indep <span class="op">=</span> []</span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>between <span class="op">=</span> []</span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_channels):</span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(i <span class="op">+</span> <span class="dv">1</span>, n_channels):</span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> i <span class="op">&lt;</span> <span class="dv">5</span> <span class="kw">and</span> j <span class="op">&lt;</span> <span class="dv">5</span>:</span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a>            within_sync.append(plv_matrix[i, j])</span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>        <span class="cf">elif</span> i <span class="op">&gt;=</span> <span class="dv">5</span> <span class="kw">and</span> j <span class="op">&gt;=</span> <span class="dv">5</span>:</span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>            within_indep.append(plv_matrix[i, j])</span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>            between.append(plv_matrix[i, j])</span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a>ax.hist(within_sync, bins<span class="op">=</span><span class="dv">15</span>, alpha<span class="op">=</span><span class="fl">0.7</span>, color<span class="op">=</span><span class="st">"#2c3e50"</span>,</span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>        label<span class="op">=</span><span class="st">"Within synchronised"</span>, edgecolor<span class="op">=</span><span class="st">"white"</span>)</span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>ax.hist(within_indep, bins<span class="op">=</span><span class="dv">15</span>, alpha<span class="op">=</span><span class="fl">0.7</span>, color<span class="op">=</span><span class="st">"#e67e22"</span>,</span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>        label<span class="op">=</span><span class="st">"Within independent"</span>, edgecolor<span class="op">=</span><span class="st">"white"</span>)</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a>ax.hist(between, bins<span class="op">=</span><span class="dv">15</span>, alpha<span class="op">=</span><span class="fl">0.7</span>, color<span class="op">=</span><span class="st">"#95a5a6"</span>,</span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>        label<span class="op">=</span><span class="st">"Between groups"</span>, edgecolor<span class="op">=</span><span class="st">"white"</span>)</span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"PLV"</span>)</span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Count"</span>)</span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">"Distribution of PLV values"</span>)</span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>ax.legend(fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Print summary ──────────────────────────────────────────</span></span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Mean PLV within synchronised group: "</span></span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f"</span><span class="sc">{</span>np<span class="sc">.</span>mean(within_sync)<span class="sc">:.3f}</span><span class="ss">"</span>)</span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Mean PLV within independent group:  "</span></span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f"</span><span class="sc">{</span>np<span class="sc">.</span>mean(within_indep)<span class="sc">:.3f}</span><span class="ss">"</span>)</span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Mean PLV between groups:            "</span></span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f"</span><span class="sc">{</span>np<span class="sc">.</span>mean(between)<span class="sc">:.3f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="plv_files/figure-html/cell-5-output-1.png" width="1173" height="468" class="figure-img"></p>
+<figcaption>PLV connectivity matrix computed from simulated EEG data. Two groups of channels were simulated: a synchronised group (channels 0-4, strongly coupled) and an independent group (channels 5-9, weakly coupled). The matrix clearly shows high PLV within the synchronised group and low PLV elsewhere.</figcaption>
+</figure>
+</div>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Mean PLV within synchronised group: 0.994
+Mean PLV within independent group:  0.911
+Mean PLV between groups:            0.954</code></pre>
+</div>
+</div>
+<p>The matrix clearly shows the block structure: the top-left 5x5 block (synchronised channels) has high PLV values, while the bottom-right 5x5 block (independent channels) has low values. The off-diagonal blocks (between groups) also show low PLV. The histogram on the right separates the three types of channel pairs, confirming the quantitative difference.</p>
+</section>
+<section id="key-takeaways" class="level2">
+<h2 class="anchored" data-anchor-id="key-takeaways">Key takeaways</h2>
+<ul>
+<li><strong>PLV</strong> measures the consistency of the phase difference between two signals over time. It ranges from 0 (no phase locking) to 1 (perfect phase locking).</li>
+<li>The computation requires band-pass filtering and the Hilbert transform to extract instantaneous phase before computing the phase difference statistics.</li>
+<li>PLV is <strong>amplitude-independent</strong>: it uses only phase information. This distinguishes it from coherence, which also captures amplitude co-variation.</li>
+<li>PLV has a <strong>positive bias</strong> for finite samples. With <span class="math inline">\(T\)</span> time points, independent signals produce an expected PLV of approximately <span class="math inline">\(1/\sqrt{T}\)</span>.</li>
+<li>The main limitations are <strong>volume conduction</strong> (nearby electrodes share signal from the same source), <strong>reference dependence</strong> (PLV changes with the reference scheme), and <strong>window length</strong> effects. Consider source-level analysis or lag-insensitive measures (e.g., PLI) for more robust connectivity estimation.</li>
+<li>PLV connectivity matrices are the building blocks for network-level analyses, including graph theory metrics, community detection, and metastability computation.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Built with <a href="https://quarto.org">Quarto</a> and <a href="https://mne.tools">MNE-Python</a></p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

@@ -1,0 +1,57 @@
+[
+  {
+    "listing": "/exercises/index.html",
+    "items": [
+      "/exercises/artifacts-01.html",
+      "/exercises/getting-started-01.html",
+      "/exercises/metastability-01.html",
+      "/exercises/preprocessing-01.html",
+      "/exercises/spectral-analysis-01.html"
+    ]
+  },
+  {
+    "listing": "/topics/index.html",
+    "items": [
+      "/topics/amplitude-rejection.html",
+      "/topics/icalabel.html",
+      "/topics/autoreject.html",
+      "/topics/bandpass-filtering.html",
+      "/topics/bad-channels.html",
+      "/topics/frequency-bands.html",
+      "/topics/erp.html",
+      "/topics/ersp.html",
+      "/topics/epoching.html",
+      "/topics/filtering.html",
+      "/topics/group-statistics.html",
+      "/topics/ica-mne.html",
+      "/topics/ica-theory.html",
+      "/topics/identifying-ica-components.html",
+      "/topics/ica.html",
+      "/topics/installing-mne.html",
+      "/topics/interpreting-metastability.html",
+      "/topics/loading-eeg-data.html",
+      "/topics/mne-data-structures.html",
+      "/topics/metastability.html",
+      "/topics/notch-filtering.html",
+      "/topics/parkinsons-fog.html",
+      "/topics/phase-alignment.html",
+      "/topics/phase-synchronisation.html",
+      "/topics/plv.html",
+      "/topics/psd.html",
+      "/topics/re-referencing.html",
+      "/topics/resampling.html",
+      "/topics/resting-state-eeg.html",
+      "/topics/setting-montages.html",
+      "/topics/simulating-eeg-data.html",
+      "/topics/bids-format.html",
+      "/topics/hilbert-transform.html",
+      "/topics/kuramoto.html",
+      "/topics/dominant-eigenvector.html",
+      "/topics/time-frequency.html",
+      "/topics/topographic-maps.html",
+      "/topics/artifact-types.html",
+      "/topics/manual-rejection.html",
+      "/topics/visual-inspection.html"
+    ]
+  }
+]

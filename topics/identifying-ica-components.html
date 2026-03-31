@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-03-31">
+<meta name="description" content="How to tell artifact components from brain components: visual criteria for blinks, saccades, muscle, and heartbeat, automated detection with find_bads_eog() and find_bads_ecg(), and using proxy channels when dedicated EOG/ECG channels are unavailable.">
+
+<title>Identifying ICA components – EEG with Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">EEG with Python</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-modules" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Modules</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-modules">    
+        <li>
+    <a class="dropdown-item" href="../modules/01-getting-started.html">
+ <span class="dropdown-text">1. Getting started</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/02-preprocessing.html">
+ <span class="dropdown-text">2. Preprocessing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/03-artifacts.html">
+ <span class="dropdown-text">3. Artifact rejection</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/04-spectral-analysis.html">
+ <span class="dropdown-text">4. Spectral analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/05-metastability.html">
+ <span class="dropdown-text">5. Connectivity and metastability</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../topics/index.html"> 
+<span class="menu-text">Topics</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../exercises/index.html"> 
+<span class="menu-text">Exercises</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#why-identification-matters" id="toc-why-identification-matters" class="nav-link active" data-scroll-target="#why-identification-matters">Why identification matters</a></li>
+  <li><a href="#the-three-views" id="toc-the-three-views" class="nav-link" data-scroll-target="#the-three-views">The three views</a></li>
+  <li><a href="#visual-criteria-by-artifact-type" id="toc-visual-criteria-by-artifact-type" class="nav-link" data-scroll-target="#visual-criteria-by-artifact-type">Visual criteria by artifact type</a>
+  <ul class="collapse">
+  <li><a href="#eye-blinks" id="toc-eye-blinks" class="nav-link" data-scroll-target="#eye-blinks">Eye blinks</a></li>
+  <li><a href="#saccadic-eye-movements" id="toc-saccadic-eye-movements" class="nav-link" data-scroll-target="#saccadic-eye-movements">Saccadic eye movements</a></li>
+  <li><a href="#muscle-artifacts" id="toc-muscle-artifacts" class="nav-link" data-scroll-target="#muscle-artifacts">Muscle artifacts</a></li>
+  <li><a href="#heartbeat-cardiac-artifacts" id="toc-heartbeat-cardiac-artifacts" class="nav-link" data-scroll-target="#heartbeat-cardiac-artifacts">Heartbeat (cardiac) artifacts</a></li>
+  </ul></li>
+  <li><a href="#decision-flowchart" id="toc-decision-flowchart" class="nav-link" data-scroll-target="#decision-flowchart">Decision flowchart</a></li>
+  <li><a href="#automated-detection-with-find_bads_eog" id="toc-automated-detection-with-find_bads_eog" class="nav-link" data-scroll-target="#automated-detection-with-find_bads_eog">Automated detection with <code>find_bads_eog()</code></a>
+  <ul class="collapse">
+  <li><a href="#using-a-proxy-channel" id="toc-using-a-proxy-channel" class="nav-link" data-scroll-target="#using-a-proxy-channel">Using a proxy channel</a></li>
+  </ul></li>
+  <li><a href="#automated-detection-with-find_bads_ecg" id="toc-automated-detection-with-find_bads_ecg" class="nav-link" data-scroll-target="#automated-detection-with-find_bads_ecg">Automated detection with <code>find_bads_ecg()</code></a></li>
+  <li><a href="#combining-automated-and-manual-inspection" id="toc-combining-automated-and-manual-inspection" class="nav-link" data-scroll-target="#combining-automated-and-manual-inspection">Combining automated and manual inspection</a></li>
+  <li><a href="#working-example" id="toc-working-example" class="nav-link" data-scroll-target="#working-example">Working example</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways">Key takeaways</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Identifying ICA components</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">artifacts</div>
+    <div class="quarto-category">decomposition</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    How to tell artifact components from brain components: visual criteria for blinks, saccades, muscle, and heartbeat, automated detection with find_bads_eog() and find_bads_ecg(), and using proxy channels when dedicated EOG/ECG channels are unavailable.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">31 March 2026</p>
+    </div>
+  </div>
+  
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">31 March 2026</p>
+    </div>
+  </div>
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="why-identification-matters" class="level2">
+<h2 class="anchored" data-anchor-id="why-identification-matters">Why identification matters</h2>
+<p>Running ICA is the easy part. The hard part is deciding which components are artifacts and which are brain activity. Every component you remove also removes some brain signal, because the separation is never perfect. Remove too few and your data stays contaminated. Remove too many and you distort the brain signals you care about.</p>
+<p>This page covers the practical criteria for identifying artifact components: what to look for in the topography, time course, and spectrum, and how to use MNE’s automated detection methods to speed up the process.</p>
+</section>
+<section id="the-three-views" class="level2">
+<h2 class="anchored" data-anchor-id="the-three-views">The three views</h2>
+<p>When you inspect a component, you look at three things. Together, they give you a reliable picture of what the component represents.</p>
+<ol type="1">
+<li><strong>Topography</strong> (spatial pattern): where on the scalp does the component project? This is the most reliable cue and usually sufficient on its own for clear cases.</li>
+<li><strong>Time course</strong> (waveform): what does the component look like over time? Intermittent sharp peaks suggest blinks. A regular rhythm suggests heartbeat. Sustained high-frequency bursts suggest muscle.</li>
+<li><strong>Power spectrum</strong>: which frequencies dominate the component? Low-frequency power points to eye artifacts. A broad high-frequency bump points to muscle. A clear peak at the alpha frequency (8-13 Hz) suggests a brain source.</li>
+</ol>
+<p>MNE’s <code>ica.plot_properties()</code> shows all three views in a single figure, which makes the decision process easier.</p>
+</section>
+<section id="visual-criteria-by-artifact-type" class="level2">
+<h2 class="anchored" data-anchor-id="visual-criteria-by-artifact-type">Visual criteria by artifact type</h2>
+<section id="eye-blinks" class="level3">
+<h3 class="anchored" data-anchor-id="eye-blinks">Eye blinks</h3>
+<p>Blink components are usually the easiest to identify:</p>
+<ul>
+<li><strong>Topography</strong>: strong, symmetric frontal projection centred on Fp1 and Fp2. The pattern is positive at the front and drops off sharply toward posterior electrodes. The left-right symmetry distinguishes it from lateral eye movements.</li>
+<li><strong>Time course</strong>: intermittent large deflections lasting 200-400 ms, with long quiet periods in between. The deflections have a smooth, rounded shape.</li>
+<li><strong>Spectrum</strong>: dominated by low frequencies (below 5 Hz), with power falling off rapidly above that.</li>
+</ul>
+<p>Confidence level: high. If the topography is clearly frontal and symmetric, and the time course shows intermittent sharp peaks, it is almost certainly a blink component. You will typically find one or two blink components.</p>
+</section>
+<section id="saccadic-eye-movements" class="level3">
+<h3 class="anchored" data-anchor-id="saccadic-eye-movements">Saccadic eye movements</h3>
+<p>Horizontal saccades produce a different pattern from blinks:</p>
+<ul>
+<li><strong>Topography</strong>: left-right asymmetric frontal pattern. One side of the frontal scalp (around F7 or F8) is positive while the other is negative. This reflects the horizontal displacement of the corneo-retinal dipole.</li>
+<li><strong>Time course</strong>: step-like transitions lasting 50-100 ms, often occurring in pairs (saccade and return). The steps are sharper and faster than blink deflections.</li>
+<li><strong>Spectrum</strong>: also dominated by low frequencies, but often with slightly more power in the 5-15 Hz range than blink components.</li>
+</ul>
+<p>Vertical eye movements look more like attenuated blinks: frontal topography, but with smaller amplitude and a more sustained waveform.</p>
+</section>
+<section id="muscle-artifacts" class="level3">
+<h3 class="anchored" data-anchor-id="muscle-artifacts">Muscle artifacts</h3>
+<p>Muscle components come from the temporalis, frontalis, or neck muscles:</p>
+<ul>
+<li><strong>Topography</strong>: peripheral, concentrated at the edges of the electrode array. Temporalis muscle shows up at T7/T8 and F7/F8. Frontalis muscle appears at Fp1/Fp2 (but with a different spectral profile from blinks). Neck muscles project to posterior and temporal electrodes.</li>
+<li><strong>Time course</strong>: either sustained tonic activity (if the muscle is constantly tense) or intermittent bursts. The waveform looks irregular and noisy rather than smooth.</li>
+<li><strong>Spectrum</strong>: a broad spectral bump above 20 Hz, often extending to 40-50 Hz or higher. This high-frequency dominance is the strongest distinguishing feature. Brain components rarely have so much power above 30 Hz.</li>
+</ul>
+<p>Muscle components can be tricky when they are intermittent, because a brief burst of muscle activity might look like a single event. The key is the spectrum: if a component’s power is concentrated above 20 Hz, it is very likely muscle.</p>
+</section>
+<section id="heartbeat-cardiac-artifacts" class="level3">
+<h3 class="anchored" data-anchor-id="heartbeat-cardiac-artifacts">Heartbeat (cardiac) artifacts</h3>
+<p>The heartbeat artifact appears when the electrical field of the heart reaches the scalp electrodes (which happens in all recordings, though it is sometimes too small to see):</p>
+<ul>
+<li><strong>Topography</strong>: broad, diffuse pattern without a clear focal point. It can vary between subjects depending on body build and electrode placement.</li>
+<li><strong>Time course</strong>: very regular peaks matching the heart rate (roughly 60-80 per minute, or once every 0.75-1 second). The QRS complex of the heartbeat appears as a sharp deflection, sometimes followed by a slower T-wave.</li>
+<li><strong>Spectrum</strong>: peaks at the heart rate frequency (around 1 Hz) with harmonics.</li>
+</ul>
+<p>The regularity of the time course is the strongest identifier. If a component has a very regular, rhythmic pattern at about 1 Hz that does not look like brain oscillations (which are less regular and more sinusoidal), it is likely a cardiac component.</p>
+</section>
+</section>
+<section id="decision-flowchart" class="level2">
+<h2 class="anchored" data-anchor-id="decision-flowchart">Decision flowchart</h2>
+<p>When inspecting a component, you can follow this sequence:</p>
+<ol type="1">
+<li><strong>Look at the topography first.</strong> Is it frontal and symmetric? Likely a blink. Frontal and asymmetric? Likely a saccade. Peripheral (temporal or edge)? Likely muscle. Diffuse with no clear focal point? Could be heartbeat.</li>
+<li><strong>Check the spectrum.</strong> If power is concentrated below 5 Hz, it supports an eye artifact classification. If there is a broad bump above 20 Hz, it supports muscle. If you see a clear alpha peak (8-13 Hz) with a smooth topography, it is probably brain.</li>
+<li><strong>Look at the time course for confirmation.</strong> Intermittent sharp peaks = blinks. Step-like transitions = saccades. Regular rhythm at ~1 Hz = heartbeat. Sustained high-frequency noise = muscle.</li>
+<li><strong>When in doubt, keep the component.</strong> Removing a brain component is worse than keeping a mild artifact, because you cannot undo the removal.</li>
+</ol>
+</section>
+<section id="automated-detection-with-find_bads_eog" class="level2">
+<h2 class="anchored" data-anchor-id="automated-detection-with-find_bads_eog">Automated detection with <code>find_bads_eog()</code></h2>
+<p>MNE can automatically identify blink and eye movement components by correlating them with an EOG (electrooculography) channel. If your recording includes dedicated EOG channels, this is fast and reliable.</p>
+<div id="09bf9d7a" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne.preprocessing <span class="im">import</span> ICA</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit ICA</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>ica <span class="op">=</span> ICA(n_components<span class="op">=</span><span class="dv">20</span>, method<span class="op">=</span><span class="st">"infomax"</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>          fit_params<span class="op">=</span><span class="bu">dict</span>(extended<span class="op">=</span><span class="va">True</span>), random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>ica.fit(raw)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Find components that correlate with the EOG channel</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>eog_indices, eog_scores <span class="op">=</span> ica.find_bads_eog(raw)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"EOG-related components: </span><span class="sc">{</span>eog_indices<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Correlation scores: </span><span class="sc">{</span>eog_scores<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Mark them for exclusion</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>ica.exclude <span class="op">=</span> eog_indices</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the scores to see how clear the detection is</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>ica.plot_scores(eog_scores, title<span class="op">=</span><span class="st">"EOG correlation scores"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="using-a-proxy-channel" class="level3">
+<h3 class="anchored" data-anchor-id="using-a-proxy-channel">Using a proxy channel</h3>
+<p>Many EEG setups do not include dedicated EOG channels. In that case, you can use a frontal EEG channel (like Fp1) as a proxy. The blink artifact is so large at frontal channels that they work well as a substitute.</p>
+<div id="bea4239c" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Use Fp1 as an EOG proxy</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>eog_indices, eog_scores <span class="op">=</span> ica.find_bads_eog(raw, ch_name<span class="op">=</span><span class="st">"Fp1"</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"EOG components (using Fp1 as proxy): </span><span class="sc">{</span>eog_indices<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The method works by creating synthetic EOG epochs (time-locked to detected blink events), computing the average blink waveform for each component, and then correlating it with the average blink in the proxy channel. Components with a high correlation are flagged.</p>
+</section>
+</section>
+<section id="automated-detection-with-find_bads_ecg" class="level2">
+<h2 class="anchored" data-anchor-id="automated-detection-with-find_bads_ecg">Automated detection with <code>find_bads_ecg()</code></h2>
+<p>The same approach works for heartbeat artifacts:</p>
+<div id="a174c1e0" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find components that correlate with the ECG channel</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>ecg_indices, ecg_scores <span class="op">=</span> ica.find_bads_ecg(raw)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"ECG-related components: </span><span class="sc">{</span>ecg_indices<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># If no ECG channel is available, MNE will try to use</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># magnetometer channels (MEG) or create a synthetic ECG.</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># For EEG-only data without an ECG channel, this may not work</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># automatically. You might need to identify cardiac components</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># by visual inspection instead.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="combining-automated-and-manual-inspection" class="level2">
+<h2 class="anchored" data-anchor-id="combining-automated-and-manual-inspection">Combining automated and manual inspection</h2>
+<p>The automated methods are a good starting point, but they should not be the final word. A recommended workflow is:</p>
+<ol type="1">
+<li>Run <code>find_bads_eog()</code> and <code>find_bads_ecg()</code> to get initial candidates.</li>
+<li>Plot the flagged components with <code>ica.plot_properties()</code> to verify that the detections make sense.</li>
+<li>Browse the remaining components with <code>ica.plot_sources()</code> and <code>ica.plot_components()</code> to check for artifacts the automated methods may have missed.</li>
+<li>Add or remove components from <code>ica.exclude</code> as needed.</li>
+</ol>
+<div id="77a28eb5" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1: Automated detection</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>eog_idx, _ <span class="op">=</span> ica.find_bads_eog(raw, ch_name<span class="op">=</span><span class="st">"Fp1"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>ecg_idx, _ <span class="op">=</span> ica.find_bads_ecg(raw)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>ica.exclude <span class="op">=</span> <span class="bu">list</span>(<span class="bu">set</span>(eog_idx <span class="op">+</span> ecg_idx))  <span class="co"># combine, removing duplicates</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 2: Verify flagged components</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>ica.plot_properties(raw, picks<span class="op">=</span>ica.exclude)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 3: Browse all components</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>ica.plot_components()</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>ica.plot_sources(raw)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 4: Adjust the exclude list if needed</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co"># ica.exclude.append(7)   # add another artifact component</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co"># ica.exclude.remove(3)   # un-flag a component that looks like brain</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply the correction</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>ica.<span class="bu">apply</span>(raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="working-example" class="level2">
+<h2 class="anchored" data-anchor-id="working-example">Working example</h2>
+<p>The code below simulates data with both blink and heartbeat artifacts, fits ICA, and demonstrates how to identify each artifact type using the frontal loading (for blinks) and periodicity (for heartbeat) of the recovered components.</p>
+<div id="a0b00669" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.decomposition <span class="im">import</span> FastICA</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Parameters ─────────────────────────────────────────────────</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>n_channels <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>sfreq <span class="op">=</span> <span class="dv">256</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>duration <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> sfreq <span class="op">*</span> duration</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>times <span class="op">=</span> np.arange(n_samples) <span class="op">/</span> sfreq</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>channel_names <span class="op">=</span> [<span class="st">"Fp1"</span>, <span class="st">"Fp2"</span>, <span class="st">"F3"</span>, <span class="st">"F4"</span>, <span class="st">"C3"</span>, <span class="st">"C4"</span>, <span class="st">"O1"</span>, <span class="st">"O2"</span>]</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Source 1: Alpha oscillation (brain) ────────────────────────</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> np.sin(<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> <span class="dv">10</span> <span class="op">*</span> times)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">+=</span> <span class="fl">0.3</span> <span class="op">*</span> rng.standard_normal(n_samples)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Source 2: Blink artifact ──────────────────────────────────</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>blink <span class="op">=</span> np.zeros(n_samples)</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> bt <span class="kw">in</span> [<span class="fl">0.8</span>, <span class="fl">2.5</span>, <span class="fl">4.1</span>, <span class="fl">5.7</span>, <span class="fl">7.3</span>, <span class="fl">9.0</span>]:</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> <span class="bu">int</span>(bt <span class="op">*</span> sfreq)</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>    width <span class="op">=</span> <span class="bu">int</span>(<span class="fl">0.15</span> <span class="op">*</span> sfreq)</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> idx <span class="op">+</span> width <span class="op">&lt;</span> n_samples:</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>        t_b <span class="op">=</span> np.arange(width) <span class="op">/</span> sfreq</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>        blink[idx:idx <span class="op">+</span> width] <span class="op">=</span> <span class="dv">5</span> <span class="op">*</span> np.sin(np.pi <span class="op">*</span> t_b <span class="op">/</span> (width <span class="op">/</span> sfreq))</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Source 3: Heartbeat artifact ──────────────────────────────</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>heartbeat <span class="op">=</span> np.zeros(n_samples)</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>heart_rate <span class="op">=</span> <span class="fl">1.1</span>  <span class="co"># beats per second (~66 bpm)</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>beat_times <span class="op">=</span> np.arange(<span class="fl">0.5</span>, duration, <span class="dv">1</span> <span class="op">/</span> heart_rate)</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> bt <span class="kw">in</span> beat_times:</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> <span class="bu">int</span>(bt <span class="op">*</span> sfreq)</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>    <span class="co"># QRS complex: sharp, brief spike</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>    qrs_width <span class="op">=</span> <span class="bu">int</span>(<span class="fl">0.04</span> <span class="op">*</span> sfreq)</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> idx <span class="op">+</span> qrs_width <span class="op">&lt;</span> n_samples:</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>        t_qrs <span class="op">=</span> np.arange(qrs_width) <span class="op">/</span> sfreq</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>        heartbeat[idx:idx <span class="op">+</span> qrs_width] <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> np.sin(</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>            np.pi <span class="op">*</span> t_qrs <span class="op">/</span> (qrs_width <span class="op">/</span> sfreq))</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Source 4: Background noise ─────────────────────────────────</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>noise <span class="op">=</span> rng.standard_normal(n_samples)</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Mixing matrix ─────────────────────────────────────────────</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Blink: strong frontal. Heartbeat: diffuse, slightly stronger centrally.</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>mixing <span class="op">=</span> np.array([</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">0.4</span>, <span class="fl">1.0</span>, <span class="fl">0.3</span>, <span class="fl">0.4</span>],   <span class="co"># Fp1</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">0.4</span>, <span class="fl">0.95</span>, <span class="fl">0.3</span>, <span class="fl">0.4</span>],  <span class="co"># Fp2</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">0.7</span>, <span class="fl">0.3</span>, <span class="fl">0.4</span>, <span class="fl">0.3</span>],   <span class="co"># F3</span></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">0.7</span>, <span class="fl">0.25</span>, <span class="fl">0.4</span>, <span class="fl">0.3</span>],  <span class="co"># F4</span></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">0.9</span>, <span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.3</span>],  <span class="co"># C3</span></span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">0.9</span>, <span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.3</span>],  <span class="co"># C4</span></span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">1.0</span>, <span class="fl">0.02</span>, <span class="fl">0.3</span>, <span class="fl">0.2</span>],  <span class="co"># O1</span></span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>    [<span class="fl">1.0</span>, <span class="fl">0.02</span>, <span class="fl">0.3</span>, <span class="fl">0.2</span>],  <span class="co"># O2</span></span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a>sources_true <span class="op">=</span> np.vstack([alpha, blink, heartbeat, noise])</span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> mixing <span class="op">@</span> sources_true</span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a>data <span class="op">*=</span> <span class="fl">30e-6</span> <span class="op">/</span> data.std()</span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Fit ICA ────────────────────────────────────────────────────</span></span>
+<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a>ica <span class="op">=</span> FastICA(n_components<span class="op">=</span><span class="dv">4</span>, random_state<span class="op">=</span><span class="dv">42</span>, max_iter<span class="op">=</span><span class="dv">1000</span>)</span>
+<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a>components <span class="op">=</span> ica.fit_transform(data.T).T</span>
+<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a>ica_mixing <span class="op">=</span> ica.mixing_</span>
+<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Criterion 1: frontal loading (for blinks) ─────────────────</span></span>
+<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a>frontal_loading <span class="op">=</span> np.<span class="bu">abs</span>(ica_mixing[:<span class="dv">2</span>, :]).mean(axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a>blink_ic <span class="op">=</span> np.argmax(frontal_loading)</span>
+<span id="cb5-70"><a href="#cb5-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-71"><a href="#cb5-71" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Criterion 2: autocorrelation at heart rate lag ─────────────</span></span>
+<span id="cb5-72"><a href="#cb5-72" aria-hidden="true" tabindex="-1"></a>heart_lag <span class="op">=</span> <span class="bu">int</span>(sfreq <span class="op">/</span> heart_rate)  <span class="co"># samples per heartbeat</span></span>
+<span id="cb5-73"><a href="#cb5-73" aria-hidden="true" tabindex="-1"></a>autocorr_at_lag <span class="op">=</span> np.zeros(<span class="dv">4</span>)</span>
+<span id="cb5-74"><a href="#cb5-74" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">4</span>):</span>
+<span id="cb5-75"><a href="#cb5-75" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> components[i]</span>
+<span id="cb5-76"><a href="#cb5-76" aria-hidden="true" tabindex="-1"></a>    c_norm <span class="op">=</span> (c <span class="op">-</span> c.mean()) <span class="op">/</span> c.std()</span>
+<span id="cb5-77"><a href="#cb5-77" aria-hidden="true" tabindex="-1"></a>    autocorr_at_lag[i] <span class="op">=</span> np.<span class="bu">abs</span>(np.correlate(</span>
+<span id="cb5-78"><a href="#cb5-78" aria-hidden="true" tabindex="-1"></a>        c_norm[:n_samples <span class="op">-</span> heart_lag],</span>
+<span id="cb5-79"><a href="#cb5-79" aria-hidden="true" tabindex="-1"></a>        c_norm[heart_lag:]</span>
+<span id="cb5-80"><a href="#cb5-80" aria-hidden="true" tabindex="-1"></a>    )[<span class="dv">0</span>] <span class="op">/</span> (n_samples <span class="op">-</span> heart_lag))</span>
+<span id="cb5-81"><a href="#cb5-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-82"><a href="#cb5-82" aria-hidden="true" tabindex="-1"></a>cardiac_ic <span class="op">=</span> np.argmax(autocorr_at_lag)</span>
+<span id="cb5-83"><a href="#cb5-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-84"><a href="#cb5-84" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Blink component:     IC </span><span class="sc">{</span>blink_ic<span class="sc">}</span><span class="ss"> "</span></span>
+<span id="cb5-85"><a href="#cb5-85" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f"(frontal loading = </span><span class="sc">{</span>frontal_loading[blink_ic]<span class="sc">:.4f}</span><span class="ss">)"</span>)</span>
+<span id="cb5-86"><a href="#cb5-86" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Heartbeat component: IC </span><span class="sc">{</span>cardiac_ic<span class="sc">}</span><span class="ss"> "</span></span>
+<span id="cb5-87"><a href="#cb5-87" aria-hidden="true" tabindex="-1"></a>      <span class="ss">f"(autocorrelation = </span><span class="sc">{</span>autocorr_at_lag[cardiac_ic]<span class="sc">:.4f}</span><span class="ss">)"</span>)</span>
+<span id="cb5-88"><a href="#cb5-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-89"><a href="#cb5-89" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Visualisation ──────────────────────────────────────────────</span></span>
+<span id="cb5-90"><a href="#cb5-90" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> plt.figure(figsize<span class="op">=</span>(<span class="dv">13</span>, <span class="dv">8</span>))</span>
+<span id="cb5-91"><a href="#cb5-91" aria-hidden="true" tabindex="-1"></a>gs <span class="op">=</span> fig.add_gridspec(<span class="dv">2</span>, <span class="dv">2</span>, hspace<span class="op">=</span><span class="fl">0.35</span>, wspace<span class="op">=</span><span class="fl">0.3</span>)</span>
+<span id="cb5-92"><a href="#cb5-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-93"><a href="#cb5-93" aria-hidden="true" tabindex="-1"></a><span class="co"># Top row: ICA component time courses</span></span>
+<span id="cb5-94"><a href="#cb5-94" aria-hidden="true" tabindex="-1"></a>ax_top <span class="op">=</span> fig.add_subplot(gs[<span class="dv">0</span>, :])</span>
+<span id="cb5-95"><a href="#cb5-95" aria-hidden="true" tabindex="-1"></a>offset <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb5-96"><a href="#cb5-96" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">4</span>):</span>
+<span id="cb5-97"><a href="#cb5-97" aria-hidden="true" tabindex="-1"></a>    trace <span class="op">=</span> components[i] <span class="op">/</span> np.<span class="bu">max</span>(np.<span class="bu">abs</span>(components)) <span class="op">+</span> offset</span>
+<span id="cb5-98"><a href="#cb5-98" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> i <span class="op">==</span> blink_ic:</span>
+<span id="cb5-99"><a href="#cb5-99" aria-hidden="true" tabindex="-1"></a>        colour, label_extra, lw <span class="op">=</span> <span class="st">"#e74c3c"</span>, <span class="st">" (blink)"</span>, <span class="fl">1.0</span></span>
+<span id="cb5-100"><a href="#cb5-100" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> i <span class="op">==</span> cardiac_ic:</span>
+<span id="cb5-101"><a href="#cb5-101" aria-hidden="true" tabindex="-1"></a>        colour, label_extra, lw <span class="op">=</span> <span class="st">"#3498db"</span>, <span class="st">" (heartbeat)"</span>, <span class="fl">1.0</span></span>
+<span id="cb5-102"><a href="#cb5-102" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb5-103"><a href="#cb5-103" aria-hidden="true" tabindex="-1"></a>        colour, label_extra, lw <span class="op">=</span> <span class="st">"#2c3e50"</span>, <span class="st">""</span>, <span class="fl">0.5</span></span>
+<span id="cb5-104"><a href="#cb5-104" aria-hidden="true" tabindex="-1"></a>    ax_top.plot(times, trace, lw<span class="op">=</span>lw, color<span class="op">=</span>colour,</span>
+<span id="cb5-105"><a href="#cb5-105" aria-hidden="true" tabindex="-1"></a>                label<span class="op">=</span><span class="ss">f"IC </span><span class="sc">{</span>i<span class="sc">}{</span>label_extra<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb5-106"><a href="#cb5-106" aria-hidden="true" tabindex="-1"></a>    offset <span class="op">-=</span> <span class="fl">1.5</span></span>
+<span id="cb5-107"><a href="#cb5-107" aria-hidden="true" tabindex="-1"></a>ax_top.set_xlabel(<span class="st">"Time (s)"</span>)</span>
+<span id="cb5-108"><a href="#cb5-108" aria-hidden="true" tabindex="-1"></a>ax_top.set_ylabel(<span class="st">"Amplitude (a.u.)"</span>)</span>
+<span id="cb5-109"><a href="#cb5-109" aria-hidden="true" tabindex="-1"></a>ax_top.set_title(<span class="st">"ICA components"</span>)</span>
+<span id="cb5-110"><a href="#cb5-110" aria-hidden="true" tabindex="-1"></a>ax_top.legend(loc<span class="op">=</span><span class="st">"upper right"</span>, fontsize<span class="op">=</span><span class="dv">8</span>, ncol<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb5-111"><a href="#cb5-111" aria-hidden="true" tabindex="-1"></a>ax_top.set_xlim(<span class="dv">0</span>, duration)</span>
+<span id="cb5-112"><a href="#cb5-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-113"><a href="#cb5-113" aria-hidden="true" tabindex="-1"></a><span class="co"># Bottom left: frontal loading bar chart</span></span>
+<span id="cb5-114"><a href="#cb5-114" aria-hidden="true" tabindex="-1"></a>ax_bl <span class="op">=</span> fig.add_subplot(gs[<span class="dv">1</span>, <span class="dv">0</span>])</span>
+<span id="cb5-115"><a href="#cb5-115" aria-hidden="true" tabindex="-1"></a>colours_fl <span class="op">=</span> [<span class="st">"#e74c3c"</span> <span class="cf">if</span> i <span class="op">==</span> blink_ic <span class="cf">else</span> <span class="st">"#95a5a6"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">4</span>)]</span>
+<span id="cb5-116"><a href="#cb5-116" aria-hidden="true" tabindex="-1"></a>ax_bl.bar(<span class="bu">range</span>(<span class="dv">4</span>), frontal_loading, color<span class="op">=</span>colours_fl)</span>
+<span id="cb5-117"><a href="#cb5-117" aria-hidden="true" tabindex="-1"></a>ax_bl.set_xlabel(<span class="st">"Component"</span>)</span>
+<span id="cb5-118"><a href="#cb5-118" aria-hidden="true" tabindex="-1"></a>ax_bl.set_ylabel(<span class="st">"Mean frontal loading"</span>)</span>
+<span id="cb5-119"><a href="#cb5-119" aria-hidden="true" tabindex="-1"></a>ax_bl.set_title(<span class="st">"Blink detection: frontal loading"</span>)</span>
+<span id="cb5-120"><a href="#cb5-120" aria-hidden="true" tabindex="-1"></a>ax_bl.set_xticks(<span class="bu">range</span>(<span class="dv">4</span>))</span>
+<span id="cb5-121"><a href="#cb5-121" aria-hidden="true" tabindex="-1"></a>ax_bl.set_xticklabels([<span class="ss">f"IC </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">4</span>)])</span>
+<span id="cb5-122"><a href="#cb5-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-123"><a href="#cb5-123" aria-hidden="true" tabindex="-1"></a><span class="co"># Bottom right: autocorrelation at heart rate lag</span></span>
+<span id="cb5-124"><a href="#cb5-124" aria-hidden="true" tabindex="-1"></a>ax_br <span class="op">=</span> fig.add_subplot(gs[<span class="dv">1</span>, <span class="dv">1</span>])</span>
+<span id="cb5-125"><a href="#cb5-125" aria-hidden="true" tabindex="-1"></a>colours_ac <span class="op">=</span> [<span class="st">"#3498db"</span> <span class="cf">if</span> i <span class="op">==</span> cardiac_ic <span class="cf">else</span> <span class="st">"#95a5a6"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">4</span>)]</span>
+<span id="cb5-126"><a href="#cb5-126" aria-hidden="true" tabindex="-1"></a>ax_br.bar(<span class="bu">range</span>(<span class="dv">4</span>), autocorr_at_lag, color<span class="op">=</span>colours_ac)</span>
+<span id="cb5-127"><a href="#cb5-127" aria-hidden="true" tabindex="-1"></a>ax_br.set_xlabel(<span class="st">"Component"</span>)</span>
+<span id="cb5-128"><a href="#cb5-128" aria-hidden="true" tabindex="-1"></a>ax_br.set_ylabel(<span class="st">"Autocorrelation at HR lag"</span>)</span>
+<span id="cb5-129"><a href="#cb5-129" aria-hidden="true" tabindex="-1"></a>ax_br.set_title(<span class="st">"Heartbeat detection: periodicity"</span>)</span>
+<span id="cb5-130"><a href="#cb5-130" aria-hidden="true" tabindex="-1"></a>ax_br.set_xticks(<span class="bu">range</span>(<span class="dv">4</span>))</span>
+<span id="cb5-131"><a href="#cb5-131" aria-hidden="true" tabindex="-1"></a>ax_br.set_xticklabels([<span class="ss">f"IC </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">4</span>)])</span>
+<span id="cb5-132"><a href="#cb5-132" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-133"><a href="#cb5-133" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Blink component:     IC 3 (frontal loading = 0.0000)
+Heartbeat component: IC 0 (autocorrelation = 0.9637)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="identifying-ica-components_files/figure-html/cell-6-output-2.png" width="1044" height="671" class="figure-img"></p>
+<figcaption>Identifying artifact components. Top: the four source signals used to generate the simulated data. Bottom left: frontal loading of each ICA component (the blink component has the highest value). Bottom right: autocorrelation of each component at the heart rate lag (the cardiac component shows the strongest periodicity).</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The top panel shows the four recovered ICA components. The blink component (red) has intermittent sharp peaks, while the heartbeat component (blue) shows a regular rhythm. The bottom-left bar chart shows the mean frontal loading of each component: the blink component stands out clearly because blinks project strongly to Fp1 and Fp2. The bottom-right chart shows the autocorrelation at the expected heartbeat lag: the cardiac component has the strongest periodicity.</p>
+<p>In practice, MNE’s <code>find_bads_eog()</code> and <code>find_bads_ecg()</code> perform similar calculations (correlation with EOG/ECG channels) but with more refined signal processing. The simple heuristics shown here illustrate the underlying logic.</p>
+</section>
+<section id="key-takeaways" class="level2">
+<h2 class="anchored" data-anchor-id="key-takeaways">Key takeaways</h2>
+<ul>
+<li>Inspect three features of each component: <strong>topography</strong> (where it projects on the scalp), <strong>time course</strong> (what it looks like over time), and <strong>spectrum</strong> (which frequencies dominate).</li>
+<li><strong>Blinks</strong>: frontal, symmetric topography; intermittent sharp peaks; low-frequency spectrum.</li>
+<li><strong>Saccades</strong>: frontal, asymmetric (left-right) topography; step-like transitions; low-frequency spectrum.</li>
+<li><strong>Muscle</strong>: peripheral topography (temporal or edge electrodes); high-frequency spectral bump above 20 Hz; irregular, noisy waveform.</li>
+<li><strong>Heartbeat</strong>: diffuse topography; very regular rhythm at ~1 Hz; sharp QRS-like peaks.</li>
+<li>Use <code>ica.find_bads_eog()</code> to detect blink/eye components automatically. If you have no dedicated EOG channel, use a frontal channel (like Fp1) as a proxy.</li>
+<li>Use <code>ica.find_bads_ecg()</code> for heartbeat components. This requires an ECG channel or, for MEG data, magnetometer channels.</li>
+<li>Always verify automated detections with visual inspection. The automated methods are a starting point, not a final answer.</li>
+<li>When in doubt, keep the component. Removing brain signal is harder to correct than leaving a mild artifact in the data.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Built with <a href="https://quarto.org">Quarto</a> and <a href="https://mne.tools">MNE-Python</a></p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

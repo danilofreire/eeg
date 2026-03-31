@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-03-31">
+<meta name="description" content="EEG findings in Parkinson’s disease, the role of pathological beta synchrony, what Freezing of Gait is, EEG biomarkers of FoG, and how metastability analysis connects to the study of PD motor symptoms.">
+
+<title>Parkinson’s disease, Freezing of Gait, and EEG – EEG with Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">EEG with Python</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-modules" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Modules</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-modules">    
+        <li>
+    <a class="dropdown-item" href="../modules/01-getting-started.html">
+ <span class="dropdown-text">1. Getting started</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/02-preprocessing.html">
+ <span class="dropdown-text">2. Preprocessing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/03-artifacts.html">
+ <span class="dropdown-text">3. Artifact rejection</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/04-spectral-analysis.html">
+ <span class="dropdown-text">4. Spectral analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/05-metastability.html">
+ <span class="dropdown-text">5. Connectivity and metastability</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../topics/index.html"> 
+<span class="menu-text">Topics</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../exercises/index.html"> 
+<span class="menu-text">Exercises</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#why-this-topic-matters" id="toc-why-this-topic-matters" class="nav-link active" data-scroll-target="#why-this-topic-matters">Why this topic matters</a></li>
+  <li><a href="#brief-overview-of-parkinsons-disease" id="toc-brief-overview-of-parkinsons-disease" class="nav-link" data-scroll-target="#brief-overview-of-parkinsons-disease">Brief overview of Parkinson’s disease</a>
+  <ul class="collapse">
+  <li><a href="#motor-symptoms" id="toc-motor-symptoms" class="nav-link" data-scroll-target="#motor-symptoms">Motor symptoms</a></li>
+  <li><a href="#non-motor-symptoms" id="toc-non-motor-symptoms" class="nav-link" data-scroll-target="#non-motor-symptoms">Non-motor symptoms</a></li>
+  <li><a href="#treatment" id="toc-treatment" class="nav-link" data-scroll-target="#treatment">Treatment</a></li>
+  </ul></li>
+  <li><a href="#eeg-findings-in-parkinsons-disease" id="toc-eeg-findings-in-parkinsons-disease" class="nav-link" data-scroll-target="#eeg-findings-in-parkinsons-disease">EEG findings in Parkinson’s disease</a>
+  <ul class="collapse">
+  <li><a href="#slowing-of-background-activity" id="toc-slowing-of-background-activity" class="nav-link" data-scroll-target="#slowing-of-background-activity">Slowing of background activity</a></li>
+  <li><a href="#excessive-beta-synchrony-in-basal-ganglia-cortical-circuits" id="toc-excessive-beta-synchrony-in-basal-ganglia-cortical-circuits" class="nav-link" data-scroll-target="#excessive-beta-synchrony-in-basal-ganglia-cortical-circuits">Excessive beta synchrony in basal ganglia-cortical circuits</a></li>
+  <li><a href="#cortical-connectivity-changes" id="toc-cortical-connectivity-changes" class="nav-link" data-scroll-target="#cortical-connectivity-changes">Cortical connectivity changes</a></li>
+  </ul></li>
+  <li><a href="#what-freezing-of-gait-is" id="toc-what-freezing-of-gait-is" class="nav-link" data-scroll-target="#what-freezing-of-gait-is">What Freezing of Gait is</a>
+  <ul class="collapse">
+  <li><a href="#clinical-presentation" id="toc-clinical-presentation" class="nav-link" data-scroll-target="#clinical-presentation">Clinical presentation</a></li>
+  <li><a href="#triggers" id="toc-triggers" class="nav-link" data-scroll-target="#triggers">Triggers</a></li>
+  <li><a href="#prevalence-and-impact" id="toc-prevalence-and-impact" class="nav-link" data-scroll-target="#prevalence-and-impact">Prevalence and impact</a></li>
+  <li><a href="#cueing-strategies" id="toc-cueing-strategies" class="nav-link" data-scroll-target="#cueing-strategies">Cueing strategies</a></li>
+  </ul></li>
+  <li><a href="#eeg-biomarkers-of-freezing-of-gait" id="toc-eeg-biomarkers-of-freezing-of-gait" class="nav-link" data-scroll-target="#eeg-biomarkers-of-freezing-of-gait">EEG biomarkers of Freezing of Gait</a>
+  <ul class="collapse">
+  <li><a href="#frontal-theta-changes" id="toc-frontal-theta-changes" class="nav-link" data-scroll-target="#frontal-theta-changes">Frontal theta changes</a></li>
+  <li><a href="#beta-desynchronisation-failure" id="toc-beta-desynchronisation-failure" class="nav-link" data-scroll-target="#beta-desynchronisation-failure">Beta desynchronisation failure</a></li>
+  <li><a href="#altered-connectivity" id="toc-altered-connectivity" class="nav-link" data-scroll-target="#altered-connectivity">Altered connectivity</a></li>
+  </ul></li>
+  <li><a href="#the-metastability-hypothesis-for-freezing-of-gait" id="toc-the-metastability-hypothesis-for-freezing-of-gait" class="nav-link" data-scroll-target="#the-metastability-hypothesis-for-freezing-of-gait">The metastability hypothesis for Freezing of Gait</a></li>
+  <li><a href="#natalias-project" id="toc-natalias-project" class="nav-link" data-scroll-target="#natalias-project">Natalia’s project</a></li>
+  <li><a href="#study-design-considerations" id="toc-study-design-considerations" class="nav-link" data-scroll-target="#study-design-considerations">Study design considerations</a>
+  <ul class="collapse">
+  <li><a href="#sample-size" id="toc-sample-size" class="nav-link" data-scroll-target="#sample-size">Sample size</a></li>
+  <li><a href="#medication-state" id="toc-medication-state" class="nav-link" data-scroll-target="#medication-state">Medication state</a></li>
+  <li><a href="#recording-protocol" id="toc-recording-protocol" class="nav-link" data-scroll-target="#recording-protocol">Recording protocol</a></li>
+  <li><a href="#fog-classification" id="toc-fog-classification" class="nav-link" data-scroll-target="#fog-classification">FoG classification</a></li>
+  </ul></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways">Key takeaways</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Parkinson’s disease, Freezing of Gait, and EEG</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">connectivity</div>
+    <div class="quarto-category">metastability</div>
+    <div class="quarto-category">clinical</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    EEG findings in Parkinson’s disease, the role of pathological beta synchrony, what Freezing of Gait is, EEG biomarkers of FoG, and how metastability analysis connects to the study of PD motor symptoms.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">31 March 2026</p>
+    </div>
+  </div>
+  
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">31 March 2026</p>
+    </div>
+  </div>
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="why-this-topic-matters" class="level2">
+<h2 class="anchored" data-anchor-id="why-this-topic-matters">Why this topic matters</h2>
+<p>Natalia’s master’s project sits at the intersection of clinical neuroscience and computational EEG analysis. To make sense of metastability results, you need to understand what Parkinson’s disease does to the brain, what Freezing of Gait is, and what EEG can tell us about both. This page provides that clinical and neuroscientific context.</p>
+<p>This is a conceptual page. The code blocks show the analysis pipeline but are not intended to be executed directly; they use placeholder data paths and serve as a reference for the workflow.</p>
+</section>
+<section id="brief-overview-of-parkinsons-disease" class="level2">
+<h2 class="anchored" data-anchor-id="brief-overview-of-parkinsons-disease">Brief overview of Parkinson’s disease</h2>
+<p><strong>Parkinson’s disease</strong> (PD) is a progressive neurodegenerative disorder. Its primary pathology is the loss of dopamine-producing neurones in the substantia nigra, a small structure in the midbrain. These neurones are part of the basal ganglia circuitry, which plays a central role in movement initiation, planning, and execution.</p>
+<section id="motor-symptoms" class="level3">
+<h3 class="anchored" data-anchor-id="motor-symptoms">Motor symptoms</h3>
+<p>The cardinal motor symptoms of PD are:</p>
+<ul>
+<li><strong>Bradykinesia</strong>: slowness of movement. This is the hallmark symptom and is required for diagnosis.</li>
+<li><strong>Resting tremor</strong>: a rhythmic, involuntary shaking that occurs when the limb is at rest. The “pill-rolling” tremor of the hand is the most recognisable form.</li>
+<li><strong>Rigidity</strong>: increased resistance to passive movement of the limbs. This is distinct from spasticity (which depends on the speed of movement).</li>
+<li><strong>Postural instability</strong>: impaired balance, which develops in later stages and is a major cause of falls.</li>
+</ul>
+<p>These symptoms typically begin on one side of the body (asymmetric onset) and gradually progress to affect both sides. The severity is measured using the Unified Parkinson’s Disease Rating Scale (UPDRS), particularly Part III (motor examination).</p>
+</section>
+<section id="non-motor-symptoms" class="level3">
+<h3 class="anchored" data-anchor-id="non-motor-symptoms">Non-motor symptoms</h3>
+<p>PD is not just a movement disorder. Non-motor symptoms are common and can be just as disabling:</p>
+<ul>
+<li>Cognitive decline, ranging from mild executive dysfunction to dementia</li>
+<li>Depression and anxiety</li>
+<li>Sleep disturbances (REM sleep behaviour disorder, insomnia)</li>
+<li>Autonomic dysfunction (constipation, orthostatic hypotension)</li>
+<li>Hyposmia (reduced sense of smell), often present years before motor symptoms</li>
+</ul>
+</section>
+<section id="treatment" class="level3">
+<h3 class="anchored" data-anchor-id="treatment">Treatment</h3>
+<p>Dopaminergic medication (primarily levodopa and dopamine agonists) is the mainstay of treatment. It replaces the missing dopamine and alleviates motor symptoms, but it does not stop disease progression. Over time, the response to medication fluctuates (the “wearing off” phenomenon), and patients may develop dyskinesias (involuntary, excessive movements).</p>
+<p>Deep brain stimulation (DBS) of the subthalamic nucleus or globus pallidus is used in advanced PD when medication alone is insufficient. DBS delivers continuous electrical pulses that modulate the pathological activity in basal ganglia circuits.</p>
+</section>
+</section>
+<section id="eeg-findings-in-parkinsons-disease" class="level2">
+<h2 class="anchored" data-anchor-id="eeg-findings-in-parkinsons-disease">EEG findings in Parkinson’s disease</h2>
+<p>EEG provides a window into the cortical consequences of PD pathology. Several consistent findings have emerged from decades of research.</p>
+<section id="slowing-of-background-activity" class="level3">
+<h3 class="anchored" data-anchor-id="slowing-of-background-activity">Slowing of background activity</h3>
+<p>Compared to age-matched healthy controls, PD patients show a shift in the EEG power spectrum towards slower frequencies. Specifically:</p>
+<ul>
+<li><strong>Increased theta (4-8 Hz) and delta (1-4 Hz) power</strong>, particularly over frontal and temporal regions.</li>
+<li><strong>Decreased alpha (8-13 Hz) power</strong>, which normally dominates the resting-state EEG.</li>
+<li><strong>Decreased beta (13-30 Hz) power</strong> over the scalp, despite the well-known excessive beta synchrony in subcortical structures.</li>
+</ul>
+<p>The apparent contradiction about beta is resolved by considering the level of analysis. Scalp EEG measures cortical activity, and cortical beta power may be reduced in PD because of disrupted thalamocortical communication. The pathological beta synchrony is most prominent in basal ganglia circuits (detected by local field potentials from DBS electrodes), though it can sometimes be detected at the scalp level using connectivity measures.</p>
+</section>
+<section id="excessive-beta-synchrony-in-basal-ganglia-cortical-circuits" class="level3">
+<h3 class="anchored" data-anchor-id="excessive-beta-synchrony-in-basal-ganglia-cortical-circuits">Excessive beta synchrony in basal ganglia-cortical circuits</h3>
+<p>The most important EEG/electrophysiology finding in PD, for our purposes, is the excessive synchronisation in the beta band (13-30 Hz) between the basal ganglia and the motor cortex. This has been demonstrated by:</p>
+<ul>
+<li>Local field potential (LFP) recordings from DBS electrodes in the subthalamic nucleus</li>
+<li>Cortico-subcortical coherence studies combining scalp EEG with LFP</li>
+<li>Magnetoencephalography (MEG) studies showing increased beta connectivity</li>
+</ul>
+<p>This pathological beta synchrony is thought to “lock” the motor system in an inhibitory state, preventing the flexible switching between motor programmes that normal movement requires. Levodopa medication and DBS both reduce beta synchrony and improve motor function, supporting a causal link.</p>
+</section>
+<section id="cortical-connectivity-changes" class="level3">
+<h3 class="anchored" data-anchor-id="cortical-connectivity-changes">Cortical connectivity changes</h3>
+<p>Beyond power spectral changes, PD alters the connectivity between cortical regions:</p>
+<ul>
+<li>Reduced long-range connectivity (frontal-parietal, frontal-occipital)</li>
+<li>Altered interhemispheric connectivity</li>
+<li>Disrupted connectivity patterns in the default mode network</li>
+<li>Changes in graph-theoretical properties (reduced small-world characteristics)</li>
+</ul>
+<p>These connectivity changes are relevant for metastability analysis because they suggest that PD does not just alter activity in individual brain regions; it disrupts the coordination between them.</p>
+</section>
+</section>
+<section id="what-freezing-of-gait-is" class="level2">
+<h2 class="anchored" data-anchor-id="what-freezing-of-gait-is">What Freezing of Gait is</h2>
+<p><strong>Freezing of Gait</strong> (FoG) is one of the most disabling symptoms of Parkinson’s disease. It is defined as a brief, episodic absence or marked reduction of forward progression of the feet despite the intention to walk.</p>
+<section id="clinical-presentation" class="level3">
+<h3 class="anchored" data-anchor-id="clinical-presentation">Clinical presentation</h3>
+<p>During a FoG episode, the patient’s feet appear to be “glued to the floor”. The legs may tremble or shuffle in place, but the person cannot take a full step forward. Episodes typically last from a few seconds to about 30 seconds, though longer episodes occur.</p>
+<p>FoG is often described by patients as feeling that their feet are stuck, that the floor is pulling them down, or that they have “forgotten how to walk”. It is both frightening and dangerous: sudden freezing during walking is a major cause of falls in PD.</p>
+</section>
+<section id="triggers" class="level3">
+<h3 class="anchored" data-anchor-id="triggers">Triggers</h3>
+<p>FoG does not occur randomly. It is triggered by specific situations:</p>
+<ul>
+<li><strong>Narrow spaces</strong>: doorways, corridors, crowded environments</li>
+<li><strong>Turning</strong>: especially tight turns (180 degrees or sharper)</li>
+<li><strong>Gait initiation</strong>: the first step from standing still</li>
+<li><strong>Dual-tasking</strong>: walking while talking, carrying objects, or performing mental calculations</li>
+<li><strong>Emotional stress</strong>: anxiety, time pressure, unfamiliar environments</li>
+<li><strong>Approaching a destination</strong>: the final steps before reaching a target</li>
+</ul>
+<p>The sensitivity to these triggers suggests that FoG involves a breakdown in the brain’s ability to process competing demands or navigate complex motor plans.</p>
+</section>
+<section id="prevalence-and-impact" class="level3">
+<h3 class="anchored" data-anchor-id="prevalence-and-impact">Prevalence and impact</h3>
+<p>FoG affects roughly 30-60% of PD patients, with prevalence increasing as the disease progresses. It is more common in patients with longer disease duration, higher UPDRS motor scores, and a history of falls.</p>
+<p>The clinical impact is severe:</p>
+<ul>
+<li>Increased risk of falls and fall-related injuries</li>
+<li>Reduced mobility and independence</li>
+<li>Social withdrawal and reduced quality of life</li>
+<li>Caregiver burden</li>
+</ul>
+<p>FoG responds partially to dopaminergic medication (it is worse during “off” states and better during “on” states), but some patients experience FoG even when their medication is working well for other symptoms. This medication-resistant FoG is particularly challenging to treat.</p>
+</section>
+<section id="cueing-strategies" class="level3">
+<h3 class="anchored" data-anchor-id="cueing-strategies">Cueing strategies</h3>
+<p>A remarkable feature of FoG is that it can often be overcome with external cues:</p>
+<ul>
+<li><strong>Visual cues</strong>: laser pointers projecting a line on the floor, strips of tape on the ground</li>
+<li><strong>Auditory cues</strong>: rhythmic music, metronome beats</li>
+<li><strong>Tactile cues</strong>: vibrating devices on the wrist or ankle</li>
+</ul>
+<p>These cues are thought to bypass the dysfunctional basal ganglia circuits and engage alternative motor pathways (particularly cerebellar and premotor circuits). The effectiveness of cueing supports the idea that the motor programmes for walking are intact in FoG; the problem is in initiating or maintaining them.</p>
+</section>
+</section>
+<section id="eeg-biomarkers-of-freezing-of-gait" class="level2">
+<h2 class="anchored" data-anchor-id="eeg-biomarkers-of-freezing-of-gait">EEG biomarkers of Freezing of Gait</h2>
+<p>Studying FoG with EEG is challenging because episodes are unpredictable and brief, and walking introduces motion artefacts. Despite these difficulties, several EEG findings have been associated with FoG.</p>
+<section id="frontal-theta-changes" class="level3">
+<h3 class="anchored" data-anchor-id="frontal-theta-changes">Frontal theta changes</h3>
+<p>Several studies have reported altered theta (4-8 Hz) activity over frontal regions during or just before FoG episodes. The interpretation is that frontal theta reflects cognitive control and conflict monitoring, and that FoG involves a failure of frontal executive circuits to resolve competing motor demands.</p>
+<p>Some studies find increased frontal theta during freezing (suggesting heightened but ineffective cognitive effort), while others find decreased frontal theta (suggesting a failure to engage cognitive control). The discrepancy may relate to differences in task design, medication state, or how FoG episodes were identified.</p>
+</section>
+<section id="beta-desynchronisation-failure" class="level3">
+<h3 class="anchored" data-anchor-id="beta-desynchronisation-failure">Beta desynchronisation failure</h3>
+<p>Normal voluntary movement is preceded by a desynchronisation (decrease in power) of beta oscillations over the motor cortex. This “beta ERD” (event-related desynchronisation) is thought to release the motor system from its resting inhibitory state, allowing movement to proceed.</p>
+<p>In FoG, this beta desynchronisation may fail. The motor cortex remains excessively synchronised in beta, preventing the transition to the motor programme for stepping. This is consistent with the broader PD picture of pathological beta synchrony.</p>
+</section>
+<section id="altered-connectivity" class="level3">
+<h3 class="anchored" data-anchor-id="altered-connectivity">Altered connectivity</h3>
+<p>FoG has been associated with altered connectivity patterns in EEG:</p>
+<ul>
+<li>Reduced frontal-parietal connectivity during walking</li>
+<li>Altered beta coherence between motor regions</li>
+<li>Changes in network properties (reduced modularity, altered hub structure)</li>
+</ul>
+<p>These connectivity changes are exactly what metastability analysis is designed to capture. If FoG involves an inability to transition between coordination states, regional metastability should be reduced in the relevant brain regions.</p>
+</section>
+</section>
+<section id="the-metastability-hypothesis-for-freezing-of-gait" class="level2">
+<h2 class="anchored" data-anchor-id="the-metastability-hypothesis-for-freezing-of-gait">The metastability hypothesis for Freezing of Gait</h2>
+<p>Combining the clinical features of FoG with the metastability framework leads to a specific hypothesis:</p>
+<p>FoG occurs when the brain’s motor network becomes “stuck” in a pathologically stable coordination state with low metastability. The network cannot transition to the coordination pattern needed for stepping, so the patient freezes.</p>
+<p>The reasoning is as follows:</p>
+<ol type="1">
+<li>Normal gait requires continuous transitions between coordination states: planning the next step, initiating the step, executing the swing phase, landing the foot, shifting weight, and repeating.</li>
+<li>Each transition requires the brain to reconfigure its coordination pattern, meaning the dominant eigenvector must change.</li>
+<li>In FoG, excessive beta synchrony locks the motor network into a rigid pattern, reducing metastability.</li>
+<li>The network cannot make the transition from “standing” to “stepping”, and the patient freezes.</li>
+<li>External cues (visual, auditory) work because they engage alternative pathways that can trigger the transition from outside the locked circuit.</li>
+</ol>
+<p>This hypothesis makes testable predictions:</p>
+<ul>
+<li>PD-FoG patients should show lower regional metastability than PD-noFoG patients, particularly in frontal and motor regions.</li>
+<li>The metastability difference should be most pronounced in the beta band.</li>
+<li>Metastability might correlate with the severity or frequency of FoG episodes.</li>
+</ul>
+</section>
+<section id="natalias-project" class="level2">
+<h2 class="anchored" data-anchor-id="natalias-project">Natalia’s project</h2>
+<p>Natalia’s master’s project tests these predictions using resting-state EEG data from three groups:</p>
+<ul>
+<li><strong>Healthy controls (HC)</strong>: age-matched, no neurological conditions</li>
+<li><strong>PD without FoG (PD-noFoG)</strong>: Parkinson’s patients who do not experience Freezing of Gait</li>
+<li><strong>PD with FoG (PD-FoG)</strong>: Parkinson’s patients who experience Freezing of Gait</li>
+</ul>
+<p>The analysis pipeline, at a high level:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1: Load BIDS-formatted EEG data</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne_bids</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>bids_path <span class="op">=</span> mne_bids.BIDSPath(</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    subject<span class="op">=</span><span class="st">"01"</span>, task<span class="op">=</span><span class="st">"rest"</span>, datatype<span class="op">=</span><span class="st">"eeg"</span>,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    root<span class="op">=</span><span class="st">"/path/to/bids/dataset"</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne_bids.read_raw_bids(bids_path)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 2: Preprocessing</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># - Set montage</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>raw.set_montage(<span class="st">"standard_1020"</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># - Filter to frequency band of interest (e.g., beta)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>raw_beta <span class="op">=</span> raw.copy().<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="dv">13</span>, h_freq<span class="op">=</span><span class="dv">30</span>, method<span class="op">=</span><span class="st">"fir"</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># - Epoch the data (e.g., 2-second non-overlapping epochs)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>events <span class="op">=</span> mne.make_fixed_length_events(raw_beta, duration<span class="op">=</span><span class="fl">2.0</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>epochs <span class="op">=</span> mne.Epochs(raw_beta, events, tmin<span class="op">=</span><span class="dv">0</span>, tmax<span class="op">=</span><span class="fl">2.0</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>                    baseline<span class="op">=</span><span class="va">None</span>, preload<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co"># - Reject bad epochs (amplitude threshold or autoreject)</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>epochs.drop_bad(reject<span class="op">=</span><span class="bu">dict</span>(eeg<span class="op">=</span><span class="fl">150e-6</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 3: Extract instantaneous phase using the Hilbert transform</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hilbert</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> epochs.get_data()  <span class="co"># shape: (n_epochs, n_channels, n_times)</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>analytic <span class="op">=</span> hilbert(data, axis<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>phases <span class="op">=</span> np.angle(analytic)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 4: Compute phase alignment matrix and dominant eigenvector</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>n_epochs, n_channels, n_times <span class="op">=</span> phases.shape</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>all_v_dominant <span class="op">=</span> []</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ep <span class="kw">in</span> <span class="bu">range</span>(n_epochs):</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    v_epoch <span class="op">=</span> np.zeros((n_times, n_channels))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> tp <span class="kw">in</span> <span class="bu">range</span>(n_times):</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        phi <span class="op">=</span> phases[ep, :, tp]</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        phase_diff <span class="op">=</span> phi[:, <span class="va">None</span>] <span class="op">-</span> phi[<span class="va">None</span>, :]</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        A <span class="op">=</span> np.cos(phase_diff)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        eigenvalues, eigenvectors <span class="op">=</span> np.linalg.eigh(A)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        v_epoch[tp] <span class="op">=</span> eigenvectors[:, <span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sign continuity fix</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> v_epoch[<span class="dv">0</span>, np.argmax(np.<span class="bu">abs</span>(v_epoch[<span class="dv">0</span>]))] <span class="op">&lt;</span> <span class="dv">0</span>:</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        v_epoch[<span class="dv">0</span>] <span class="op">*=</span> <span class="op">-</span><span class="dv">1</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> tp <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, n_times):</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> np.dot(v_epoch[tp], v_epoch[tp <span class="op">-</span> <span class="dv">1</span>]) <span class="op">&lt;</span> <span class="dv">0</span>:</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>            v_epoch[tp] <span class="op">*=</span> <span class="op">-</span><span class="dv">1</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    all_v_dominant.append(v_epoch)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 5: Compute regional metastability per participant</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Concatenate eigenvectors across epochs for this participant</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>v_all <span class="op">=</span> np.concatenate(all_v_dominant, axis<span class="op">=</span><span class="dv">0</span>)  <span class="co"># (total_timepoints, n_channels)</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>regional_ms <span class="op">=</span> np.var(v_all, axis<span class="op">=</span><span class="dv">0</span>)  <span class="co"># one value per channel</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Repeat for all participants, then compare groups</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| eval: false</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 6: Group statistics</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> f_oneway, kruskal</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> statsmodels.stats.multitest <span class="im">import</span> multipletests</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># ms_hc, ms_pd_nofog, ms_pd_fog are arrays of shape (n_subjects, n_channels)</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>p_values <span class="op">=</span> np.zeros(n_channels)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ch <span class="kw">in</span> <span class="bu">range</span>(n_channels):</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    _, p_values[ch] <span class="op">=</span> f_oneway(</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        ms_hc[:, ch], ms_pd_nofog[:, ch], ms_pd_fog[:, ch]</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Correct for multiple comparisons across channels</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>reject, p_corrected, _, _ <span class="op">=</span> multipletests(p_values, method<span class="op">=</span><span class="st">"fdr_bh"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="study-design-considerations" class="level2">
+<h2 class="anchored" data-anchor-id="study-design-considerations">Study design considerations</h2>
+<section id="sample-size" class="level3">
+<h3 class="anchored" data-anchor-id="sample-size">Sample size</h3>
+<p>Clinical EEG studies typically have small sample sizes (10-30 per group). This limits statistical power and makes it important to:</p>
+<ul>
+<li>Use non-parametric tests (permutation tests, Kruskal-Wallis) when possible</li>
+<li>Report effect sizes, not just p-values</li>
+<li>Be cautious about claims from individual channels that barely survive correction</li>
+<li>Consider whether a region-of-interest approach (averaging channels within predefined regions) is more appropriate than testing every channel individually</li>
+</ul>
+</section>
+<section id="medication-state" class="level3">
+<h3 class="anchored" data-anchor-id="medication-state">Medication state</h3>
+<p>PD patients are typically tested in two conditions:</p>
+<ul>
+<li><strong>ON medication</strong>: after taking their regular dopaminergic medication. Motor symptoms are better controlled but dyskinesias may be present.</li>
+<li><strong>OFF medication</strong>: after overnight withdrawal of medication (typically 12 hours). Motor symptoms are more pronounced.</li>
+</ul>
+<p>The medication state affects EEG and metastability. If you test patients ON medication, you are measuring the brain dynamics of a treated (partially normalised) system. If you test OFF medication, you are measuring the pathological dynamics more directly, but the patients are more symptomatic and the recording may be more challenging (more tremor artefact, less cooperation).</p>
+<p>Natalia’s study tests patients in the practically defined OFF state (after overnight medication withdrawal). This is standard practice for studies investigating the pathophysiology of PD.</p>
+</section>
+<section id="recording-protocol" class="level3">
+<h3 class="anchored" data-anchor-id="recording-protocol">Recording protocol</h3>
+<p>Resting-state EEG recordings for PD studies should consider:</p>
+<ul>
+<li><strong>Eyes open vs eyes closed</strong>: Most studies use eyes-closed rest because it produces a cleaner, more stable EEG. Some use alternating blocks of eyes-open and eyes-closed rest.</li>
+<li><strong>Duration</strong>: At least 3-5 minutes of clean data per condition. Longer is better for metastability estimates.</li>
+<li><strong>Tremor</strong>: Resting tremor produces artefact in the 4-6 Hz range and its harmonics. If the patient has prominent tremor, you may need to address this in preprocessing (e.g., ICA component removal).</li>
+<li><strong>Alertness</strong>: Patients should be monitored for drowsiness, which shifts the EEG towards slower frequencies and can confound group comparisons.</li>
+</ul>
+</section>
+<section id="fog-classification" class="level3">
+<h3 class="anchored" data-anchor-id="fog-classification">FoG classification</h3>
+<p>Classifying patients as FoG+ or FoG- is not always simple. Common approaches include:</p>
+<ul>
+<li>The <strong>New Freezing of Gait Questionnaire</strong> (NFOG-Q): a self-report measure that identifies FoG patients and quantifies severity.</li>
+<li><strong>Clinical observation</strong>: observing patients during standardised gait tasks (walking, turning, dual-tasking) and noting FoG episodes.</li>
+<li><strong>Video analysis</strong>: recording gait tasks and having blinded raters identify FoG episodes.</li>
+</ul>
+<p>The NFOG-Q is the most widely used screening tool, but it relies on patient self-report and may miss FoG in patients who are not aware of their episodes. Clinical observation is more reliable but requires a standardised protocol.</p>
+</section>
+</section>
+<section id="key-takeaways" class="level2">
+<h2 class="anchored" data-anchor-id="key-takeaways">Key takeaways</h2>
+<ol type="1">
+<li><strong>Parkinson’s disease</strong> is caused by the loss of dopaminergic neurones. Its motor symptoms (bradykinesia, tremor, rigidity) result from disrupted basal ganglia-cortical circuits.</li>
+<li>The key EEG finding in PD is <strong>excessive beta synchrony</strong> between basal ganglia and cortex, which locks the motor system in an inhibitory state.</li>
+<li>Scalp EEG in PD also shows <strong>slowing of background activity</strong> (more theta/delta, less alpha) and altered cortical connectivity.</li>
+<li><strong>Freezing of Gait</strong> is an episodic inability to step, triggered by narrow spaces, turning, and dual-tasking. It affects 30-60% of PD patients and is a major cause of falls.</li>
+<li>The <strong>metastability hypothesis</strong> for FoG proposes that rigid neural dynamics (low metastability) prevent the flexible transitions between coordination states needed for gait.</li>
+<li>Natalia’s project compares regional metastability across HC, PD-noFoG, and PD-FoG groups, with the prediction that FoG patients show the lowest metastability in frontal and motor regions.</li>
+<li>Study design must address <strong>medication state</strong>, <strong>recording protocol</strong>, and <strong>FoG classification</strong> to produce interpretable results.</li>
+</ol>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Built with <a href="https://quarto.org">Quarto</a> and <a href="https://mne.tools">MNE-Python</a></p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-03-31">
+<meta name="description" content="What a band-pass filter does, typical EEG cutoff frequencies, FIR filter design in MNE-Python, transition bandwidth, filter order, edge artifacts, and zero-phase filtering.">
+
+<title>Band-pass filtering – EEG with Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+
+
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">EEG with Python</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-modules" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Modules</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-modules">    
+        <li>
+    <a class="dropdown-item" href="../modules/01-getting-started.html">
+ <span class="dropdown-text">1. Getting started</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/02-preprocessing.html">
+ <span class="dropdown-text">2. Preprocessing</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/03-artifacts.html">
+ <span class="dropdown-text">3. Artifact rejection</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/04-spectral-analysis.html">
+ <span class="dropdown-text">4. Spectral analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../modules/05-metastability.html">
+ <span class="dropdown-text">5. Connectivity and metastability</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="../topics/index.html"> 
+<span class="menu-text">Topics</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../exercises/index.html"> 
+<span class="menu-text">Exercises</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#what-does-a-band-pass-filter-do" id="toc-what-does-a-band-pass-filter-do" class="nav-link active" data-scroll-target="#what-does-a-band-pass-filter-do">What does a band-pass filter do?</a></li>
+  <li><a href="#typical-eeg-cutoff-frequencies" id="toc-typical-eeg-cutoff-frequencies" class="nav-link" data-scroll-target="#typical-eeg-cutoff-frequencies">Typical EEG cutoff frequencies</a>
+  <ul class="collapse">
+  <li><a href="#high-pass-cutoff-lower-edge" id="toc-high-pass-cutoff-lower-edge" class="nav-link" data-scroll-target="#high-pass-cutoff-lower-edge">High-pass cutoff (lower edge)</a></li>
+  <li><a href="#low-pass-cutoff-upper-edge" id="toc-low-pass-cutoff-upper-edge" class="nav-link" data-scroll-target="#low-pass-cutoff-upper-edge">Low-pass cutoff (upper edge)</a></li>
+  </ul></li>
+  <li><a href="#fir-filter-design-in-mne-python" id="toc-fir-filter-design-in-mne-python" class="nav-link" data-scroll-target="#fir-filter-design-in-mne-python">FIR filter design in MNE-Python</a>
+  <ul class="collapse">
+  <li><a href="#basic-usage" id="toc-basic-usage" class="nav-link" data-scroll-target="#basic-usage">Basic usage</a></li>
+  <li><a href="#applying-high-pass-and-low-pass-separately" id="toc-applying-high-pass-and-low-pass-separately" class="nav-link" data-scroll-target="#applying-high-pass-and-low-pass-separately">Applying high-pass and low-pass separately</a></li>
+  <li><a href="#full-parameter-control" id="toc-full-parameter-control" class="nav-link" data-scroll-target="#full-parameter-control">Full parameter control</a></li>
+  </ul></li>
+  <li><a href="#transition-bandwidth" id="toc-transition-bandwidth" class="nav-link" data-scroll-target="#transition-bandwidth">Transition bandwidth</a></li>
+  <li><a href="#filter-order" id="toc-filter-order" class="nav-link" data-scroll-target="#filter-order">Filter order</a></li>
+  <li><a href="#edge-artifacts" id="toc-edge-artifacts" class="nav-link" data-scroll-target="#edge-artifacts">Edge artifacts</a></li>
+  <li><a href="#zero-phase-filtering" id="toc-zero-phase-filtering" class="nav-link" data-scroll-target="#zero-phase-filtering">Zero-phase filtering</a></li>
+  <li><a href="#working-example" id="toc-working-example" class="nav-link" data-scroll-target="#working-example">Working example</a></li>
+  <li><a href="#iir-filters-as-an-alternative" id="toc-iir-filters-as-an-alternative" class="nav-link" data-scroll-target="#iir-filters-as-an-alternative">IIR filters as an alternative</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways">Key takeaways</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Band-pass filtering</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">preprocessing</div>
+    <div class="quarto-category">filtering</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    What a band-pass filter does, typical EEG cutoff frequencies, FIR filter design in MNE-Python, transition bandwidth, filter order, edge artifacts, and zero-phase filtering.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">31 March 2026</p>
+    </div>
+  </div>
+  
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">31 March 2026</p>
+    </div>
+  </div>
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="what-does-a-band-pass-filter-do" class="level2">
+<h2 class="anchored" data-anchor-id="what-does-a-band-pass-filter-do">What does a band-pass filter do?</h2>
+<p>A band-pass filter keeps frequencies within a specified range and attenuates everything outside it. You define two cutoff frequencies: a high-pass cutoff (the lower edge) that removes slow drifts, and a low-pass cutoff (the upper edge) that removes high-frequency noise. Only the frequencies between these two cutoffs pass through.</p>
+<p>In EEG, this is almost always the first preprocessing step after loading the data. The raw signal contains everything from sub-Hertz electrode drifts to high-frequency muscle noise, and you need to narrow the frequency range to the band of interest before doing anything else.</p>
+</section>
+<section id="typical-eeg-cutoff-frequencies" class="level2">
+<h2 class="anchored" data-anchor-id="typical-eeg-cutoff-frequencies">Typical EEG cutoff frequencies</h2>
+<section id="high-pass-cutoff-lower-edge" class="level3">
+<h3 class="anchored" data-anchor-id="high-pass-cutoff-lower-edge">High-pass cutoff (lower edge)</h3>
+<p>The high-pass cutoff removes slow drifts caused by electrode movement, skin potentials, and amplifier drift. The choice of cutoff depends on what you plan to do with the data.</p>
+<p><strong>0.1 Hz</strong>: the most conservative choice. Removes only the slowest drifts while preserving all EEG-relevant activity, including slow cortical potentials. Use this when you need to preserve low-frequency components or when you are studying very slow oscillations.</p>
+<p><strong>0.5 Hz</strong>: a common compromise. Removes most drift while preserving delta activity (1–4 Hz). This is a reasonable default for most ERP and time-frequency analyses.</p>
+<p><strong>1 Hz</strong>: recommended if you plan to run ICA. ICA converges poorly when there are large slow drifts in the data, because the drifts dominate the decomposition. A 1 Hz high-pass removes the drifts without affecting the frequency ranges that most cognitive EEG studies care about (theta and above). Be aware, though, that a 1 Hz high-pass can distort the shape of slow ERPs like the P300 or the CNV (contingent negative variation).</p>
+<p><strong>2 Hz and above</strong>: aggressive. Can distort ERP waveforms and remove real brain signals. Avoid unless you have a specific reason.</p>
+</section>
+<section id="low-pass-cutoff-upper-edge" class="level3">
+<h3 class="anchored" data-anchor-id="low-pass-cutoff-upper-edge">Low-pass cutoff (upper edge)</h3>
+<p>The low-pass cutoff removes high-frequency activity, which in scalp EEG is usually noise (muscle artifact, electronic interference) rather than brain signal.</p>
+<p><strong>30 Hz</strong>: conservative for many cognitive studies. Preserves alpha and beta activity while removing most muscle artifact. Use this if you are studying ERPs or alpha/beta oscillations and do not need gamma.</p>
+<p><strong>40–45 Hz</strong>: the most common choice. Includes the low gamma range while removing line noise (50/60 Hz) and most EMG artifact.</p>
+<p><strong>100 Hz or higher</strong>: needed if you are studying gamma oscillations (30–100 Hz). Requires careful artifact handling because muscle activity also lives in this range.</p>
+</section>
+</section>
+<section id="fir-filter-design-in-mne-python" class="level2">
+<h2 class="anchored" data-anchor-id="fir-filter-design-in-mne-python">FIR filter design in MNE-Python</h2>
+<p>MNE-Python uses FIR (finite impulse response) filters by default. FIR filters have two properties that make them well suited for EEG: they have a linear phase response (all frequencies are delayed by the same amount, preserving waveform shape) and they are always stable.</p>
+<section id="basic-usage" class="level3">
+<h3 class="anchored" data-anchor-id="basic-usage">Basic usage</h3>
+<div id="1b43a5e8" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load data</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.read_raw_edf(<span class="st">"recording.edf"</span>, preload<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Band-pass filter: keep 0.1 to 40 Hz</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">0.1</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>That is it for the basic case. MNE chooses sensible defaults for the filter design (FIR, Hamming window, automatic filter order and transition bandwidth).</p>
+</section>
+<section id="applying-high-pass-and-low-pass-separately" class="level3">
+<h3 class="anchored" data-anchor-id="applying-high-pass-and-low-pass-separately">Applying high-pass and low-pass separately</h3>
+<p>You can also apply the high-pass and low-pass as separate steps. This is functionally equivalent to a single band-pass call, but some people find it easier to reason about each step independently.</p>
+<div id="d3006864" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># High-pass filter at 1 Hz (for ICA preprocessing)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">1.0</span>, h_freq<span class="op">=</span><span class="va">None</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Low-pass filter at 40 Hz</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="va">None</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="full-parameter-control" class="level3">
+<h3 class="anchored" data-anchor-id="full-parameter-control">Full parameter control</h3>
+<div id="6275ee66" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    l_freq<span class="op">=</span><span class="fl">0.1</span>,              <span class="co"># high-pass cutoff (Hz)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    h_freq<span class="op">=</span><span class="fl">40.0</span>,             <span class="co"># low-pass cutoff (Hz)</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    picks<span class="op">=</span><span class="st">"eeg"</span>,             <span class="co"># apply only to EEG channels</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    filter_length<span class="op">=</span><span class="st">"auto"</span>,    <span class="co"># automatic filter order</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    l_trans_bandwidth<span class="op">=</span><span class="st">"auto"</span>,  <span class="co"># automatic transition bandwidth (high-pass)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    h_trans_bandwidth<span class="op">=</span><span class="st">"auto"</span>,  <span class="co"># automatic transition bandwidth (low-pass)</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    method<span class="op">=</span><span class="st">"fir"</span>,            <span class="co"># FIR filter (default)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    fir_window<span class="op">=</span><span class="st">"hamming"</span>,    <span class="co"># window function (default)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    phase<span class="op">=</span><span class="st">"zero"</span>,            <span class="co"># zero-phase filtering (default)</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    verbose<span class="op">=</span><span class="va">True</span>             <span class="co"># print filter parameters</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Setting <code>verbose=True</code> prints the filter parameters, which is useful for checking what MNE actually did:</p>
+<pre><code>Setting up band-pass filter from 0.1 - 40 Hz
+
+FIR filter parameters
+---------------------
+Designing a one-pass, zero-phase, non-causal bandpass filter:
+- Windowed time-domain design (firwin) method
+- Hamming window with 0.0194 passband ripple and 53 dB stopband attenuation
+- Lower passband edge: 0.10
+- Lower transition bandwidth: 0.10 Hz (-6 dB cutoff frequency: 0.05 Hz)
+- Upper passband edge: 40.00 Hz
+- Upper transition bandwidth: 10.00 Hz (-6 dB cutoff frequency: 45.00 Hz)
+- Filter length: 8449 samples (33.004 s)</code></pre>
+</section>
+</section>
+<section id="transition-bandwidth" class="level2">
+<h2 class="anchored" data-anchor-id="transition-bandwidth">Transition bandwidth</h2>
+<p>The transition bandwidth is the frequency range over which the filter goes from full passband (keeping everything) to full stopband (removing everything). A narrower transition bandwidth gives a sharper cutoff, but requires a higher filter order (more computation and a longer filter).</p>
+<p>MNE sets the transition bandwidth automatically based on the cutoff frequency. The rules are approximately:</p>
+<ul>
+<li><strong>High-pass transition bandwidth</strong>: <code>min(max(l_freq * 0.25, 2.0), l_freq)</code></li>
+<li><strong>Low-pass transition bandwidth</strong>: <code>min(max(h_freq * 0.25, 2.0), sfreq / 2 - h_freq)</code></li>
+</ul>
+<p>For a 1 Hz high-pass, the transition bandwidth is about 1 Hz (so the filter starts attenuating at 0 Hz and reaches full attenuation by 1 Hz). For a 40 Hz low-pass, the transition bandwidth is about 10 Hz (so the filter starts attenuating at 40 Hz and reaches full attenuation by 50 Hz).</p>
+<p>You can override the defaults:</p>
+<div id="de0d11fe" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Narrower transition bandwidth for a sharper cutoff</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    l_freq<span class="op">=</span><span class="fl">1.0</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    h_freq<span class="op">=</span><span class="fl">40.0</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    l_trans_bandwidth<span class="op">=</span><span class="fl">0.5</span>,  <span class="co"># 0.5 Hz transition (sharper than default)</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    h_trans_bandwidth<span class="op">=</span><span class="fl">5.0</span>   <span class="co"># 5 Hz transition (sharper than default)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Be cautious with very narrow transition bandwidths. They produce long filters that can introduce ringing artifacts, especially at the edges of short epochs.</p>
+</section>
+<section id="filter-order" class="level2">
+<h2 class="anchored" data-anchor-id="filter-order">Filter order</h2>
+<p>The filter order determines how many samples the filter uses to compute each output sample. A higher order gives a sharper transition but uses more memory and can cause problems with short data segments.</p>
+<p>MNE sets the filter order (length) automatically based on the transition bandwidth. The formula is approximately:</p>
+<pre><code>filter_length = 3.3 / transition_bandwidth * sfreq</code></pre>
+<p>For a 1 Hz high-pass at 256 Hz sampling rate with a 1 Hz transition bandwidth, this gives a filter length of about 845 samples (3.3 seconds of data). The data must be longer than the filter for the filter to work. If your data segments are shorter than the filter length, you will get a warning or an error.</p>
+<p>You can set the filter length manually:</p>
+<div id="cb6b9399" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Specify filter length directly</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">1.0</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>, filter_length<span class="op">=</span><span class="st">"10s"</span>)  <span class="co"># 10 seconds</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Or in samples</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">1.0</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>, filter_length<span class="op">=</span><span class="dv">2560</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="edge-artifacts" class="level2">
+<h2 class="anchored" data-anchor-id="edge-artifacts">Edge artifacts</h2>
+<p>Filters produce artifacts at the beginning and end of the data. The filter needs to “warm up” (fill its buffer with data) before it produces reliable output. During this warm-up period, the filtered signal can show ringing or amplitude distortions.</p>
+<p>The length of the edge artifact is roughly equal to the filter order. For a high-pass filter at 0.1 Hz with a long filter, this can be several seconds.</p>
+<p>There are two ways to deal with edge artifacts:</p>
+<ol type="1">
+<li><strong>Record extra data</strong>: start recording a few seconds before the task begins and stop a few seconds after it ends. Then crop the edges after filtering.</li>
+<li><strong>Use padding</strong>: MNE automatically pads the data before filtering (reflecting the edges) to reduce edge artifacts. This is controlled by the <code>pad</code> parameter.</li>
+</ol>
+<div id="30cf9c92" class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Crop edge artifacts after filtering</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">0.1</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>raw.crop(tmin<span class="op">=</span><span class="fl">2.0</span>, tmax<span class="op">=</span>raw.times[<span class="op">-</span><span class="dv">1</span>] <span class="op">-</span> <span class="fl">2.0</span>)  <span class="co"># remove 2 s from each end</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="zero-phase-filtering" class="level2">
+<h2 class="anchored" data-anchor-id="zero-phase-filtering">Zero-phase filtering</h2>
+<p>By default, MNE uses <strong>zero-phase filtering</strong>: the filter is applied forwards and then backwards over the data. This eliminates the phase delay that a single-pass filter would introduce. Without zero-phase filtering, a low-pass filter would shift your ERP peaks in time, which could affect latency measurements.</p>
+<p>The trade-off is that zero-phase filtering doubles the effective filter order (since you apply the filter twice), and it requires the entire signal to be available (you cannot do it in real time).</p>
+<div id="e3b6ce82" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Zero-phase filtering (default)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">1.0</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>, phase<span class="op">=</span><span class="st">"zero"</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Minimum-phase filtering (causal, introduces phase delay)</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Only use this if you have a specific reason (e.g., real-time processing)</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">1.0</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>, phase<span class="op">=</span><span class="st">"minimum"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>For offline EEG analysis, always use zero-phase filtering unless you have a specific reason not to.</p>
+</section>
+<section id="working-example" class="level2">
+<h2 class="anchored" data-anchor-id="working-example">Working example</h2>
+<div id="53c4b7cd" class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Create simulated data ────────────────────────────────────</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>sfreq <span class="op">=</span> <span class="dv">256</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>duration <span class="op">=</span> <span class="dv">60</span>  <span class="co"># seconds</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> sfreq <span class="op">*</span> duration</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>times <span class="op">=</span> np.arange(n_samples) <span class="op">/</span> sfreq</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Pink noise background</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>white <span class="op">=</span> rng.standard_normal(n_samples)</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>freqs_fft <span class="op">=</span> np.fft.rfftfreq(n_samples, d<span class="op">=</span><span class="dv">1</span> <span class="op">/</span> sfreq)</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>freqs_fft[<span class="dv">0</span>] <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>pink <span class="op">=</span> np.fft.irfft(np.fft.rfft(white) <span class="op">/</span> np.sqrt(freqs_fft), n<span class="op">=</span>n_samples)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a 10 Hz alpha oscillation and a slow 0.05 Hz drift</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> <span class="fl">3e-6</span> <span class="op">*</span> np.sin(<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> <span class="dv">10</span> <span class="op">*</span> times)</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>drift <span class="op">=</span> <span class="fl">10e-6</span> <span class="op">*</span> np.sin(<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> <span class="fl">0.05</span> <span class="op">*</span> times)</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>signal <span class="op">=</span> pink <span class="op">*</span> <span class="fl">20e-6</span> <span class="op">/</span> pink.std() <span class="op">+</span> alpha <span class="op">+</span> drift</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Wrap in MNE Raw</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>info <span class="op">=</span> mne.create_info(ch_names<span class="op">=</span>[<span class="st">"Oz"</span>], sfreq<span class="op">=</span>sfreq, ch_types<span class="op">=</span>[<span class="st">"eeg"</span>])</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.RawArray(signal.reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>), info)</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Apply band-pass filter ───────────────────────────────────</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>raw_filtered <span class="op">=</span> raw.copy().<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">1.0</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>, verbose<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Compare PSD before and after ─────────────────────────────</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">4</span>))</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Before filtering</span></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>psd_before <span class="op">=</span> raw.compute_psd(fmax<span class="op">=</span><span class="dv">60</span>)</span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>psd_before.plot(axes<span class="op">=</span>axes[<span class="dv">0</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].set_title(<span class="st">"Before filtering"</span>)</span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a><span class="co"># After filtering</span></span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>psd_after <span class="op">=</span> raw_filtered.compute_psd(fmax<span class="op">=</span><span class="dv">60</span>)</span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>psd_after.plot(axes<span class="op">=</span>axes[<span class="dv">1</span>], show<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].set_title(<span class="st">"After band-pass (1-40 Hz)"</span>)</span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="iir-filters-as-an-alternative" class="level2">
+<h2 class="anchored" data-anchor-id="iir-filters-as-an-alternative">IIR filters as an alternative</h2>
+<p>MNE also supports IIR (infinite impulse response) filters, most commonly Butterworth filters. IIR filters achieve sharp cutoffs with fewer coefficients, making them faster than FIR filters. However, they have a nonlinear phase response, which means different frequencies are delayed by different amounts. Zero-phase filtering (applying forward and backward) corrects this.</p>
+<div id="c57fbdc4" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Butterworth IIR filter</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    l_freq<span class="op">=</span><span class="fl">1.0</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    h_freq<span class="op">=</span><span class="fl">40.0</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    method<span class="op">=</span><span class="st">"iir"</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    iir_params<span class="op">=</span>{<span class="st">"order"</span>: <span class="dv">4</span>, <span class="st">"ftype"</span>: <span class="st">"butter"</span>}</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>For most EEG applications, the default FIR filter is the better choice. Use IIR filters when you need speed (e.g., processing large datasets) and are confident that zero-phase filtering is handling the phase distortion.</p>
+</section>
+<section id="key-takeaways" class="level2">
+<h2 class="anchored" data-anchor-id="key-takeaways">Key takeaways</h2>
+<ul>
+<li>A band-pass filter keeps frequencies between two cutoffs and removes everything else. In EEG, this removes slow drifts (below the high-pass cutoff) and high-frequency noise (above the low-pass cutoff).</li>
+<li>Common cutoff choices: 0.1–0.5 Hz high-pass for general analysis, 1 Hz high-pass before ICA, 30–45 Hz low-pass for cognitive studies. Choose cutoffs based on the frequency bands you need to preserve.</li>
+<li>MNE uses FIR filters by default with automatic transition bandwidth and filter order. These defaults work well for most applications.</li>
+<li>The transition bandwidth controls how sharply the filter cuts off. Narrower bandwidths give sharper cutoffs but require longer filters, which can cause ringing at epoch edges.</li>
+<li>Zero-phase filtering (the default in MNE) eliminates phase distortion by applying the filter forwards and backwards. Always use it for offline analysis.</li>
+<li>Filter before running ICA or computing connectivity. Filtering is usually the first step after loading data and setting channel types.</li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>Built with <a href="https://quarto.org">Quarto</a> and <a href="https://mne.tools">MNE-Python</a></p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+      &nbsp;
+    </div>
+  </div>
+</footer>
+
+
+
+
+</body></html>
