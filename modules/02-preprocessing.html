@@ -342,7 +342,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="working-example-filter-notch-and-re-reference" class="level2">
 <h2 class="anchored" data-anchor-id="working-example-filter-notch-and-re-reference">Working example: filter, notch, and re-reference</h2>
 <p>The code below creates simulated EEG data, applies a band-pass filter, adds a notch filter, and re-references to average. It plots the power spectral density before and after filtering so you can see the effect.</p>
-<div id="a9338cb2" class="cell" data-execution_count="1">
+<div id="3ffd46dd" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -446,13 +446,13 @@ Plotting power spectral density (dB=True).</code></pre>
 <div class="cell-output cell-output-stderr">
 <pre><code>/opt/miniconda3/lib/python3.13/site-packages/mne/viz/utils.py:160: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
   (fig or plt).show(**kwargs)
-/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_94944/471749207.py:42: UserWarning: The figure layout has changed to tight
+/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_9086/471749207.py:42: UserWarning: The figure layout has changed to tight
   fig_before.tight_layout()
-/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_94944/471749207.py:46: RuntimeWarning: filter_length (16897) is longer than the signal (5120), distortion is likely. Reduce filter length or filter a longer signal.
+/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_9086/471749207.py:46: RuntimeWarning: filter_length (16897) is longer than the signal (5120), distortion is likely. Reduce filter length or filter a longer signal.
   raw.filter(l_freq=0.1, h_freq=40.0)
 /opt/miniconda3/lib/python3.13/site-packages/mne/viz/utils.py:160: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
   (fig or plt).show(**kwargs)
-/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_94944/471749207.py:60: UserWarning: The figure layout has changed to tight
+/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_9086/471749207.py:60: UserWarning: The figure layout has changed to tight
   fig_after.tight_layout()</code></pre>
 </div>
 <div class="cell-output cell-output-display">

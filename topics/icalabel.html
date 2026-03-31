@@ -310,7 +310,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="installing-mne-icalabel" class="level2">
 <h2 class="anchored" data-anchor-id="installing-mne-icalabel">Installing mne-icalabel</h2>
 <p>The <code>mne-icalabel</code> package is not included with MNE-Python by default. You need to install it separately:</p>
-<div id="c7328acd" class="cell" data-execution_count="1">
+<div id="424b58e8" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install mne-icalabel</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># pip install mne-icalabel</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -322,7 +322,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="using-iclabel-in-your-pipeline" class="level2">
 <h2 class="anchored" data-anchor-id="using-iclabel-in-your-pipeline">Using ICLabel in your pipeline</h2>
 <p>The main function is <code>label_components()</code>, which takes a fitted ICA object and the raw data, runs the neural network, and returns labels and probability scores.</p>
-<div id="728b91d1" class="cell" data-execution_count="2">
+<div id="4fd54e23" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne.preprocessing <span class="im">import</span> ICA</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne_icalabel <span class="im">import</span> label_components</span>
@@ -348,7 +348,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="interpreting-the-output" class="level3">
 <h3 class="anchored" data-anchor-id="interpreting-the-output">Interpreting the output</h3>
 <p>The <code>labels</code> list gives you the most likely category for each component (the one with the highest probability). The <code>y_pred_proba</code> array gives you the full probability distribution, which is more informative.</p>
-<div id="162562a0" class="cell" data-execution_count="3">
+<div id="714afea0" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Category names (in the order used by ICLabel)</span></span>
@@ -366,7 +366,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="excluding-components-by-threshold" class="level3">
 <h3 class="anchored" data-anchor-id="excluding-components-by-threshold">Excluding components by threshold</h3>
 <p>Rather than removing every component labelled as non-brain, you can set a probability threshold. This gives you control over the trade-off between cleaning and signal preservation.</p>
-<div id="9d2191ad" class="cell" data-execution_count="4">
+<div id="ab576d7d" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Exclude components where P(non-brain) &gt; 0.8</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># This is a conservative threshold: only remove components that</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># are clearly artifacts</span></span>
@@ -383,7 +383,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>ica.<span class="bu">apply</span>(raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>A common approach is to exclude components where the probability of being any single artifact type exceeds a threshold (e.g., 80%). This is more nuanced than a simple brain-vs-not-brain split:</p>
-<div id="713e1d60" class="cell" data-execution_count="5">
+<div id="25eda734" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Exclude components with &gt; 80% probability for any artifact category</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>artifact_categories <span class="op">=</span> [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">5</span>]  <span class="co"># muscle, eye, heart, line, chan_noise</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>threshold <span class="op">=</span> <span class="fl">0.80</span></span>
@@ -412,7 +412,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="a-complete-iclabel-workflow" class="level2">
 <h2 class="anchored" data-anchor-id="a-complete-iclabel-workflow">A complete ICLabel workflow</h2>
-<div id="03d09ad9" class="cell" data-execution_count="6">
+<div id="d77d87b5" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne.preprocessing <span class="im">import</span> ICA</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne_icalabel <span class="im">import</span> label_components</span>
@@ -464,7 +464,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="working-example-the-concept-behind-component-classification">Working example: the concept behind component classification</h2>
 <p>ICLabel’s neural network requires pre-trained weights that are specific to the model architecture and training data, so it cannot be replicated from scratch with simulated data. However, we can demonstrate the underlying concept: classifying components based on measurable features like spatial distribution and spectral content.</p>
 <p>The code below fits ICA on simulated data with blink and muscle artifacts, then uses simple heuristics (frontal loading for blinks, high-frequency power for muscle) to classify each component. This is a simplified version of what ICLabel does with a neural network.</p>
-<div id="6bd3c73a" class="cell" data-execution_count="7">
+<div id="9cfc56fc" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.decomposition <span class="im">import</span> FastICA</span>

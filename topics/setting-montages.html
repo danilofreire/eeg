@@ -281,7 +281,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="available-montages-in-mne" class="level3">
 <h3 class="anchored" data-anchor-id="available-montages-in-mne">Available montages in MNE</h3>
 <p>MNE-Python includes many standard montages. You can see the full list with:</p>
-<div id="98cc0170" class="cell" data-execution_count="1">
+<div id="28fa77c0" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># List all built-in montages</span></span>
@@ -355,7 +355,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="setting-a-montage-in-mne-python">Setting a montage in MNE-Python</h2>
 <section id="basic-usage" class="level3">
 <h3 class="anchored" data-anchor-id="basic-usage">Basic usage</h3>
-<div id="4d7c2406" class="cell" data-execution_count="2">
+<div id="f293f1aa" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load your data</span></span>
@@ -372,7 +372,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="handling-mismatched-channel-names">Handling mismatched channel names</h3>
 <p>Your data may use channel names that do not exactly match the montage. For example, the montage uses “T7” but your data has “T3” (an older naming convention for the same electrode). MNE will raise an error by default when channel names do not match.</p>
 <p>You have several options:</p>
-<div id="2bd0cbba" class="cell" data-execution_count="3">
+<div id="25bd62a2" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Option 1: warn instead of raising an error</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>raw.set_montage(montage, on_missing<span class="op">=</span><span class="st">"warn"</span>)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -388,7 +388,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="checking-what-happened" class="level3">
 <h3 class="anchored" data-anchor-id="checking-what-happened">Checking what happened</h3>
 <p>After setting a montage, you can verify that it worked by inspecting the channel positions:</p>
-<div id="79d442fc" class="cell" data-execution_count="4">
+<div id="445dda18" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check that channels have positions</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ch <span class="kw">in</span> raw.info[<span class="st">"chs"</span>][:<span class="dv">5</span>]:</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>ch[<span class="st">'ch_name'</span>]<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>ch[<span class="st">'loc'</span>][:<span class="dv">3</span>]<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -400,7 +400,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Once a montage is set, you can visualise the electrode positions. This is useful for verifying that the montage was applied correctly and for generating figures.</p>
 <section id="d-topographic-view" class="level3">
 <h3 class="anchored" data-anchor-id="d-topographic-view">2D topographic view</h3>
-<div id="994ef6d8" class="cell" data-execution_count="5">
+<div id="2c9612a6" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>montage <span class="op">=</span> mne.channels.make_standard_montage(<span class="st">"standard_1020"</span>)</span>
@@ -411,14 +411,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="d-view" class="level3">
 <h3 class="anchored" data-anchor-id="d-view">3D view</h3>
-<div id="64b478e1" class="cell" data-execution_count="6">
+<div id="321972b1" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 3D scatter plot of electrode positions</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>montage.plot(kind<span class="op">=</span><span class="st">"3d"</span>, show_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="plotting-from-a-raw-object" class="level3">
 <h3 class="anchored" data-anchor-id="plotting-from-a-raw-object">Plotting from a Raw object</h3>
-<div id="5df1438e" class="cell" data-execution_count="7">
+<div id="96bbc783" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the sensor layout from an existing Raw object</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>raw.plot_sensors(kind<span class="op">=</span><span class="st">"topomap"</span>, show_names<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -443,7 +443,7 @@ C4,0.0684,0.0,0.0753</code></pre>
 </section>
 <section id="loading-and-applying-a-custom-montage" class="level3">
 <h3 class="anchored" data-anchor-id="loading-and-applying-a-custom-montage">Loading and applying a custom montage</h3>
-<div id="f25123df" class="cell" data-execution_count="8">
+<div id="09059b5a" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -477,7 +477,7 @@ C4,0.0684,0.0,0.0753</code></pre>
 <section id="using-digitised-positions" class="level3">
 <h3 class="anchored" data-anchor-id="using-digitised-positions">Using digitised positions</h3>
 <p>Some labs use a 3D digitiser (such as a Polhemus) to measure the exact position of each electrode on each participant’s head. MNE can read several digitiser formats:</p>
-<div id="529660ad" class="cell" data-execution_count="9">
+<div id="3adf5219" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read positions from a Polhemus .elp file</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>montage <span class="op">=</span> mne.channels.read_dig_polhemus_isotrak(<span class="st">"digitisation.elp"</span>)</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>

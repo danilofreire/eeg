@@ -3,15 +3,10 @@
     "listing": "/exercises/index.html",
     "items": [
       "/exercises/artifacts-01.html",
-      "/exercises/artifacts-02.html",
       "/exercises/getting-started-01.html",
-      "/exercises/getting-started-02.html",
       "/exercises/metastability-01.html",
-      "/exercises/metastability-02.html",
       "/exercises/preprocessing-01.html",
-      "/exercises/preprocessing-02.html",
-      "/exercises/spectral-analysis-01.html",
-      "/exercises/spectral-analysis-02.html"
+      "/exercises/spectral-analysis-01.html"
     ]
   },
   {

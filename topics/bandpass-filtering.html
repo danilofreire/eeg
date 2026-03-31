@@ -280,7 +280,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>MNE-Python uses FIR (finite impulse response) filters by default. FIR filters have two properties that make them well suited for EEG: they have a linear phase response (all frequencies are delayed by the same amount, preserving waveform shape) and they are always stable.</p>
 <section id="basic-usage" class="level3">
 <h3 class="anchored" data-anchor-id="basic-usage">Basic usage</h3>
-<div id="76c4d7b7" class="cell" data-execution_count="1">
+<div id="4698cb2c" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load data</span></span>
@@ -294,7 +294,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="applying-high-pass-and-low-pass-separately" class="level3">
 <h3 class="anchored" data-anchor-id="applying-high-pass-and-low-pass-separately">Applying high-pass and low-pass separately</h3>
 <p>You can also apply the high-pass and low-pass as separate steps. This is functionally equivalent to a single band-pass call, but some people find it easier to reason about each step independently.</p>
-<div id="f28b18eb" class="cell" data-execution_count="2">
+<div id="e945283e" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># High-pass filter at 1 Hz (for ICA preprocessing)</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">1.0</span>, h_freq<span class="op">=</span><span class="va">None</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -304,7 +304,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="full-parameter-control" class="level3">
 <h3 class="anchored" data-anchor-id="full-parameter-control">Full parameter control</h3>
-<div id="7cd89a8e" class="cell" data-execution_count="3">
+<div id="bc136d7a" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    l_freq<span class="op">=</span><span class="fl">0.1</span>,              <span class="co"># high-pass cutoff (Hz)</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    h_freq<span class="op">=</span><span class="fl">40.0</span>,             <span class="co"># low-pass cutoff (Hz)</span></span>
@@ -343,7 +343,7 @@ Designing a one-pass, zero-phase, non-causal bandpass filter:
 </ul>
 <p>For a 1 Hz high-pass, the transition bandwidth is about 1 Hz (so the filter starts attenuating at 0 Hz and reaches full attenuation by 1 Hz). For a 40 Hz low-pass, the transition bandwidth is about 10 Hz (so the filter starts attenuating at 40 Hz and reaches full attenuation by 50 Hz).</p>
 <p>You can override the defaults:</p>
-<div id="e6b6bae4" class="cell" data-execution_count="4">
+<div id="9aa74a1a" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Narrower transition bandwidth for a sharper cutoff</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    l_freq<span class="op">=</span><span class="fl">1.0</span>,</span>
@@ -361,7 +361,7 @@ Designing a one-pass, zero-phase, non-causal bandpass filter:
 <pre><code>filter_length = 3.3 / transition_bandwidth * sfreq</code></pre>
 <p>For a 1 Hz high-pass at 256 Hz sampling rate with a 1 Hz transition bandwidth, this gives a filter length of about 845 samples (3.3 seconds of data). The data must be longer than the filter for the filter to work. If your data segments are shorter than the filter length, you will get a warning or an error.</p>
 <p>You can set the filter length manually:</p>
-<div id="8782ed17" class="cell" data-execution_count="5">
+<div id="de55e2f6" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Specify filter length directly</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">1.0</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>, filter_length<span class="op">=</span><span class="st">"10s"</span>)  <span class="co"># 10 seconds</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -378,7 +378,7 @@ Designing a one-pass, zero-phase, non-causal bandpass filter:
 <li><strong>Record extra data</strong>: start recording a few seconds before the task begins and stop a few seconds after it ends. Then crop the edges after filtering.</li>
 <li><strong>Use padding</strong>: MNE automatically pads the data before filtering (reflecting the edges) to reduce edge artifacts. This is controlled by the <code>pad</code> parameter.</li>
 </ol>
-<div id="da082865" class="cell" data-execution_count="6">
+<div id="1de796fc" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Crop edge artifacts after filtering</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">0.1</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>)</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>raw.crop(tmin<span class="op">=</span><span class="fl">2.0</span>, tmax<span class="op">=</span>raw.times[<span class="op">-</span><span class="dv">1</span>] <span class="op">-</span> <span class="fl">2.0</span>)  <span class="co"># remove 2 s from each end</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -388,7 +388,7 @@ Designing a one-pass, zero-phase, non-causal bandpass filter:
 <h2 class="anchored" data-anchor-id="zero-phase-filtering">Zero-phase filtering</h2>
 <p>By default, MNE uses <strong>zero-phase filtering</strong>: the filter is applied forwards and then backwards over the data. This eliminates the phase delay that a single-pass filter would introduce. Without zero-phase filtering, a low-pass filter would shift your ERP peaks in time, which could affect latency measurements.</p>
 <p>The trade-off is that zero-phase filtering doubles the effective filter order (since you apply the filter twice), and it requires the entire signal to be available (you cannot do it in real time).</p>
-<div id="27d00e0d" class="cell" data-execution_count="7">
+<div id="deddab70" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Zero-phase filtering (default)</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(l_freq<span class="op">=</span><span class="fl">1.0</span>, h_freq<span class="op">=</span><span class="fl">40.0</span>, phase<span class="op">=</span><span class="st">"zero"</span>)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -400,7 +400,7 @@ Designing a one-pass, zero-phase, non-causal bandpass filter:
 </section>
 <section id="working-example" class="level2">
 <h2 class="anchored" data-anchor-id="working-example">Working example</h2>
-<div id="70f8c3a3" class="cell" data-execution_count="8">
+<div id="01950199" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -451,7 +451,7 @@ Designing a one-pass, zero-phase, non-causal bandpass filter:
 <section id="iir-filters-as-an-alternative" class="level2">
 <h2 class="anchored" data-anchor-id="iir-filters-as-an-alternative">IIR filters as an alternative</h2>
 <p>MNE also supports IIR (infinite impulse response) filters, most commonly Butterworth filters. IIR filters achieve sharp cutoffs with fewer coefficients, making them faster than FIR filters. However, they have a nonlinear phase response, which means different frequencies are delayed by different amounts. Zero-phase filtering (applying forward and backward) corrects this.</p>
-<div id="897294dd" class="cell" data-execution_count="9">
+<div id="c2ef94a9" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Butterworth IIR filter</span></span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>raw.<span class="bu">filter</span>(</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    l_freq<span class="op">=</span><span class="fl">1.0</span>,</span>

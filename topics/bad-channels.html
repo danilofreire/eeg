@@ -263,7 +263,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="manual-detection" class="level2">
 <h2 class="anchored" data-anchor-id="manual-detection">Manual detection</h2>
 <p>The most direct way to identify bad channels is to look at the data. MNE-Python provides interactive plotting tools for this.</p>
-<div id="622b19b4" class="cell" data-execution_count="1">
+<div id="d08a9ac2" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -292,7 +292,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="co"># raw.plot(scalings="auto", n_channels=10)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>When you click on a channel name in the interactive plot, MNE marks it as bad and adds it to <code>raw.info['bads']</code>. You can also set bad channels programmatically:</p>
-<div id="c996ebcb" class="cell" data-execution_count="2">
+<div id="161d2043" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mark channels as bad manually</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>raw.info[<span class="st">"bads"</span>] <span class="op">=</span> [<span class="st">"F4"</span>, <span class="st">"O2"</span>]</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Bad channels: </span><span class="sc">{</span>raw<span class="sc">.</span>info[<span class="st">'bads'</span>]<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -304,7 +304,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="variance-based-detection" class="level3">
 <h3 class="anchored" data-anchor-id="variance-based-detection">Variance-based detection</h3>
 <p>A noisy channel has much higher variance than a normal channel. A flat channel has much lower variance. You can flag channels whose variance falls outside a reasonable range.</p>
-<div id="d7b3d180" class="cell" data-execution_count="3">
+<div id="02652f9f" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -335,7 +335,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="correlation-based-detection" class="level3">
 <h3 class="anchored" data-anchor-id="correlation-based-detection">Correlation-based detection</h3>
 <p>A channel that carries genuine brain signal will be correlated with its neighbours (because of volume conduction). A bad channel will show low correlation with nearby channels. This approach requires electrode locations (a montage) so that MNE can determine which channels are neighbours.</p>
-<div id="71b8984c" class="cell" data-execution_count="4">
+<div id="7ee25463" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -367,7 +367,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="using-ransac-via-the-autoreject-package" class="level3">
 <h3 class="anchored" data-anchor-id="using-ransac-via-the-autoreject-package">Using RANSAC (via the autoreject package)</h3>
 <p>The <code>autoreject</code> package provides a more sophisticated approach called RANSAC (Random Sample Consensus). It predicts each channel’s signal from its neighbours using spherical spline interpolation, then flags channels where the prediction and the actual signal disagree. This is more robust than simple variance or correlation checks.</p>
-<div id="77e6f0e8" class="cell" data-execution_count="5">
+<div id="8459347b" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install autoreject if needed: pip install autoreject</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># from autoreject import Ransac</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
@@ -380,7 +380,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="interpolation-via-spherical-splines" class="level2">
 <h2 class="anchored" data-anchor-id="interpolation-via-spherical-splines">Interpolation via spherical splines</h2>
 <p>Once you have identified bad channels, you have two options: exclude them or interpolate them. <strong>Interpolation</strong> estimates what the bad channel should have recorded, based on the signals at surrounding channels. MNE uses <strong>spherical spline interpolation</strong> (Perrin et al., 1989), which fits a smooth surface over the scalp and reads off the estimated value at the bad channel’s location.</p>
-<div id="8ba6277e" class="cell" data-execution_count="6">
+<div id="88be8e6f" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -441,7 +441,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Interpolate after ICA, just before computing Epochs or ERPs.</li>
 <li>If a recording has too many bad channels (more than about 10–15% of the total), consider excluding that participant from the study rather than interpolating.</li>
 </ol>
-<div id="e400983f" class="cell" data-execution_count="7">
+<div id="be49f129" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Recommended workflow ──────────────────────────────────────</span></span>

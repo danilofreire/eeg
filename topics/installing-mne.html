@@ -248,13 +248,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="installing-with-pip" class="level2">
 <h2 class="anchored" data-anchor-id="installing-with-pip">Installing with pip</h2>
 <p>The simplest way to install MNE-Python is with pip. Open a terminal and run:</p>
-<div id="dedf4058" class="cell" data-execution_count="1">
+<div id="3b7a6569" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install MNE-Python from PyPI</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Run this in your terminal, not inside Python</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># pip install mne</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>This installs the core MNE library along with its required dependencies (NumPy, SciPy, and a few others). If you want to install MNE inside a virtual environment (recommended), create one first:</p>
-<div id="2d47d03a" class="cell" data-execution_count="2">
+<div id="c42821f0" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create and activate a virtual environment, then install MNE</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Run these commands in your terminal:</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># python -m venv eeg-env</span></span>
@@ -266,14 +266,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="installing-with-conda" class="level2">
 <h2 class="anchored" data-anchor-id="installing-with-conda">Installing with conda</h2>
 <p>If you use Anaconda or Miniconda for managing your Python environments, you can install MNE from the conda-forge channel:</p>
-<div id="c89f66ee" class="cell" data-execution_count="3">
+<div id="62a1fd20" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install MNE-Python with conda</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Run this in your terminal:</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># conda install -c conda-forge mne</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Conda handles dependency resolution differently from pip and can be more reliable when you need packages that rely on compiled C or Fortran libraries (like some SciPy routines). If you are already using conda for your other scientific Python work, this is probably the easier route.</p>
 <p>You can also create a dedicated conda environment for your EEG work:</p>
-<div id="f4e9371d" class="cell" data-execution_count="4">
+<div id="3e0b2b0e" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a new conda environment with MNE</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Run this in your terminal:</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># conda create -n eeg python=3.12 mne -c conda-forge</span></span>
@@ -283,7 +283,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="verifying-the-installation" class="level2">
 <h2 class="anchored" data-anchor-id="verifying-the-installation">Verifying the installation</h2>
 <p>After installing, open a Python session (or a Jupyter notebook) and check that MNE imports without errors:</p>
-<div id="e24d2649" class="cell" data-execution_count="5">
+<div id="ddca03a5" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Print the installed version</span></span>
@@ -346,7 +346,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 <p>The <code>mne-icalabel</code> package deserves special mention. It uses pre-trained classifiers to automatically label ICA components as brain, eye, muscle, heart, line noise, channel noise, or other. This can save a lot of time compared to manually inspecting each component.</p>
 <p>To install it:</p>
-<div id="c2bd84c3" class="cell" data-execution_count="6">
+<div id="587ca651" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install mne-icalabel for automated ICA component classification</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># pip install mne-icalabel</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -358,7 +358,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="a-quick-test" class="level2">
 <h2 class="anchored" data-anchor-id="a-quick-test">A quick test</h2>
 <p>Here is a minimal script that creates some simulated data and plots it, just to confirm everything is working:</p>
-<div id="84b9a5de" class="cell" data-execution_count="7">
+<div id="df260475" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>

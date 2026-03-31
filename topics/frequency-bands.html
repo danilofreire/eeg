@@ -372,7 +372,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Band power is the amount of energy in a specific frequency range. There are several ways to compute it, but the most common approach is to estimate the power spectral density (PSD) and then integrate over the frequency range of interest.</p>
 <section id="using-welchs-method" class="level3">
 <h3 class="anchored" data-anchor-id="using-welchs-method">Using Welch’s method</h3>
-<div id="9a686391" class="cell" data-execution_count="1">
+<div id="9e1264bc" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> welch</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -402,7 +402,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="using-mnes-compute_psd" class="level3">
 <h3 class="anchored" data-anchor-id="using-mnes-compute_psd">Using MNE’s compute_psd()</h3>
-<div id="f5c1ac18" class="cell" data-execution_count="2">
+<div id="93c18447" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -436,7 +436,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="absolute-vs-relative-power">Absolute vs relative power</h2>
 <p><strong>Absolute power</strong> is the total power in a frequency band, measured in units of V^2 (or V^2/Hz if you are working with power spectral density rather than integrated power). It tells you how much energy there is in that band.</p>
 <p><strong>Relative power</strong> is the power in a band divided by the total power across all bands. It is expressed as a proportion (0 to 1) or a percentage. Relative power tells you what fraction of the total signal energy falls in a particular band.</p>
-<div id="078fc134" class="cell" data-execution_count="3">
+<div id="08534ef4" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> welch</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -478,7 +478,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="complete-example-computing-and-visualising-band-powers" class="level2">
 <h2 class="anchored" data-anchor-id="complete-example-computing-and-visualising-band-powers">Complete example: computing and visualising band powers</h2>
-<div id="72e7cc76" class="cell" data-execution_count="4">
+<div id="81e1b640" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>

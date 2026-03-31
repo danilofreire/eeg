@@ -310,7 +310,7 @@ window.Quarto = {
 <section id="independent-samples-t-test" class="level2">
 <h2 class="anchored" data-anchor-id="independent-samples-t-test">Independent samples t-test</h2>
 <p>When you have two groups and one continuous outcome, the independent samples t-test (or Welch’s t-test) is the standard choice:</p>
-<div id="5d672fce" class="cell" data-execution_count="1">
+<div id="bd52ea0e" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> ttest_ind</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># alpha_power_patients and alpha_power_controls are 1D arrays,</span></span>
@@ -327,7 +327,7 @@ window.Quarto = {
 <p>The t-statistic tells you whether the difference is statistically significant, but not how large it is. Cohen’s d quantifies the effect size in standard deviation units:</p>
 <p><span class="math display">\[d = \frac{\bar{x}_1 - \bar{x}_2}{s_{\text{pooled}}}\]</span></p>
 <p>where <span class="math inline">\(s_{\text{pooled}} = \sqrt{\frac{(n_1-1)s_1^2 + (n_2-1)s_2^2}{n_1+n_2-2}}\)</span>.</p>
-<div id="65facf33" class="cell" data-execution_count="2">
+<div id="44fd45f4" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cohens_d(group1, group2):</span>
@@ -346,7 +346,7 @@ window.Quarto = {
 <section id="one-way-anova" class="level2">
 <h2 class="anchored" data-anchor-id="one-way-anova">One-way ANOVA</h2>
 <p>When you have three or more groups, use a one-way ANOVA to test whether the group means are all equal:</p>
-<div id="d2bbe851" class="cell" data-execution_count="3">
+<div id="5db265fa" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pingouin <span class="im">as</span> pg</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -380,7 +380,7 @@ window.Quarto = {
 <section id="welchs-anova" class="level3">
 <h3 class="anchored" data-anchor-id="welchs-anova">Welch’s ANOVA</h3>
 <p>If the groups have unequal variances (check with Levene’s test), use Welch’s ANOVA instead:</p>
-<div id="285b1c87" class="cell" data-execution_count="4">
+<div id="c707092f" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>aov_welch <span class="op">=</span> pg.welch_anova(data<span class="op">=</span>df, dv<span class="op">=</span><span class="st">"alpha_power"</span>, between<span class="op">=</span><span class="st">"group"</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(aov_welch)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -389,7 +389,7 @@ window.Quarto = {
 <section id="post-hoc-tests" class="level2">
 <h2 class="anchored" data-anchor-id="post-hoc-tests">Post-hoc tests</h2>
 <p>A significant ANOVA tells you that at least one group differs from the others, but it does not tell you which pairs differ. Post-hoc tests make all pairwise comparisons and adjust for multiple testing:</p>
-<div id="f6f54dc2" class="cell" data-execution_count="5">
+<div id="e5d39fd3" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Tukey's HSD (assumes equal variances)</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>posthoc <span class="op">=</span> pg.pairwise_tukey(data<span class="op">=</span>df, dv<span class="op">=</span><span class="st">"alpha_power"</span>, between<span class="op">=</span><span class="st">"group"</span>)</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(posthoc)</span>
@@ -402,7 +402,7 @@ window.Quarto = {
 <section id="bonferroni-correction" class="level3">
 <h3 class="anchored" data-anchor-id="bonferroni-correction">Bonferroni correction</h3>
 <p>The simplest multiple comparisons correction is Bonferroni: multiply each p-value by the number of comparisons (or, equivalently, divide the significance threshold by the number of comparisons). With 3 groups, there are 3 pairwise comparisons, so the Bonferroni-corrected threshold is <span class="math inline">\(0.05 / 3 = 0.0167\)</span>.</p>
-<div id="4f5b1f0a" class="cell" data-execution_count="6">
+<div id="70cb8c10" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> ttest_ind</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -457,7 +457,7 @@ window.Quarto = {
 </table>
 <p><strong>FWER</strong> (family-wise error rate) is the probability of making one or more false positives. Bonferroni controls this strictly but is very conservative when there are many tests.</p>
 <p><strong>FDR</strong> (false discovery rate) is the expected proportion of false positives among all significant results. The Benjamini-Hochberg procedure controls FDR and is less conservative than Bonferroni, making it more appropriate when you have many correlated tests (as in EEG).</p>
-<div id="13e73151" class="cell" data-execution_count="7">
+<div id="271fc70b" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> statsmodels.stats.multitest <span class="im">import</span> multipletests</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># p_values is an array of p-values from multiple tests</span></span>
@@ -483,7 +483,7 @@ window.Quarto = {
 <section id="permutation-tests" class="level2">
 <h2 class="anchored" data-anchor-id="permutation-tests">Permutation tests</h2>
 <p>Permutation tests make no distributional assumptions (no need for normality). They work by asking: if the group labels were randomly shuffled, how often would we see a difference as large as the one we observed?</p>
-<div id="6fea4eb5" class="cell" data-execution_count="8">
+<div id="f100f5cc" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> permutation_test(group1, group2, n_permutations<span class="op">=</span><span class="dv">10000</span>, rng<span class="op">=</span><span class="va">None</span>):</span>
@@ -524,7 +524,7 @@ window.Quarto = {
 <section id="working-example-anova-on-simulated-group-data" class="level2">
 <h2 class="anchored" data-anchor-id="working-example-anova-on-simulated-group-data">Working example: ANOVA on simulated group data</h2>
 <p>The code below simulates alpha power data for three groups (young adults, older adults, and Parkinson’s patients), runs a one-way ANOVA, performs post-hoc tests, and visualises the results.</p>
-<div id="9e5ff895" class="cell" data-execution_count="9">
+<div id="8e84a41a" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>

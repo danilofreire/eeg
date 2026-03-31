@@ -280,14 +280,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="the-autoreject-api">The autoreject API</h2>
 <section id="installation" class="level3">
 <h3 class="anchored" data-anchor-id="installation">Installation</h3>
-<div id="0324775f" class="cell" data-execution_count="1">
+<div id="0862e197" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install autoreject</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># pip install autoreject</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="autoreject-the-main-class" class="level3">
 <h3 class="anchored" data-anchor-id="autoreject-the-main-class">AutoReject: the main class</h3>
-<div id="07c9b41f" class="cell" data-execution_count="2">
+<div id="6ad4d91e" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> autoreject <span class="im">import</span> AutoReject</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -313,7 +313,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="the-rejectlog" class="level3">
 <h3 class="anchored" data-anchor-id="the-rejectlog">The RejectLog</h3>
 <p>Autoreject produces a <code>RejectLog</code> that tells you exactly what happened to each epoch and each channel. This is valuable for understanding your data quality and for reporting in papers.</p>
-<div id="c3e1f67c" class="cell" data-execution_count="3">
+<div id="8e093a29" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> autoreject <span class="im">import</span> AutoReject</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>ar <span class="op">=</span> AutoReject(random_state<span class="op">=</span><span class="dv">42</span>)</span>
@@ -338,7 +338,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="getting-the-learned-thresholds" class="level3">
 <h3 class="anchored" data-anchor-id="getting-the-learned-thresholds">Getting the learned thresholds</h3>
 <p>You can inspect the thresholds that autoreject learned for each channel:</p>
-<div id="7b1aa6f1" class="cell" data-execution_count="4">
+<div id="230209be" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The learned thresholds (peak-to-peak, in volts)</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>thresholds <span class="op">=</span> ar.threshes_</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ch_name, threshold <span class="kw">in</span> <span class="bu">zip</span>(epochs.ch_names, thresholds):</span>
@@ -350,7 +350,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="ransac-for-bad-channel-detection">RANSAC for bad channel detection</h2>
 <p>The <code>autoreject</code> package also includes an implementation of RANSAC (Random Sample Consensus), which detects persistently bad channels. Unlike the main <code>AutoReject</code> class (which works at the epoch level), RANSAC identifies channels that are bad across the entire recording.</p>
 <p>The idea behind RANSAC is: for each channel, predict its signal from its neighbours using spherical spline interpolation, then compare the prediction with the actual signal. If they disagree consistently, the channel is bad.</p>
-<div id="b25af2ba" class="cell" data-execution_count="5">
+<div id="389bf7c1" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> autoreject <span class="im">import</span> Ransac</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>ransac <span class="op">=</span> Ransac(verbose<span class="op">=</span><span class="va">True</span>, n_jobs<span class="op">=</span><span class="dv">1</span>)</span>
@@ -373,7 +373,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><strong>Epoch</strong> the cleaned data.</li>
 <li><strong>Run autoreject</strong> on the epochs to handle remaining sporadic artifacts.</li>
 </ol>
-<div id="f0fc4b58" class="cell" data-execution_count="6">
+<div id="9fa13764" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne.preprocessing <span class="im">import</span> ICA</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> autoreject <span class="im">import</span> AutoReject</span>
@@ -408,7 +408,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="working-example" class="level2">
 <h2 class="anchored" data-anchor-id="working-example">Working example</h2>
 <p>Since <code>autoreject</code> may not be installed in your environment, the code below demonstrates the concept of adaptive, channel-specific thresholds using basic numpy operations. We create simulated epochs where some channels in some epochs have been contaminated with large artifacts, then apply a simple version of the autoreject logic: compute channel-specific thresholds based on the distribution of peak-to-peak amplitudes, and decide whether to keep, interpolate, or reject each epoch.</p>
-<div id="1af5580d" class="cell" data-execution_count="7">
+<div id="241bc800" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>

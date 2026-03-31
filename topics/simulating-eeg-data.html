@@ -263,7 +263,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="pink-noise" class="level3">
 <h3 class="anchored" data-anchor-id="pink-noise">Pink noise</h3>
 <p>Real EEG has a characteristic spectral shape: power decreases roughly as 1/f.&nbsp;White noise (equal power at all frequencies) sounds and looks nothing like EEG. Pink noise is a better starting point.</p>
-<div id="a83f1302" class="cell" data-execution_count="1">
+<div id="de97b12e" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
@@ -289,7 +289,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="adding-oscillations" class="level3">
 <h3 class="anchored" data-anchor-id="adding-oscillations">Adding oscillations</h3>
 <p>To add a known oscillatory component, you create a sinusoid at the desired frequency and add it to the noise. You can control the amplitude to set the signal-to-noise ratio.</p>
-<div id="aa09dbc8" class="cell" data-execution_count="2">
+<div id="dd21aa97" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a 10 Hz alpha oscillation</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>alpha_amplitude <span class="op">=</span> <span class="fl">5e-6</span>  <span class="co"># 5 microvolts peak</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> alpha_amplitude <span class="op">*</span> np.sin(<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> <span class="dv">10</span> <span class="op">*</span> times)</span>
@@ -305,7 +305,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="wrapping-it-in-an-mne-raw-object" class="level3">
 <h3 class="anchored" data-anchor-id="wrapping-it-in-an-mne-raw-object">Wrapping it in an MNE Raw object</h3>
 <p>To use MNE’s processing functions, you need to put your simulated data into an MNE <code>Raw</code> object. This requires creating an <code>Info</code> structure first.</p>
-<div id="1332e482" class="cell" data-execution_count="3">
+<div id="886f95d5" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create channel info for a single channel</span></span>
@@ -325,7 +325,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="blink-artifacts" class="level3">
 <h3 class="anchored" data-anchor-id="blink-artifacts">Blink artifacts</h3>
 <p>Eye blinks produce large, slow deflections (lasting about 200–400 ms) that are strongest at frontal electrodes. You can simulate one as a half-cycle of a low-frequency sinusoid or as a Gaussian bump.</p>
-<div id="6bc2a43b" class="cell" data-execution_count="4">
+<div id="a9e64da0" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_blink(n_samples, sfreq, onset_sec, amplitude<span class="op">=</span><span class="fl">100e-6</span>):</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Create a single blink artifact as a Gaussian bump."""</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    times <span class="op">=</span> np.arange(n_samples) <span class="op">/</span> sfreq</span>
@@ -346,7 +346,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="muscle-artifacts" class="level3">
 <h3 class="anchored" data-anchor-id="muscle-artifacts">Muscle artifacts</h3>
 <p>Muscle (EMG) artifacts are high-frequency broadband bursts. You can simulate them by adding short bursts of high-frequency noise.</p>
-<div id="cfaabd14" class="cell" data-execution_count="5">
+<div id="4bb19c37" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_muscle_burst(n_samples, sfreq, onset_sec, duration_sec<span class="op">=</span><span class="fl">0.5</span>,</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                      amplitude<span class="op">=</span><span class="fl">10e-6</span>):</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Create a burst of high-frequency noise to simulate muscle artifact."""</span></span>
@@ -376,7 +376,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="simulating-evoked-responses" class="level3">
 <h3 class="anchored" data-anchor-id="simulating-evoked-responses">Simulating evoked responses</h3>
 <p>If you want to simulate event-related data (ERPs), <code>mne.simulation.simulate_evoked</code> generates evoked responses from a known source configuration. This requires a forward model, which maps brain sources to scalp electrodes.</p>
-<div id="7019ea66" class="cell" data-execution_count="6">
+<div id="f544d2c1" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne.simulation <span class="im">import</span> simulate_evoked, simulate_sparse_stc</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -414,7 +414,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="simulating-raw-data-with-mne.simulation.simulate_raw" class="level3">
 <h3 class="anchored" data-anchor-id="simulating-raw-data-with-mne.simulation.simulate_raw">Simulating raw data with mne.simulation.simulate_raw</h3>
 <p>For continuous (raw) data, <code>simulate_raw</code> lets you define source waveforms and project them through a forward model to the scalp.</p>
-<div id="22b0f157" class="cell" data-execution_count="7">
+<div id="ea4b02f0" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne.simulation <span class="im">import</span> simulate_raw, add_noise</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a simple raw object with proper info</span></span>
@@ -435,7 +435,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="multi-channel-data-with-spatial-structure">Multi-channel data with spatial structure</h2>
 <p>Real EEG has spatial structure: a source in the occipital cortex produces strong signals at O1, Oz, O2 and weaker signals at frontal electrodes. If you simulate each channel independently, you lose this structure, and your simulated data will not behave like real data under spatial analyses (e.g., ICA, source localisation).</p>
 <p>The simplest way to add spatial structure is to define a few “source” signals and mix them to the scalp channels using a mixing matrix. Each row of the mixing matrix represents how strongly a particular source contributes to a particular channel.</p>
-<div id="0ffcb129" class="cell" data-execution_count="8">
+<div id="78d45eae" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
