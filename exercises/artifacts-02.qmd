@@ -1,0 +1,1627 @@
+---
+title: "Artifact rejection: more exercises"
+description: "Further practice with artifact simulation, ICA analysis, mixing matrices, combined rejection pipelines, and automated artifact detection."
+module: 3
+date: 2026-03-31
+date-modified: last-modified
+categories: [artifacts, ica]
+---
+
+These exercises go with [Module 3: Artifact rejection](../modules/03-artifacts.qmd). They build on the foundations from the first exercise set by tackling more realistic scenarios: multiple artifact types at once, data-driven thresholds, the linear algebra behind ICA, and full cleaning pipelines. All exercises use simulated data so you always know the ground truth.
+
+
+## Exercise 6: Simulate four artifact types and identify them
+
+Create a 20-channel recording with four types of injected artifacts: blinks on Fp1/Fp2 (slow, large Gaussian pulses), saccades on F7/F8 (step functions), EMG on T7/T8 (high-frequency bursts), and ECG on all channels (sharp periodic peaks at roughly 1 Hz). Plot each artifact type on its characteristic channel.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Start with a 20-channel `Raw` object filled with low-amplitude noise. Add each artifact type separately: use `np.exp(...)` for Gaussian blink pulses, `np.heaviside()` for saccade steps, `np.random.randn()` band-passed or multiplied by a high-frequency sine for EMG bursts, and a sharp Gaussian pulse repeated at 1 Hz for the ECG. Plot a 10-second window on one representative channel per artifact type using `matplotlib`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 60
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Baseline noise
+data = np.random.randn(n_channels, n_samples) * 5e-6
+
+# --- 1. Blink artifacts on Fp1/Fp2 (Gaussian pulses every ~3 s) ---
+blink_times = np.arange(1.5, duration - 1, 3.0)
+for t_blink in blink_times:
+    pulse = np.exp(-0.5 * ((times - t_blink) / 0.15) ** 2)
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 75e-6 * pulse
+
+# --- 2. Saccade artifacts on F7/F8 (step functions, opposite polarity) ---
+saccade_times = [8.0, 20.0, 35.0, 50.0]
+for t_sac in saccade_times:
+    # Step lasts 0.5 s then returns to baseline
+    start_samp = int(t_sac * sfreq)
+    end_samp = start_samp + int(0.5 * sfreq)
+    if end_samp < n_samples:
+        data[ch_names.index("F7"), start_samp:end_samp] += 40e-6
+        data[ch_names.index("F8"), start_samp:end_samp] -= 40e-6
+
+# --- 3. EMG bursts on T7/T8 (high-frequency noise) ---
+emg_times = [5.0, 15.0, 28.0, 42.0]
+for t_emg in emg_times:
+    start_samp = int(t_emg * sfreq)
+    burst_len = int(0.3 * sfreq)  # 300 ms burst
+    end_samp = start_samp + burst_len
+    if end_samp < n_samples:
+        emg_burst = np.random.randn(burst_len) * 30e-6
+        # Give it a high-frequency character by modulating with a fast sine
+        hf_carrier = np.sin(2 * np.pi * 80 * np.arange(burst_len) / sfreq)
+        emg_burst *= np.abs(hf_carrier) + 0.5
+        data[ch_names.index("T7"), start_samp:end_samp] += emg_burst
+        data[ch_names.index("T8"), start_samp:end_samp] += emg_burst * 0.8
+
+# --- 4. ECG artifact on all channels (sharp periodic peaks at ~1 Hz) ---
+ecg_times = np.arange(0.5, duration, 1.0)  # ~1 Hz heartbeat
+for t_ecg in ecg_times:
+    # QRS-like sharp pulse (narrow Gaussian, width ~20 ms)
+    qrs_pulse = np.exp(-0.5 * ((times - t_ecg) / 0.02) ** 2)
+    # ECG appears weakly on all channels
+    for ch_idx in range(n_channels):
+        data[ch_idx] += 8e-6 * qrs_pulse
+
+raw = mne.io.RawArray(data, info)
+
+# Plot one representative channel per artifact type (first 10 seconds)
+fig, axes = plt.subplots(4, 1, figsize=(14, 10), sharex=True)
+t_plot = slice(0, int(10 * sfreq))
+t_sec = times[:int(10 * sfreq)]
+
+axes[0].plot(t_sec, raw.get_data(picks="Fp1")[0, t_plot] * 1e6)
+axes[0].set_title("Fp1 -- blink artifacts (Gaussian pulses)")
+axes[0].set_ylabel("uV")
+
+axes[1].plot(t_sec, raw.get_data(picks="F7")[0, t_plot] * 1e6)
+axes[1].set_title("F7 -- saccade artifacts (step functions)")
+axes[1].set_ylabel("uV")
+
+axes[2].plot(t_sec, raw.get_data(picks="T7")[0, t_plot] * 1e6)
+axes[2].set_title("T7 -- EMG artifacts (high-frequency bursts)")
+axes[2].set_ylabel("uV")
+
+axes[3].plot(t_sec, raw.get_data(picks="Cz")[0, t_plot] * 1e6)
+axes[3].set_title("Cz -- ECG artifacts (periodic sharp peaks at ~1 Hz)")
+axes[3].set_ylabel("uV")
+axes[3].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+
+print("Four artifact types injected and plotted.")
+print(f"  Blinks: {len(blink_times)} events on Fp1/Fp2")
+print(f"  Saccades: {len(saccade_times)} events on F7/F8")
+print(f"  EMG bursts: {len(emg_times)} events on T7/T8")
+print(f"  ECG peaks: {len(ecg_times)} events on all channels")
+```
+
+You should see four distinct patterns. Fp1 has large, slow bumps (blinks). F7 shows sudden voltage steps (saccades). T7 has short bursts of high-frequency noise (EMG). Cz shows small, sharp spikes repeating every second (ECG). In real data you would rarely see artifacts this cleanly separated, but this is what each type looks like in isolation.
+:::
+
+
+## Exercise 7: Annotation-based artifact rejection
+
+Create a `Raw` object, add `Annotations` for three bad segments (different types: "bad_blink", "bad_movement", "bad_muscle"). Create epochs and show that epochs overlapping with bad annotations are automatically excluded. Report kept vs dropped.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `mne.Annotations(onset, duration, description)` to create annotations, then assign them with `raw.set_annotations()`. Any annotation whose description starts with "bad" or "BAD" will cause MNE to reject overlapping epochs automatically. Create fixed-length events and build `Epochs` with `reject_by_annotation=True` (this is the default). Check `epochs.drop_log` to see which epochs were dropped and why.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 30
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Fp1", "Fp2", "C3", "C4", "O1", "O2"]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(n_channels, n_samples) * 10e-6
+
+raw = mne.io.RawArray(data, info)
+
+# Add three bad annotations of different types
+annotations = mne.Annotations(
+    onset=[3.0, 12.5, 22.0],
+    duration=[1.0, 2.0, 0.5],
+    description=["bad_blink", "bad_movement", "bad_muscle"]
+)
+raw.set_annotations(annotations)
+
+print("Annotations added:")
+for ann in raw.annotations:
+    print(f"  {ann['description']}: onset={ann['onset']:.1f} s, "
+          f"duration={ann['duration']:.1f} s")
+
+# Create 2-second epochs
+events = mne.make_fixed_length_events(raw, duration=2.0)
+epochs = mne.Epochs(
+    raw, events,
+    tmin=0, tmax=2.0,
+    baseline=None,
+    reject_by_annotation=True,  # this is the default
+    preload=True
+)
+
+n_total = len(events)
+n_kept = len(epochs)
+n_dropped = n_total - n_kept
+
+print(f"\nTotal epochs created: {n_total}")
+print(f"Epochs kept: {n_kept}")
+print(f"Epochs dropped: {n_dropped}")
+
+# Show the drop log
+print("\nDrop log (reason for each dropped epoch):")
+for i, log in enumerate(epochs.drop_log):
+    if len(log) > 0:
+        print(f"  Epoch {i}: dropped because of {log}")
+```
+
+Any epoch whose time window overlaps with a "bad_*" annotation is automatically excluded. The drop log shows which annotations caused each rejection. This approach is useful when you (or an automatic detector) mark bad segments manually before epoching.
+:::
+
+
+## Exercise 8: Data-driven rejection thresholds
+
+Create epoched data with varying artifact levels. Instead of using a fixed threshold, compute the peak-to-peak amplitude distribution across all epochs and set the rejection threshold at the 95th percentile. Compare the number of rejections with a fixed 100 uV threshold.
+
+::: {.callout-tip collapse="true" title="Hint"}
+First create epochs without any rejection. Then loop over all epochs, compute the peak-to-peak amplitude for each one (maximum minus minimum across all channels), and collect those values. Use `np.percentile(ptp_values, 95)` as your data-driven threshold. Then compare: how many epochs exceed this percentile-based threshold vs a fixed 100 uV threshold?
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Fp1", "Fp2", "C3", "C4", "O1", "O2", "P3", "P4"]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create data with a range of artifact amplitudes
+data = np.random.randn(n_channels, n_samples) * 10e-6
+
+rng = np.random.default_rng(42)
+# Inject artifacts of varying sizes at random times
+artifact_amplitudes = rng.uniform(30e-6, 250e-6, size=15)
+artifact_times = rng.uniform(2, duration - 2, size=15)
+for amp, t_art in zip(artifact_amplitudes, artifact_times):
+    start = int(t_art * sfreq)
+    end = min(start + int(0.1 * sfreq), n_samples)
+    ch_idx = rng.integers(0, n_channels)
+    data[ch_idx, start:end] += amp
+
+raw = mne.io.RawArray(data, info)
+
+# Create 2-second epochs (no rejection yet)
+events = mne.make_fixed_length_events(raw, duration=2.0)
+epochs_no_reject = mne.Epochs(
+    raw, events, tmin=0, tmax=2.0, baseline=None, preload=True
+)
+
+# Compute peak-to-peak amplitude for each epoch
+epoch_data = epochs_no_reject.get_data()  # (n_epochs, n_channels, n_times)
+ptp_per_epoch = np.ptp(epoch_data, axis=2).max(axis=1)  # max PTP across channels
+ptp_uv = ptp_per_epoch * 1e6  # convert to uV
+
+print("Peak-to-peak amplitude distribution across epochs (uV):")
+print(f"  Min:  {ptp_uv.min():.1f}")
+print(f"  Mean: {ptp_uv.mean():.1f}")
+print(f"  Max:  {ptp_uv.max():.1f}")
+print(f"  Std:  {ptp_uv.std():.1f}")
+
+# Data-driven threshold at the 95th percentile
+threshold_95 = np.percentile(ptp_uv, 95)
+print(f"\n95th percentile threshold: {threshold_95:.1f} uV")
+
+# Count rejections using data-driven threshold
+n_reject_data_driven = np.sum(ptp_uv > threshold_95)
+
+# Count rejections using fixed 100 uV threshold
+fixed_threshold = 100.0
+n_reject_fixed = np.sum(ptp_uv > fixed_threshold)
+
+n_total = len(ptp_uv)
+print(f"\nTotal epochs: {n_total}")
+print(f"Rejected (data-driven, 95th %ile = {threshold_95:.1f} uV): "
+      f"{n_reject_data_driven} ({100 * n_reject_data_driven / n_total:.1f}%)")
+print(f"Rejected (fixed 100 uV): "
+      f"{n_reject_fixed} ({100 * n_reject_fixed / n_total:.1f}%)")
+
+# The data-driven threshold adapts to the actual noise level of the recording.
+# If the data are relatively clean, the 95th percentile will be low and you
+# reject only the worst 5%. If the data are noisy, the threshold is higher
+# and you keep more epochs that would be rejected by a strict fixed threshold.
+```
+
+The data-driven approach always rejects roughly 5% of epochs (by construction). The fixed threshold may reject more or fewer depending on the actual noise level. In practice, the percentile approach adapts to each recording, which is useful when data quality varies across participants.
+:::
+
+
+## Exercise 9: Compare ICA with different numbers of components
+
+Fit ICA with `n_components` = 5, 10, 15, and 20 on the same data. For each, compute the explained variance ratio. Plot explained variance vs number of components. Discuss the trade-off between too few (underfitting) and too many components.
+
+::: {.callout-tip collapse="true" title="Hint"}
+After fitting ICA, the explained variance is stored in `ica.pca_explained_variance_`. The total explained variance for a given number of components is the sum of the first `n_components` entries divided by the sum of all entries. Fit ICA four times with different `n_components` and compute this ratio for each. Plot the results as a line chart.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create data with a few distinct sources
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+beta = 6e-6 * np.sin(2 * np.pi * 20 * times)
+
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+for name in ["C3", "C4", "Cz"]:
+    data[ch_names.index(name)] += beta
+
+# Add a blink source on frontal channels
+for t_blink in np.arange(1.5, duration - 1, 3.0):
+    pulse = np.exp(-0.5 * ((times - t_blink) / 0.15) ** 2)
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 75e-6 * pulse
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+raw.filter(l_freq=1, h_freq=40)
+
+# Fit ICA with different numbers of components
+n_components_list = [5, 10, 15, 20]
+explained_variances = []
+
+for n_comp in n_components_list:
+    ica = ICA(n_components=n_comp, random_state=42)
+    ica.fit(raw)
+
+    # Total explained variance from the PCA step
+    # ica.pca_explained_variance_ contains the variance for ALL PCA components
+    total_var = ica.pca_explained_variance_.sum()
+    explained_var = ica.pca_explained_variance_[:n_comp].sum()
+    ratio = explained_var / total_var
+
+    explained_variances.append(ratio)
+    print(f"n_components={n_comp:2d}: explained variance = {ratio:.4f} "
+          f"({100 * ratio:.2f}%)")
+
+# Plot
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.plot(n_components_list, explained_variances, "o-", linewidth=2, markersize=8)
+ax.set_xlabel("Number of ICA components")
+ax.set_ylabel("Explained variance ratio")
+ax.set_title("ICA explained variance vs number of components")
+ax.set_ylim(0, 1.05)
+ax.grid(True, alpha=0.3)
+
+for n_comp, var in zip(n_components_list, explained_variances):
+    ax.annotate(f"{100 * var:.1f}%", (n_comp, var),
+                textcoords="offset points", xytext=(0, 12), ha="center")
+
+plt.tight_layout()
+plt.show()
+```
+
+With 5 components you capture the strongest sources but miss subtler ones: underfitting. With 20 components (equal to the number of channels) you capture everything, including noise components that may be hard to interpret. The sweet spot is usually somewhere in between: enough components to capture the main artifact sources, but not so many that you split real brain signals across multiple components. In practice, most people use 15--20 components for a 64-channel montage, or set `n_components` to 0.99 (keeping enough PCA components to explain 99% of the variance).
+:::
+
+
+## Exercise 10: Inspect the ICA mixing matrix
+
+Fit ICA on multi-channel data with a known blink artifact. Extract the mixing matrix (`ica.mixing_matrix_`) and the unmixing matrix (`ica.unmixing_matrix_`). Show that `mixing @ unmixing` is approximately the identity. Plot the mixing weights for the blink component as a bar chart across channels.
+
+::: {.callout-tip collapse="true" title="Hint"}
+After fitting ICA, `ica.mixing_matrix_` has shape `(n_channels, n_components)` and `ica.unmixing_matrix_` has shape `(n_components, n_channels)`. Their product should be close to the identity matrix. Use `np.allclose()` to check. To identify the blink component, use `ica.find_bads_eog()` with Fp1 as the proxy channel. Then plot the corresponding column of the mixing matrix as a bar chart.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Add blink artifacts
+for t_blink in np.arange(1.5, duration - 1, 3.0):
+    pulse = np.exp(-0.5 * ((times - t_blink) / 0.15) ** 2)
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 75e-6 * pulse
+    for name in ["F3", "F4", "Fz"]:
+        data[ch_names.index(name)] += 25e-6 * pulse
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+raw.filter(l_freq=1, h_freq=40)
+
+# Fit ICA
+ica = ICA(n_components=15, random_state=42)
+ica.fit(raw)
+
+# Extract mixing and unmixing matrices
+mixing = ica.mixing_matrix_       # shape: (n_components, n_components)
+unmixing = ica.unmixing_matrix_   # shape: (n_components, n_components)
+
+print(f"Mixing matrix shape:   {mixing.shape}")
+print(f"Unmixing matrix shape: {unmixing.shape}")
+
+# Check that mixing @ unmixing is approximately the identity
+product = mixing @ unmixing
+identity_check = np.allclose(product, np.eye(product.shape[0]), atol=1e-6)
+print(f"\nMixing @ Unmixing ~ Identity? {identity_check}")
+print(f"Max deviation from identity: {np.max(np.abs(product - np.eye(product.shape[0]))):.2e}")
+
+# Find the blink component
+blink_indices, blink_scores = ica.find_bads_eog(
+    raw, ch_name="Fp1", threshold=2.0
+)
+print(f"\nBlink component index: {blink_indices}")
+
+if len(blink_indices) > 0:
+    blink_comp = blink_indices[0]
+
+    # The mixing weights for this component show its spatial pattern
+    # We need the weights in original channel space, so use get_components()
+    components = ica.get_components()  # shape: (n_channels, n_components)
+    blink_weights = components[:, blink_comp]
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    bars = ax.bar(range(n_channels), blink_weights)
+    ax.set_xticks(range(n_channels))
+    ax.set_xticklabels(ch_names, rotation=45, ha="right")
+    ax.set_xlabel("Channel")
+    ax.set_ylabel("Mixing weight")
+    ax.set_title(f"ICA component {blink_comp} (blink) -- mixing weights")
+    ax.axhline(y=0, color="k", linewidth=0.5)
+
+    # Colour frontal channels differently
+    frontal = ["Fp1", "Fp2", "F3", "F4", "Fz", "F7", "F8"]
+    for i, name in enumerate(ch_names):
+        if name in frontal:
+            bars[i].set_color("tab:red")
+        else:
+            bars[i].set_color("tab:blue")
+
+    plt.tight_layout()
+    plt.show()
+else:
+    print("No blink component detected. Try lowering the threshold.")
+```
+
+The bar chart should show large weights on Fp1 and Fp2, moderate weights on F3/F4/Fz, and near-zero weights on posterior channels. This matches the spatial pattern of the injected blink artifact. The mixing matrix tells you how each independent component projects back onto the scalp channels, which is exactly what a topographic map of a component shows.
+:::
+
+
+## Exercise 11: Reconstruct a single ICA component in channel space
+
+After fitting ICA, reconstruct what a single component looks like in the original channel space. Zero out all components except one, apply the mixing matrix, and plot the result. This shows the spatial pattern of that component over time.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Get the ICA source time courses with `ica.get_sources(raw).get_data()`. Create a zeroed-out copy, keep only the component you want, and project back to channel space using `ica.get_components()` (the mixing weights). The reconstruction for a single component is: `channel_data = mixing_weights[:, comp] @ source_data[comp, :]` (an outer product). Plot a few seconds on two or three channels.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+data = np.random.randn(n_channels, n_samples) * 5e-6
+# Add alpha oscillation to occipital channels
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Add blink artifact
+for t_blink in np.arange(1.5, duration - 1, 3.0):
+    pulse = np.exp(-0.5 * ((times - t_blink) / 0.15) ** 2)
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 75e-6 * pulse
+    for name in ["F3", "F4", "Fz"]:
+        data[ch_names.index(name)] += 25e-6 * pulse
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+raw.filter(l_freq=1, h_freq=40)
+
+# Fit ICA
+ica = ICA(n_components=15, random_state=42)
+ica.fit(raw)
+
+# Get sources and mixing weights
+sources = ica.get_sources(raw).get_data()  # (n_components, n_samples)
+components = ica.get_components()           # (n_channels, n_components)
+
+# Find the blink component
+blink_indices, _ = ica.find_bads_eog(raw, ch_name="Fp1", threshold=2.0)
+comp_idx = blink_indices[0] if len(blink_indices) > 0 else 0
+print(f"Reconstructing component {comp_idx} in channel space")
+
+# Reconstruct: outer product of mixing weights and source time course
+# mixing_weights[:, comp] is (n_channels,), source[comp, :] is (n_samples,)
+reconstructed = components[:, comp_idx:comp_idx + 1] @ sources[comp_idx:comp_idx + 1, :]
+# reconstructed shape: (n_channels, n_samples)
+
+print(f"Reconstructed data shape: {reconstructed.shape}")
+
+# Plot first 10 seconds on Fp1, Cz, and O1
+fig, axes = plt.subplots(3, 1, figsize=(14, 8), sharex=True)
+t_plot = slice(0, int(10 * sfreq))
+t_sec = times[:int(10 * sfreq)]
+
+for ax, ch_name in zip(axes, ["Fp1", "Cz", "O1"]):
+    ch_idx = ch_names.index(ch_name)
+    ax.plot(t_sec, reconstructed[ch_idx, t_plot] * 1e6,
+            label=f"Component {comp_idx}")
+    ax.set_ylabel("uV")
+    ax.set_title(f"{ch_name} -- reconstructed component {comp_idx}")
+    ax.legend()
+
+axes[-1].set_xlabel("Time (s)")
+plt.tight_layout()
+plt.show()
+
+# The blink component should show large deflections on Fp1,
+# smaller ones on Cz, and nearly nothing on O1.
+print("If this is the blink component, Fp1 should show the largest signal.")
+```
+
+The reconstructed single-component signal shows how that component contributes to each channel. For a blink component, Fp1 should have large, periodic bumps while O1 should be nearly flat. This is the information that ICA uses when you exclude a component and call `ica.apply()`: it subtracts exactly this reconstructed signal from the original data.
+:::
+
+
+## Exercise 12: Simulate and remove a cardiac (ECG) artifact with ICA
+
+Create data with a simulated heartbeat artifact: a sharp, periodic pulse (roughly 1 Hz, QRS-like shape) that appears weakly across all channels. Run ICA, find the ECG component using `ica.find_bads_ecg()` with a proxy channel, exclude it, and compare the signal before and after.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create the ECG as a narrow Gaussian pulse (width about 20 ms) repeating at 1 Hz. Add it to all EEG channels with a small amplitude (5--10 uV). Also create a dedicated ECG channel with the same pulse but at a much larger amplitude (this is the reference for `find_bads_ecg()`). Set the channel type of this extra channel to "ecg" using `raw.set_channel_types()`. After ICA, use `ica.find_bads_ecg(raw, ch_name="ECG")` to find the cardiac component.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+# 20 EEG channels + 1 ECG reference channel
+ch_names_eeg = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+ch_names = ch_names_eeg + ["ECG"]
+n_eeg = len(ch_names_eeg)
+n_channels = len(ch_names)
+ch_types = ["eeg"] * n_eeg + ["ecg"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
+
+# Create clean EEG with alpha
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Create ECG artifact: sharp QRS-like pulse at ~1 Hz
+ecg_signal = np.zeros(n_samples)
+heart_rate_hz = 1.05  # slightly above 1 Hz for realism
+for t_beat in np.arange(0.5, duration, 1 / heart_rate_hz):
+    qrs = np.exp(-0.5 * ((times - t_beat) / 0.02) ** 2)
+    ecg_signal += qrs
+
+# Add ECG weakly to all EEG channels (5-10 uV)
+rng = np.random.default_rng(42)
+for i in range(n_eeg):
+    ecg_weight = rng.uniform(3e-6, 10e-6)
+    data[i] += ecg_weight * ecg_signal
+
+# ECG reference channel has the full signal at larger amplitude
+data[ch_names.index("ECG")] = 200e-6 * ecg_signal + \
+    np.random.randn(n_samples) * 5e-6
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage, on_missing="ignore")
+raw.filter(l_freq=1, h_freq=40)
+
+# Store a copy before ICA
+raw_before = raw.copy()
+
+# Fit ICA on EEG channels only
+ica = ICA(n_components=15, random_state=42)
+ica.fit(raw, picks="eeg")
+
+# Find cardiac component using the ECG reference channel
+ecg_indices, ecg_scores = ica.find_bads_ecg(raw, ch_name="ECG", threshold=0.5)
+print(f"ECG component(s) found: {ecg_indices}")
+
+# Exclude and apply
+ica.exclude = ecg_indices
+ica.apply(raw)
+
+# Compare Cz before and after
+cz_before = raw_before.get_data(picks="Cz")[0]
+cz_after = raw.get_data(picks="Cz")[0]
+
+fig, axes = plt.subplots(2, 1, figsize=(14, 6), sharex=True)
+t_plot = slice(0, int(10 * sfreq))
+t_sec = times[:int(10 * sfreq)]
+
+axes[0].plot(t_sec, cz_before[t_plot] * 1e6)
+axes[0].set_title("Cz before ECG removal")
+axes[0].set_ylabel("uV")
+
+axes[1].plot(t_sec, cz_after[t_plot] * 1e6)
+axes[1].set_title("Cz after ECG removal")
+axes[1].set_ylabel("uV")
+axes[1].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+
+print("The periodic sharp peaks (ECG) should be reduced after ICA cleaning.")
+```
+
+The "before" trace on Cz should show small, sharp spikes at roughly 1 Hz intervals (the cardiac artifact). After ICA cleaning, those spikes should be gone or much smaller. The ECG reference channel is not modified by ICA because we only fitted on EEG channels; it just serves as the template for detecting the cardiac component.
+:::
+
+
+## Exercise 13: Remove simultaneous blink and EMG artifacts
+
+Create data with both blink artifacts (frontal, low-frequency) and EMG artifacts (temporal, high-frequency). Run ICA, identify both types of components (one by EOG correlation, one by high-frequency power), exclude both, and verify the cleaned data.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Inject blinks on Fp1/Fp2 (Gaussian pulses) and EMG bursts on T7/T8 (high-frequency noise). After fitting ICA, find the blink component with `ica.find_bads_eog()`. For the EMG component, get the source time courses with `ica.get_sources(raw)`, compute the power spectrum of each source, and flag the one with the most high-frequency power (say, above 30 Hz). Add both component indices to `ica.exclude` and apply.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Clean data with alpha
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# 1. Blink artifacts on Fp1/Fp2
+for t_blink in np.arange(1.5, duration - 1, 3.0):
+    pulse = np.exp(-0.5 * ((times - t_blink) / 0.15) ** 2)
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 75e-6 * pulse
+    for name in ["F3", "F4", "Fz"]:
+        data[ch_names.index(name)] += 25e-6 * pulse
+
+# 2. EMG bursts on T7/T8 (frequent short high-frequency bursts)
+rng = np.random.default_rng(42)
+emg_burst_times = np.arange(2.0, duration - 1, 2.5)
+for t_emg in emg_burst_times:
+    start = int(t_emg * sfreq)
+    burst_len = int(0.2 * sfreq)
+    end = min(start + burst_len, n_samples)
+    actual_len = end - start
+    # High-frequency noise burst
+    emg_noise = rng.normal(0, 25e-6, actual_len)
+    hf_mod = np.sin(2 * np.pi * 70 * np.arange(actual_len) / sfreq)
+    emg_noise *= (np.abs(hf_mod) + 0.5)
+    data[ch_names.index("T7"), start:end] += emg_noise
+    data[ch_names.index("T8"), start:end] += emg_noise * 0.9
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+raw.filter(l_freq=1, h_freq=None)  # only high-pass, keep high freqs for EMG
+
+raw_before = raw.copy()
+
+# Fit ICA
+ica = ICA(n_components=15, random_state=42)
+ica.fit(raw)
+
+# --- Find blink component via EOG correlation ---
+blink_indices, _ = ica.find_bads_eog(raw, ch_name="Fp1", threshold=2.0)
+print(f"Blink component(s): {blink_indices}")
+
+# --- Find EMG component via high-frequency power ---
+sources_raw = ica.get_sources(raw)
+sources_data = sources_raw.get_data()  # (n_components, n_samples)
+n_comp = sources_data.shape[0]
+
+# Compute power above 30 Hz for each component
+hf_power = np.zeros(n_comp)
+for c in range(n_comp):
+    freqs = np.fft.rfftfreq(n_samples, 1 / sfreq)
+    psd = np.abs(np.fft.rfft(sources_data[c])) ** 2
+    hf_mask = freqs > 30
+    hf_power[c] = psd[hf_mask].mean()
+
+# The EMG component has the most high-frequency power
+emg_comp = np.argmax(hf_power)
+# Avoid picking the same component as the blink
+if emg_comp in blink_indices:
+    hf_power[emg_comp] = 0
+    emg_comp = np.argmax(hf_power)
+
+print(f"EMG component (highest HF power): {emg_comp}")
+
+# Exclude both
+ica.exclude = list(blink_indices) + [emg_comp]
+print(f"Excluding components: {ica.exclude}")
+ica.apply(raw)
+
+# Compare before and after on Fp1 (blink) and T7 (EMG)
+fig, axes = plt.subplots(2, 2, figsize=(14, 8))
+t_plot = slice(0, int(10 * sfreq))
+t_sec = times[:int(10 * sfreq)]
+
+for col, (ch, label) in enumerate([("Fp1", "blink"), ("T7", "EMG")]):
+    before = raw_before.get_data(picks=ch)[0]
+    after = raw.get_data(picks=ch)[0]
+
+    axes[0, col].plot(t_sec, before[t_plot] * 1e6)
+    axes[0, col].set_title(f"{ch} before ({label} artifact)")
+    axes[0, col].set_ylabel("uV")
+
+    axes[1, col].plot(t_sec, after[t_plot] * 1e6)
+    axes[1, col].set_title(f"{ch} after ICA cleaning")
+    axes[1, col].set_ylabel("uV")
+    axes[1, col].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+
+print("Fp1 should show reduced blink bumps; T7 should show reduced HF bursts.")
+```
+
+After ICA cleaning, Fp1 should have its periodic blink bumps removed and T7 should have its high-frequency bursts reduced. ICA can separate the two because they have different spatial patterns (frontal vs temporal) and different frequency profiles (low vs high). This is a common real-world scenario where a single ICA run handles multiple artifact types at once.
+:::
+
+
+## Exercise 14: Compare rejection rates at different thresholds
+
+Create epoched data. Apply rejection at thresholds of 50, 75, 100, 150, and 200 uV. Plot the number of surviving epochs vs threshold as a curve. Find the "elbow" where relaxing the threshold stops recovering many more epochs.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create epochs without rejection first, then compute peak-to-peak amplitudes for each epoch (as in Exercise 8). Count how many epochs survive each threshold level and plot the results. The "elbow" is where the curve flattens out: increasing the threshold further does not save many more epochs.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Fp1", "Fp2", "F3", "F4", "C3", "C4", "P3", "P4", "O1", "O2"]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create data with artifacts of varying amplitudes
+data = np.random.randn(n_channels, n_samples) * 10e-6
+
+rng = np.random.default_rng(42)
+# Inject 30 artifacts with amplitudes from 40 to 300 uV
+n_artifacts = 30
+artifact_amps = rng.uniform(40e-6, 300e-6, size=n_artifacts)
+artifact_times = rng.uniform(2, duration - 2, size=n_artifacts)
+
+for amp, t_art in zip(artifact_amps, artifact_times):
+    start = int(t_art * sfreq)
+    end = min(start + int(0.08 * sfreq), n_samples)
+    ch_idx = rng.integers(0, n_channels)
+    data[ch_idx, start:end] += amp
+
+raw = mne.io.RawArray(data, info)
+
+# Create 2-second epochs without rejection
+events = mne.make_fixed_length_events(raw, duration=2.0)
+epochs = mne.Epochs(
+    raw, events, tmin=0, tmax=2.0, baseline=None, preload=True
+)
+
+# Compute peak-to-peak for each epoch
+epoch_data = epochs.get_data()
+ptp = np.ptp(epoch_data, axis=2).max(axis=1) * 1e6  # in uV
+
+# Test different thresholds
+thresholds = [50, 75, 100, 150, 200]
+n_total = len(ptp)
+surviving = []
+
+print(f"Total epochs: {n_total}\n")
+for thresh in thresholds:
+    n_survive = np.sum(ptp <= thresh)
+    surviving.append(n_survive)
+    pct = 100 * n_survive / n_total
+    print(f"Threshold {thresh:3d} uV: {n_survive:3d} epochs kept "
+          f"({pct:.1f}%), {n_total - n_survive} rejected")
+
+# Plot
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.plot(thresholds, surviving, "o-", linewidth=2, markersize=8, color="tab:blue")
+ax.set_xlabel("Rejection threshold (uV)")
+ax.set_ylabel("Surviving epochs")
+ax.set_title("Epoch survival vs rejection threshold")
+ax.grid(True, alpha=0.3)
+
+# Annotate each point
+for thresh, n_surv in zip(thresholds, surviving):
+    ax.annotate(f"{n_surv}", (thresh, n_surv),
+                textcoords="offset points", xytext=(0, 12), ha="center")
+
+plt.tight_layout()
+plt.show()
+
+# Find the elbow: where the marginal gain drops
+gains = np.diff(surviving)
+print(f"\nMarginal gains (extra epochs kept per threshold step):")
+for i in range(len(gains)):
+    print(f"  {thresholds[i]} -> {thresholds[i+1]} uV: +{gains[i]} epochs")
+
+elbow_idx = np.argmin(np.abs(gains - gains.mean())) + 1
+print(f"\nThe curve flattens around {thresholds[elbow_idx]} uV, "
+      f"suggesting that as a reasonable threshold for this dataset.")
+```
+
+At very strict thresholds (50 uV) you reject many epochs, including some that are only mildly noisy. As the threshold increases, you keep more epochs, but at some point the curve flattens because most remaining epochs are clean. The elbow is a good balance: it keeps most of the clean data while still rejecting the worst artifacts. In practice, this kind of analysis helps you choose a threshold that suits your particular dataset rather than relying on a one-size-fits-all value.
+:::
+
+
+## Exercise 15: Build an artifact summary report
+
+Write a function that takes an `Epochs` object (with `drop_log` populated) and returns a summary: total epochs, epochs kept, epochs dropped, percentage dropped, and the channels most frequently responsible for rejection. Test on simulated data with artifacts concentrated on specific channels.
+
+::: {.callout-tip collapse="true" title="Hint"}
+The `epochs.drop_log` is a tuple of tuples. Each entry is empty (epoch kept) or contains the names of channels that caused the rejection. Loop through the drop log, count how often each channel name appears, and sort by frequency. Use `collections.Counter` for convenience.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from collections import Counter
+
+
+def artifact_summary(epochs):
+    """Produce a summary report of epoch rejections.
+
+    Parameters
+    ----------
+    epochs : mne.Epochs
+        Epochs object with drop_log populated (must have been created
+        with preload=True and a reject parameter).
+
+    Returns
+    -------
+    report : dict
+        Summary with keys: total, kept, dropped, pct_dropped,
+        channel_counts (Counter of channel names causing rejections).
+    """
+    drop_log = epochs.drop_log
+    total = len(drop_log)
+    kept = sum(1 for entry in drop_log if len(entry) == 0)
+    dropped = total - kept
+
+    # Count which channels caused rejections
+    channel_counts = Counter()
+    for entry in drop_log:
+        for ch_name in entry:
+            if ch_name not in ("IGNORED",):
+                channel_counts[ch_name] += 1
+
+    report = {
+        "total": total,
+        "kept": kept,
+        "dropped": dropped,
+        "pct_dropped": 100 * dropped / total if total > 0 else 0,
+        "channel_counts": channel_counts,
+    }
+    return report
+
+
+def print_report(report):
+    """Print a formatted artifact summary."""
+    print("=== Artifact Rejection Summary ===")
+    print(f"Total epochs:    {report['total']}")
+    print(f"Epochs kept:     {report['kept']}")
+    print(f"Epochs dropped:  {report['dropped']}")
+    print(f"Percentage dropped: {report['pct_dropped']:.1f}%")
+
+    if report["channel_counts"]:
+        print("\nChannels most often responsible for rejection:")
+        for ch, count in report["channel_counts"].most_common():
+            print(f"  {ch}: {count} times")
+    else:
+        print("\nNo channels caused rejections.")
+
+
+# --- Test on simulated data ---
+sfreq = 500
+duration = 60
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Fp1", "Fp2", "C3", "C4", "O1", "O2"]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+data = np.random.randn(n_channels, n_samples) * 10e-6
+
+# Inject artifacts mainly on Fp1 (blinks) and C3 (muscle)
+rng = np.random.default_rng(42)
+
+# Many blink artifacts on Fp1
+for t in rng.uniform(1, duration - 1, size=12):
+    s = int(t * sfreq)
+    e = min(s + int(0.1 * sfreq), n_samples)
+    data[ch_names.index("Fp1"), s:e] += 200e-6
+
+# Some muscle artifacts on C3
+for t in rng.uniform(1, duration - 1, size=5):
+    s = int(t * sfreq)
+    e = min(s + int(0.05 * sfreq), n_samples)
+    data[ch_names.index("C3"), s:e] += 150e-6
+
+raw = mne.io.RawArray(data, info)
+
+events = mne.make_fixed_length_events(raw, duration=2.0)
+epochs = mne.Epochs(
+    raw, events,
+    tmin=0, tmax=2.0,
+    baseline=None,
+    reject=dict(eeg=100e-6),
+    preload=True
+)
+
+report = artifact_summary(epochs)
+print_report(report)
+```
+
+The report should show that Fp1 is the channel most often responsible for rejection (it has the most injected artifacts), followed by C3. This kind of summary is useful for identifying "bad" channels: if one channel causes a disproportionate number of rejections, you might want to interpolate it rather than losing all those epochs.
+:::
+
+
+## Exercise 16: Plot the ICA eigenvalue spectrum
+
+Fit ICA on data and extract the PCA explained variance ratios that ICA uses internally (`ica.pca_explained_variance_`). Plot them as a scree plot. Identify the "elbow" and discuss how it relates to choosing `n_components`.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Fit ICA with a high `n_components` (or leave it at `None` to use all channels). Then access `ica.pca_explained_variance_`, which gives the eigenvalues from the PCA whitening step. Plot them on a log scale. The elbow in the scree plot suggests where the signal ends and noise begins; components beyond the elbow are mostly noise.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create data with a few strong sources and lots of noise
+data = np.random.randn(n_channels, n_samples) * 5e-6
+
+# Source 1: alpha oscillation (occipital)
+alpha = 15e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Source 2: beta oscillation (central)
+beta = 8e-6 * np.sin(2 * np.pi * 20 * times)
+for name in ["C3", "C4", "Cz"]:
+    data[ch_names.index(name)] += beta
+
+# Source 3: blink artifact (frontal)
+for t_blink in np.arange(1.5, duration - 1, 3.0):
+    pulse = np.exp(-0.5 * ((times - t_blink) / 0.15) ** 2)
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 75e-6 * pulse
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+raw.filter(l_freq=1, h_freq=40)
+
+# Fit ICA with all components
+ica = ICA(n_components=None, random_state=42)
+ica.fit(raw)
+
+# Get the PCA explained variance
+pca_var = ica.pca_explained_variance_
+pca_var_ratio = pca_var / pca_var.sum()
+
+print("PCA explained variance ratios:")
+for i, ratio in enumerate(pca_var_ratio):
+    cumulative = pca_var_ratio[:i + 1].sum()
+    print(f"  Component {i:2d}: {100 * ratio:.2f}% "
+          f"(cumulative: {100 * cumulative:.2f}%)")
+
+# Scree plot
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# Linear scale
+axes[0].plot(range(1, len(pca_var) + 1), pca_var_ratio * 100,
+             "o-", markersize=6)
+axes[0].set_xlabel("Component number")
+axes[0].set_ylabel("Explained variance (%)")
+axes[0].set_title("Scree plot (linear scale)")
+axes[0].grid(True, alpha=0.3)
+
+# Log scale
+axes[1].semilogy(range(1, len(pca_var) + 1), pca_var_ratio * 100,
+                 "o-", markersize=6)
+axes[1].set_xlabel("Component number")
+axes[1].set_ylabel("Explained variance (%, log scale)")
+axes[1].set_title("Scree plot (log scale)")
+axes[1].grid(True, alpha=0.3)
+
+plt.tight_layout()
+plt.show()
+
+# Identify the elbow: where the drop-off levels out
+# A simple heuristic: find where variance drops below 1/n_channels
+threshold = 1 / n_channels
+above_threshold = np.sum(pca_var_ratio > threshold)
+print(f"\nComponents above {100 * threshold:.1f}% variance: {above_threshold}")
+print(f"This suggests n_components={above_threshold} as a starting point.")
+```
+
+The scree plot should show a few components with high variance (corresponding to the alpha, beta, and blink sources) followed by a sharp drop. The remaining components capture noise. The elbow, where the curve flattens, is a reasonable choice for `n_components`. Setting `n_components=0.99` in MNE does something similar automatically: it keeps enough PCA components to explain 99% of the variance.
+:::
+
+
+## Exercise 17: Simulate and detect a saccade artifact
+
+Create a saccade artifact as a step function (sudden voltage shift) on lateral frontal channels (F7, F8), with opposite polarity on left vs right. Run ICA, find the component with a step-like time course and lateral frontal topography. Exclude it and verify.
+
+::: {.callout-tip collapse="true" title="Hint"}
+A saccade produces a box-car-like shift: the voltage jumps up on one side (e.g. F7) and down on the other (F8), holds for a fraction of a second, then returns. After fitting ICA, look for the component whose mixing weights have opposite signs on F7 and F8. You can check this by inspecting `ica.get_components()` and looking for a column where the F7 and F8 entries have large magnitudes with opposite signs.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Add saccade artifacts: step functions on F7 (positive) and F8 (negative)
+saccade_times = np.arange(3.0, duration - 2, 4.0)
+for t_sac in saccade_times:
+    start = int(t_sac * sfreq)
+    step_duration = int(0.4 * sfreq)  # 400 ms step
+    end = min(start + step_duration, n_samples)
+    # Smooth onset/offset with a short ramp (20 ms)
+    ramp_len = int(0.02 * sfreq)
+    step = np.zeros(end - start)
+    step[ramp_len:-ramp_len] = 1.0
+    step[:ramp_len] = np.linspace(0, 1, ramp_len)
+    step[-ramp_len:] = np.linspace(1, 0, ramp_len)
+
+    # Opposite polarity on left vs right
+    data[ch_names.index("F7"), start:end] += 50e-6 * step
+    data[ch_names.index("F8"), start:end] -= 50e-6 * step
+    # Smaller contributions to nearby channels
+    data[ch_names.index("Fp1"), start:end] += 15e-6 * step
+    data[ch_names.index("Fp2"), start:end] -= 15e-6 * step
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+raw.filter(l_freq=1, h_freq=40)
+
+raw_before = raw.copy()
+
+# Fit ICA
+ica = ICA(n_components=15, random_state=42)
+ica.fit(raw)
+
+# Find the saccade component by looking for opposite polarity on F7/F8
+components = ica.get_components()  # (n_channels, n_components)
+f7_idx = ch_names.index("F7")
+f8_idx = ch_names.index("F8")
+
+# The saccade component has large, opposite-sign weights on F7 and F8
+laterality_score = np.zeros(components.shape[1])
+for c in range(components.shape[1]):
+    f7_weight = components[f7_idx, c]
+    f8_weight = components[f8_idx, c]
+    # Large magnitude and opposite signs = high laterality
+    if f7_weight * f8_weight < 0:  # opposite signs
+        laterality_score[c] = abs(f7_weight) + abs(f8_weight)
+
+saccade_comp = np.argmax(laterality_score)
+print(f"Saccade component (highest laterality on F7/F8): {saccade_comp}")
+print(f"  F7 weight: {components[f7_idx, saccade_comp]:.4f}")
+print(f"  F8 weight: {components[f8_idx, saccade_comp]:.4f}")
+
+# Exclude and apply
+ica.exclude = [saccade_comp]
+ica.apply(raw)
+
+# Compare F7 before and after
+fig, axes = plt.subplots(2, 1, figsize=(14, 6), sharex=True)
+t_plot = slice(0, int(15 * sfreq))
+t_sec = times[:int(15 * sfreq)]
+
+axes[0].plot(t_sec, raw_before.get_data(picks="F7")[0, t_plot] * 1e6,
+             label="F7")
+axes[0].plot(t_sec, raw_before.get_data(picks="F8")[0, t_plot] * 1e6,
+             label="F8", alpha=0.7)
+axes[0].set_title("Before saccade removal")
+axes[0].set_ylabel("uV")
+axes[0].legend()
+
+axes[1].plot(t_sec, raw.get_data(picks="F7")[0, t_plot] * 1e6,
+             label="F7")
+axes[1].plot(t_sec, raw.get_data(picks="F8")[0, t_plot] * 1e6,
+             label="F8", alpha=0.7)
+axes[1].set_title("After saccade removal")
+axes[1].set_ylabel("uV")
+axes[1].set_xlabel("Time (s)")
+axes[1].legend()
+
+plt.tight_layout()
+plt.show()
+
+print("The step-like deflections (opposite on F7 vs F8) should be removed.")
+```
+
+The key diagnostic feature of a saccade component is opposite polarity on left and right lateral channels. Before cleaning, F7 and F8 show mirror-image step functions. After removing the saccade component, those steps should be gone. The detection method here (checking for opposite-sign weights on F7/F8) is simple but effective for this kind of artifact.
+:::
+
+
+## Exercise 18: Apply ICA to EEG channels only
+
+Create data with EEG and EOG channels. Fit ICA only on EEG channels (`picks="eeg"`). Use the EOG channels as references to find blink components (`ica.find_bads_eog` using the actual EOG channel). This is the recommended real-world workflow.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create a `Raw` object with 20 EEG channels and 2 EOG channels (set `ch_types` to `"eog"` for the last two). Add blink artifacts to both the frontal EEG channels and the EOG channels. Fit ICA with `picks="eeg"` so the EOG channels are not included in the decomposition. Then use `ica.find_bads_eog(raw, ch_name="EOG1")` to find the blink component by correlating ICA sources with the dedicated EOG channel. This avoids the circular problem of using EEG channels both for ICA and for artifact detection.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+# 20 EEG channels + 2 EOG channels
+ch_names_eeg = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+ch_names_eog = ["EOG1", "EOG2"]
+ch_names = ch_names_eeg + ch_names_eog
+n_eeg = len(ch_names_eeg)
+n_all = len(ch_names)
+ch_types = ["eeg"] * n_eeg + ["eog"] * 2
+
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
+
+# Create clean EEG
+data = np.random.randn(n_all, n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Add blink artifacts: strong on EOG, present on frontal EEG
+for t_blink in np.arange(1.5, duration - 1, 3.0):
+    pulse = np.exp(-0.5 * ((times - t_blink) / 0.15) ** 2)
+
+    # EOG channels get the full blink
+    data[ch_names.index("EOG1")] += 150e-6 * pulse
+    data[ch_names.index("EOG2")] += 140e-6 * pulse
+
+    # Frontal EEG channels get a weaker version
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 75e-6 * pulse
+    for name in ["F3", "F4", "Fz"]:
+        data[ch_names.index(name)] += 25e-6 * pulse
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage, on_missing="ignore")  # ignore EOG channels
+raw.filter(l_freq=1, h_freq=40)
+
+raw_before = raw.copy()
+
+# Fit ICA on EEG channels only
+ica = ICA(n_components=15, random_state=42)
+ica.fit(raw, picks="eeg")
+print(f"ICA fitted on {ica.ch_names[:3]}... ({len(ica.ch_names)} EEG channels)")
+print(f"EOG channels excluded from ICA fitting: {ch_names_eog}")
+
+# Find blink component using the dedicated EOG channel
+blink_indices, blink_scores = ica.find_bads_eog(
+    raw, ch_name="EOG1", threshold=2.0
+)
+print(f"\nBlink component(s) found via EOG1: {blink_indices}")
+
+# Exclude and apply (ICA modifies only EEG channels)
+ica.exclude = blink_indices
+ica.apply(raw)
+
+# Compare Fp1 before and after
+fig, axes = plt.subplots(2, 1, figsize=(14, 6), sharex=True)
+t_plot = slice(0, int(10 * sfreq))
+t_sec = times[:int(10 * sfreq)]
+
+axes[0].plot(t_sec, raw_before.get_data(picks="Fp1")[0, t_plot] * 1e6)
+axes[0].set_title("Fp1 before ICA (fitted on EEG only, detected via EOG1)")
+axes[0].set_ylabel("uV")
+
+axes[1].plot(t_sec, raw.get_data(picks="Fp1")[0, t_plot] * 1e6)
+axes[1].set_title("Fp1 after ICA blink removal")
+axes[1].set_ylabel("uV")
+axes[1].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+
+# Verify that EOG channels are unchanged
+eog1_before = raw_before.get_data(picks="EOG1")[0]
+eog1_after = raw.get_data(picks="EOG1")[0]
+eog_unchanged = np.allclose(eog1_before, eog1_after)
+print(f"\nEOG1 unchanged after ICA.apply()? {eog_unchanged}")
+print("(EOG channels should not be modified because ICA was fitted on EEG only.)")
+```
+
+This is the recommended workflow for real EEG data. You fit ICA only on EEG channels so the decomposition is not influenced by the large EOG signals. Then you use the EOG channels as an independent reference to identify which ICA components correspond to eye artifacts. The EOG channels themselves are left untouched by `ica.apply()` because they were not included in the ICA fit.
+:::
+
+
+## Exercise 19: Test ICA reproducibility across random seeds
+
+Fit ICA on the same data with 5 different `random_state` values. For each, find the blink component and compute its correlation with the others. Report the mean and standard deviation of the pairwise correlations. This shows whether ICA gives stable results.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Run ICA five times with different `random_state` values (e.g. 0, 1, 2, 3, 4). For each run, find the blink component using `find_bads_eog()` and extract its source time course with `ica.get_sources(raw).get_data()[blink_index]`. Then compute the Pearson correlation between all pairs of blink source time courses using `np.corrcoef()`. High correlations (close to 1 or -1) mean ICA is giving stable results. The sign may flip between runs (a known property of ICA), so use the absolute value of the correlation.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Add strong blink artifact
+for t_blink in np.arange(1.5, duration - 1, 3.0):
+    pulse = np.exp(-0.5 * ((times - t_blink) / 0.15) ** 2)
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 75e-6 * pulse
+    for name in ["F3", "F4", "Fz"]:
+        data[ch_names.index(name)] += 25e-6 * pulse
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+raw.filter(l_freq=1, h_freq=40)
+
+# Fit ICA with different random seeds
+seeds = [0, 1, 2, 3, 4]
+blink_sources = []
+
+for seed in seeds:
+    raw_copy = raw.copy()
+    ica = ICA(n_components=15, random_state=seed)
+    ica.fit(raw_copy)
+
+    blink_idx, _ = ica.find_bads_eog(raw_copy, ch_name="Fp1", threshold=2.0)
+
+    if len(blink_idx) > 0:
+        source_data = ica.get_sources(raw_copy).get_data()
+        blink_ts = source_data[blink_idx[0]]
+        blink_sources.append(blink_ts)
+        print(f"Seed {seed}: blink component = {blink_idx[0]}")
+    else:
+        print(f"Seed {seed}: no blink component found")
+
+# Compute pairwise correlations (absolute value, since sign can flip)
+n_runs = len(blink_sources)
+if n_runs >= 2:
+    correlations = []
+    for i in range(n_runs):
+        for j in range(i + 1, n_runs):
+            r = np.abs(np.corrcoef(blink_sources[i], blink_sources[j])[0, 1])
+            correlations.append(r)
+            print(f"  |corr(seed {seeds[i]}, seed {seeds[j]})| = {r:.4f}")
+
+    correlations = np.array(correlations)
+    print(f"\nPairwise correlations (absolute):")
+    print(f"  Mean: {correlations.mean():.4f}")
+    print(f"  Std:  {correlations.std():.4f}")
+    print(f"  Min:  {correlations.min():.4f}")
+    print(f"  Max:  {correlations.max():.4f}")
+
+    if correlations.mean() > 0.95:
+        print("\nICA is highly reproducible for the blink component.")
+    elif correlations.mean() > 0.80:
+        print("\nICA is reasonably reproducible, but some variability exists.")
+    else:
+        print("\nICA results vary across runs. Consider using more data "
+              "or fewer components.")
+else:
+    print("Not enough successful runs to compute correlations.")
+```
+
+With a strong, well-defined artifact like blinks on clean simulated data, you should see correlations very close to 1.0 across runs. On noisier or more ambiguous data, the correlations may drop. This is why it is good practice to set `random_state` to a fixed value for reproducibility when reporting results, and to check stability if you are not sure whether ICA is giving reliable results for your dataset.
+:::
+
+
+## Exercise 20: Build a combined artifact rejection pipeline
+
+Write a function that: (1) applies amplitude rejection to remove the worst epochs, (2) fits ICA on the surviving data, (3) identifies and removes blink and cardiac components, (4) applies ICA to the full epoch set. Compare the data quality before and after the full pipeline by computing the mean PSD.
+
+::: {.callout-tip collapse="true" title="Hint"}
+The trick is to fit ICA on clean(er) data (after rejecting the worst epochs) but then apply the ICA solution to all epochs (including those that were borderline). First create epochs with a strict rejection threshold to get a clean subset. Fit ICA on that subset. Find the bad components. Then go back, create epochs from the original data with a more lenient threshold (or no threshold), and apply `ica.apply()` to those epochs. Compare the PSD of the original vs cleaned epochs.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+
+def combined_pipeline(raw, sfreq, strict_thresh=80e-6, lenient_thresh=200e-6):
+    """Run a combined amplitude-rejection + ICA cleaning pipeline.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw data (with EEG and optionally ECG channels).
+    sfreq : float
+        Sampling frequency.
+    strict_thresh : float
+        Strict threshold (V) for selecting clean epochs for ICA fitting.
+    lenient_thresh : float
+        Lenient threshold (V) for the final epoch set.
+
+    Returns
+    -------
+    epochs_before : mne.Epochs
+        Epochs before ICA cleaning (lenient rejection only).
+    epochs_after : mne.Epochs
+        Epochs after ICA cleaning.
+    ica : ICA
+        The fitted ICA object.
+    """
+    # Step 1: Create events
+    events = mne.make_fixed_length_events(raw, duration=2.0)
+
+    # Step 2: Create strictly rejected epochs for ICA fitting
+    epochs_strict = mne.Epochs(
+        raw, events, tmin=0, tmax=2.0, baseline=None,
+        reject=dict(eeg=strict_thresh), preload=True
+    )
+    n_strict = len(epochs_strict)
+    print(f"Step 1: Strict rejection ({strict_thresh * 1e6:.0f} uV) "
+          f"kept {n_strict}/{len(events)} epochs for ICA fitting")
+
+    # Step 3: Fit ICA on the clean subset
+    ica = ICA(n_components=15, random_state=42)
+    ica.fit(epochs_strict)
+    print(f"Step 2: ICA fitted with {ica.n_components_} components")
+
+    # Step 4: Find bad components
+    excluded = []
+
+    # Find blink components
+    blink_idx, _ = ica.find_bads_eog(raw, ch_name="Fp1", threshold=2.0)
+    excluded.extend(blink_idx)
+    print(f"Step 3a: Blink components found: {blink_idx}")
+
+    # Find ECG components (if ECG channel exists)
+    if "ECG" in raw.ch_names:
+        ecg_idx, _ = ica.find_bads_ecg(raw, ch_name="ECG", threshold=0.5)
+        excluded.extend(ecg_idx)
+        print(f"Step 3b: ECG components found: {ecg_idx}")
+
+    ica.exclude = list(set(excluded))
+    print(f"Step 3: Total components to exclude: {ica.exclude}")
+
+    # Step 5: Create lenient epochs from original data (before ICA)
+    raw_for_epochs = raw.copy()
+    epochs_before = mne.Epochs(
+        raw_for_epochs, events, tmin=0, tmax=2.0, baseline=None,
+        reject=dict(eeg=lenient_thresh), preload=True
+    )
+    print(f"Step 4: Lenient rejection ({lenient_thresh * 1e6:.0f} uV) "
+          f"kept {len(epochs_before)}/{len(events)} epochs")
+
+    # Step 6: Apply ICA to the lenient epochs
+    epochs_after = epochs_before.copy()
+    ica.apply(epochs_after)
+    print(f"Step 5: ICA applied to {len(epochs_after)} epochs")
+
+    return epochs_before, epochs_after, ica
+
+
+# --- Create test data ---
+sfreq = 500
+duration = 180  # 3 minutes for enough epochs
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names_eeg = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+ch_names = ch_names_eeg + ["ECG"]
+n_eeg = len(ch_names_eeg)
+ch_types = ["eeg"] * n_eeg + ["ecg"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
+
+data = np.random.randn(len(ch_names), n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Add blink artifacts
+for t_blink in np.arange(1.5, duration - 1, 3.0):
+    pulse = np.exp(-0.5 * ((times - t_blink) / 0.15) ** 2)
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 75e-6 * pulse
+    for name in ["F3", "F4", "Fz"]:
+        data[ch_names.index(name)] += 25e-6 * pulse
+
+# Add ECG artifact
+ecg_signal = np.zeros(n_samples)
+for t_beat in np.arange(0.5, duration, 0.95):
+    ecg_signal += np.exp(-0.5 * ((times - t_beat) / 0.02) ** 2)
+
+rng = np.random.default_rng(42)
+for i in range(n_eeg):
+    data[i] += rng.uniform(3e-6, 8e-6) * ecg_signal
+
+data[ch_names.index("ECG")] = 200e-6 * ecg_signal + \
+    rng.normal(0, 5e-6, n_samples)
+
+# Add a few very large artifacts (to test strict rejection)
+for t_art in [15.0, 45.0, 90.0, 130.0]:
+    s = int(t_art * sfreq)
+    e = min(s + int(0.1 * sfreq), n_samples)
+    ch_idx = rng.integers(0, n_eeg)
+    data[ch_idx, s:e] += 300e-6
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage, on_missing="ignore")
+raw.filter(l_freq=1, h_freq=40)
+
+# Run the pipeline
+epochs_before, epochs_after, ica = combined_pipeline(raw, sfreq)
+
+# Compare PSDs
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+psd_before = epochs_before.compute_psd(fmax=40, picks="eeg")
+psd_after = epochs_after.compute_psd(fmax=40, picks="eeg")
+
+psd_before.plot(axes=axes[0], show=False)
+axes[0].set_title("Mean PSD before ICA cleaning")
+
+psd_after.plot(axes=axes[1], show=False)
+axes[1].set_title("Mean PSD after ICA cleaning")
+
+plt.tight_layout()
+plt.show()
+
+# Quantitative comparison: mean power in the 1-4 Hz band (blink range)
+psd_before_data = psd_before.get_data()
+psd_after_data = psd_after.get_data()
+freqs = psd_before.freqs
+
+low_freq_mask = (freqs >= 1) & (freqs <= 4)
+mean_power_before = psd_before_data[:, :, low_freq_mask].mean()
+mean_power_after = psd_after_data[:, :, low_freq_mask].mean()
+
+print(f"\nMean power in 1-4 Hz band:")
+print(f"  Before ICA: {mean_power_before:.4e}")
+print(f"  After ICA:  {mean_power_after:.4e}")
+print(f"  Reduction:  {100 * (1 - mean_power_after / mean_power_before):.1f}%")
+```
+
+This pipeline combines the strengths of both approaches. Amplitude rejection removes the worst epochs first, giving ICA cleaner data to work with (ICA performs poorly when the training data contains extreme artifacts). Then ICA handles the subtler, systematic artifacts (blinks, heartbeats) that repeat across epochs. The final result should show reduced low-frequency power (from removing blinks) and reduced sharp-peak artifacts (from removing ECG). In a real analysis, you would run exactly this kind of pipeline, possibly with autoreject or a similar tool for the threshold-selection step.
+:::

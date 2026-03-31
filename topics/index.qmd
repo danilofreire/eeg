@@ -7,12 +7,13 @@ listing:
   id: topics-listing
   contents: "*.qmd"
   type: table
-  fields: [title, description, categories]
+  fields: [title, module, description, categories]
   field-display-names:
     title: "Title"
+    module: "Module"
     description: "Description"
     categories: "Categories"
-  sort: "title asc"
+  sort: "module asc"
   filter-ui: true
 ---
 

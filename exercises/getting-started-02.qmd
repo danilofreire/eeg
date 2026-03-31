@@ -1,0 +1,730 @@
+---
+title: "Getting started: more exercises"
+description: "Further practice with MNE data structures, montages, annotations, channel selection, simulated signals, and data export."
+module: 1
+date: 2026-03-31
+date-modified: last-modified
+categories: [getting-started, basics]
+---
+
+These exercises go with [Module 1: Getting started](../modules/01-getting-started.qmd). They pick up where the first set left off and cover montages, annotations, events, epochs, channel manipulation, data export, and a few other practical topics. Work through them in order or jump to whichever one interests you.
+
+All exercises use simulated data so you do not need any external files.
+
+
+## Exercise 6: List available standard montages
+
+List every standard montage that MNE ships with. Print each montage name together with its channel count. Then find and print the name of the montage with the most channels.
+
+::: {.callout-tip collapse="true" title="Hint"}
+`mne.channels.get_builtin_montages()` returns a list of montage names. Loop over them, call `mne.channels.make_standard_montage(name)` for each, and check `len(montage.ch_names)`. Keep track of the maximum as you go.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import mne
+
+montage_names = mne.channels.get_builtin_montages()
+print(f"MNE ships with {len(montage_names)} standard montages.\n")
+
+max_channels = 0
+max_name = ""
+
+for name in montage_names:
+    montage = mne.channels.make_standard_montage(name)
+    n_ch = len(montage.ch_names)
+    print(f"  {name}: {n_ch} channels")
+    if n_ch > max_channels:
+        max_channels = n_ch
+        max_name = name
+
+print(f"\nMontage with the most channels: {max_name} ({max_channels} channels)")
+```
+:::
+
+
+## Exercise 7: Create a Raw object with mixed channel types
+
+Create a `Raw` object that contains 20 EEG channels, 2 EOG channels, and 2 EMG channels (24 channels in total). Query the `Info` to count how many channels belong to each type. Then pick only the EEG channels into a new object and verify that it has exactly 20 channels.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Build three lists of channel names (e.g. `EEG001`...`EEG020`, `EOG1`, `EOG2`, `EMG1`, `EMG2`) and a matching list of types. Use `collections.Counter` on `raw.get_channel_types()` to count by type. Use `raw.copy().pick_types(eeg=True)` to keep only EEG channels.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from collections import Counter
+
+# Build channel names and types
+ch_names_eeg = [f"EEG{i:03d}" for i in range(1, 21)]
+ch_names_eog = ["EOG1", "EOG2"]
+ch_names_emg = ["EMG1", "EMG2"]
+ch_names = ch_names_eeg + ch_names_eog + ch_names_emg
+ch_types = ["eeg"] * 20 + ["eog"] * 2 + ["emg"] * 2
+
+# Create the Raw object (10 seconds of random data)
+sfreq = 256
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
+data = np.random.randn(len(ch_names), sfreq * 10) * 20e-6
+raw = mne.io.RawArray(data, info)
+
+# Count channels by type
+type_counts = Counter(raw.get_channel_types())
+print("Channel counts by type:")
+for ch_type, count in sorted(type_counts.items()):
+    print(f"  {ch_type}: {count}")
+
+# Pick only EEG channels
+raw_eeg = raw.copy().pick_types(eeg=True)
+print(f"\nAfter picking EEG only: {len(raw_eeg.ch_names)} channels")
+print(f"Channel names: {raw_eeg.ch_names}")
+```
+:::
+
+
+## Exercise 8: Work with events arrays
+
+Generate fixed-length events from a `Raw` object using `mne.make_fixed_length_events()`. Print the shape of the resulting events array, explain what each of the three columns represents, and count the total number of events.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create a short Raw (say 30 seconds), then call `mne.make_fixed_length_events(raw, duration=2.0)` to get one event every 2 seconds. The returned array has shape `(n_events, 3)`. Column 0 is the sample index, column 1 is the previous event id (usually 0), and column 2 is the event id.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Create a 30-second Raw object
+sfreq = 256
+ch_names = [f"EEG{i:03d}" for i in range(1, 9)]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(len(ch_names), sfreq * 30) * 20e-6
+raw = mne.io.RawArray(data, info)
+
+# Generate events every 2 seconds
+events = mne.make_fixed_length_events(raw, duration=2.0)
+
+print(f"Events array shape: {events.shape}")
+print(f"Total number of events: {len(events)}")
+print()
+print("Column meanings:")
+print("  Column 0 (sample index): the sample number where each event occurs")
+print("  Column 1 (previous event id): usually 0 for fixed-length events")
+print("  Column 2 (event id): the integer label for this event type")
+print()
+print("First 5 events:")
+print(events[:5])
+```
+:::
+
+
+## Exercise 9: Convert Raw to Epochs
+
+Create a `Raw` object, generate fixed-length events, build `Epochs` with 1-second windows around each event, and verify the shape of the resulting 3-D data array. The three dimensions should be `(n_epochs, n_channels, n_times)`.
+
+::: {.callout-tip collapse="true" title="Hint"}
+After generating events with `mne.make_fixed_length_events(raw, duration=1.0)`, create an `event_id` dictionary (e.g. `{"event": 1}`) and pass it to `mne.Epochs(raw, events, event_id, tmin=0, tmax=1.0 - 1/sfreq, baseline=None, preload=True)`. Then call `epochs.get_data()` and check its `.shape`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Create a 20-second Raw object with 8 channels
+sfreq = 256
+ch_names = [f"EEG{i:03d}" for i in range(1, 9)]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(len(ch_names), sfreq * 20) * 20e-6
+raw = mne.io.RawArray(data, info)
+
+# Generate events every 1 second
+events = mne.make_fixed_length_events(raw, duration=1.0)
+event_id = {"event": 1}
+
+# Build Epochs (1-second windows)
+epochs = mne.Epochs(
+    raw, events, event_id,
+    tmin=0, tmax=1.0 - 1 / sfreq,
+    baseline=None, preload=True
+)
+
+# Get the data array and check its shape
+epochs_data = epochs.get_data()
+n_epochs, n_channels, n_times = epochs_data.shape
+
+print(f"Epochs data shape: {epochs_data.shape}")
+print(f"  n_epochs:   {n_epochs}")
+print(f"  n_channels: {n_channels}")
+print(f"  n_times:    {n_times}")
+print(f"\nExpected n_times for 1 second at {sfreq} Hz: {sfreq}")
+```
+:::
+
+
+## Exercise 10: Extract and modify data as a NumPy array
+
+Get the data array from a `Raw` object with `get_data()`, multiply every value by 2, create a new `Raw` from the scaled array, and confirm that the scaling was applied by comparing the two arrays.
+
+::: {.callout-tip collapse="true" title="Hint"}
+`raw.get_data()` returns a plain NumPy array. After scaling it, create a new `RawArray` with the same `Info`. Use `np.allclose()` to check that `new_data == 2 * original_data`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Create a Raw object
+sfreq = 256
+ch_names = ["C3", "C4", "Cz", "Pz", "Oz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(len(ch_names), sfreq * 10) * 15e-6
+raw_original = mne.io.RawArray(data, info)
+
+# Extract the data as a NumPy array
+original_data = raw_original.get_data()
+print(f"Original mean amplitude: {np.mean(np.abs(original_data)):.2e} V")
+
+# Scale the data by a factor of 2
+scaled_data = original_data * 2
+
+# Create a new Raw from the scaled data
+raw_scaled = mne.io.RawArray(scaled_data, raw_original.info.copy())
+
+# Verify the scaling
+new_data = raw_scaled.get_data()
+print(f"Scaled mean amplitude:   {np.mean(np.abs(new_data)):.2e} V")
+
+if np.allclose(new_data, 2 * original_data):
+    print("\nScaling verified: every value in the new Raw is exactly 2x the original.")
+else:
+    print("\nSomething went wrong with the scaling.")
+```
+:::
+
+
+## Exercise 11: Compare two montages visually
+
+Load the `standard_1020` and `standard_1005` montages. Print how many channels each one defines. Then plot both montages side by side so you can see the difference in spatial coverage.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `mne.channels.make_standard_montage()` to load each montage. Check `len(montage.ch_names)` for the channel count. Call `montage.plot()` on each one to produce a topographic map of electrode positions. You can display them in sequence or use `matplotlib` subplots for a side-by-side layout.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import mne
+import matplotlib.pyplot as plt
+
+# Load both montages
+montage_1020 = mne.channels.make_standard_montage("standard_1020")
+montage_1005 = mne.channels.make_standard_montage("standard_1005")
+
+print(f"standard_1020: {len(montage_1020.ch_names)} channels")
+print(f"standard_1005: {len(montage_1005.ch_names)} channels")
+
+# Plot them side by side
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+montage_1020.plot(axes=axes[0], show=False)
+axes[0].set_title(f"standard_1020 ({len(montage_1020.ch_names)} channels)")
+
+montage_1005.plot(axes=axes[1], show=False)
+axes[1].set_title(f"standard_1005 ({len(montage_1005.ch_names)} channels)")
+
+plt.tight_layout()
+plt.show()
+```
+
+The 10-05 montage is a superset of 10-20 and has many more electrode positions, giving much finer spatial coverage across the scalp.
+:::
+
+
+## Exercise 12: Add annotations to mark bad segments
+
+Create a `Raw` object and add `Annotations` that mark three separate time segments as `"bad_movement"`. Verify that the annotations were stored correctly by printing the total number of annotations, their descriptions, and their onset times.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create annotations with `mne.Annotations(onset, duration, description)`, where each argument can be a list. Then assign them with `raw.set_annotations(annotations)`. Access the stored annotations through `raw.annotations` and iterate over them to print details.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Create a 60-second Raw object
+sfreq = 256
+ch_names = [f"EEG{i:03d}" for i in range(1, 9)]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(len(ch_names), sfreq * 60) * 20e-6
+raw = mne.io.RawArray(data, info)
+
+# Define three bad segments
+onsets = [5.0, 22.5, 45.0]       # start times in seconds
+durations = [2.0, 3.5, 1.5]      # duration of each bad segment
+descriptions = ["bad_movement"] * 3
+
+annotations = mne.Annotations(onset=onsets, duration=durations, description=descriptions)
+raw.set_annotations(annotations)
+
+# Verify
+print(f"Total annotations: {len(raw.annotations)}")
+print()
+for i, annot in enumerate(raw.annotations):
+    print(f"  Annotation {i + 1}:")
+    print(f"    Onset:       {annot['onset']:.1f} s")
+    print(f"    Duration:    {annot['duration']:.1f} s")
+    print(f"    Description: {annot['description']}")
+```
+:::
+
+
+## Exercise 13: Simulate a multi-frequency signal and verify with PSD
+
+Create a single-channel signal that contains three frequency components: 5 Hz (theta), 10 Hz (alpha), and 25 Hz (beta). Compute the power spectral density using `scipy.signal.welch` and verify that the three peaks appear at the correct frequencies.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Build a time vector and sum three sine waves at different frequencies. Use `scipy.signal.welch(signal, fs=sfreq, nperseg=sfreq*2)` to estimate the PSD. Find the peak frequencies with `freqs[np.argsort(psd)[-3:]]` or by looking for local maxima. Plot the PSD to confirm visually.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import welch
+
+# Parameters
+sfreq = 500
+duration = 30  # seconds
+times = np.arange(0, duration, 1 / sfreq)
+
+# Create a signal with three frequency components
+theta = 3e-6 * np.sin(2 * np.pi * 5 * times)    # 5 Hz
+alpha = 5e-6 * np.sin(2 * np.pi * 10 * times)   # 10 Hz
+beta  = 2e-6 * np.sin(2 * np.pi * 25 * times)   # 25 Hz
+noise = 0.5e-6 * np.random.randn(len(times))
+
+signal = theta + alpha + beta + noise
+
+# Compute the PSD with Welch's method
+freqs, psd = welch(signal, fs=sfreq, nperseg=sfreq * 2)
+
+# Find the three tallest peaks
+# Restrict to 1-50 Hz to avoid the DC component
+mask = (freqs >= 1) & (freqs <= 50)
+freqs_masked = freqs[mask]
+psd_masked = psd[mask]
+
+top_indices = np.argsort(psd_masked)[-3:]
+peak_freqs = sorted(freqs_masked[top_indices])
+
+print(f"Expected peaks at: 5, 10, 25 Hz")
+print(f"Detected peaks at: {peak_freqs[0]:.1f}, {peak_freqs[1]:.1f}, {peak_freqs[2]:.1f} Hz")
+
+# Plot
+plt.figure(figsize=(10, 4))
+plt.semilogy(freqs_masked, psd_masked)
+plt.xlabel("Frequency (Hz)")
+plt.ylabel("Power spectral density (V^2/Hz)")
+plt.title("PSD of simulated multi-frequency signal")
+for f in [5, 10, 25]:
+    plt.axvline(f, color="red", linestyle="--", alpha=0.5, label=f"{f} Hz")
+plt.legend()
+plt.tight_layout()
+plt.show()
+```
+:::
+
+
+## Exercise 14: Rename channels and change channel types
+
+Create a `Raw` object with generic channel names (e.g. `CH01`, `CH02`, ...). Rename two channels to `HEOG` and `VEOG`. Then change their type from EEG to EOG. Verify the changes by printing the channel names and types.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `raw.rename_channels({"old_name": "new_name"})` to rename and `raw.set_channel_types({"ch_name": "eog"})` to change types. Check the result with `raw.ch_names` and `raw.get_channel_types()`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Create a Raw with generic names
+ch_names = [f"CH{i:02d}" for i in range(1, 11)]
+sfreq = 256
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(len(ch_names), sfreq * 10) * 15e-6
+raw = mne.io.RawArray(data, info)
+
+print("Before changes:")
+print(f"  Names: {raw.ch_names}")
+print(f"  Types: {raw.get_channel_types()}")
+
+# Rename two channels
+raw.rename_channels({"CH09": "HEOG", "CH10": "VEOG"})
+
+# Change their types to EOG
+raw.set_channel_types({"HEOG": "eog", "VEOG": "eog"})
+
+print("\nAfter changes:")
+print(f"  Names: {raw.ch_names}")
+print(f"  Types: {raw.get_channel_types()}")
+
+# Quick verification
+eog_channels = [ch for ch, t in zip(raw.ch_names, raw.get_channel_types()) if t == "eog"]
+print(f"\n  EOG channels found: {eog_channels}")
+```
+:::
+
+
+## Exercise 15: Create an Evoked object from simulated event-related data
+
+Simulate a recording where a brief P300-like positive deflection (a bump at around 300 ms after stimulus onset) is buried in noise. Insert stimulus events at regular intervals, epoch the data around those events, average the epochs to get an `Evoked` object, and plot it.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create a long Raw with random noise. At known sample offsets (the "events"), add a Gaussian bump centred at 300 ms (about 0.3 * sfreq samples after each event). Use `mne.Epochs` to cut windows around the events, then `epochs.average()` to get the Evoked. The average should reveal the bump even though single trials are noisy.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Parameters
+sfreq = 256
+duration = 120  # seconds (long recording to get many trials)
+n_channels = 5
+ch_names = ["Fz", "Cz", "Pz", "Oz", "CPz"]
+
+# Generate background noise
+n_samples = int(sfreq * duration)
+data = np.random.randn(n_channels, n_samples) * 5e-6
+
+# Create events every 2 seconds (stimulus onsets)
+event_samples = np.arange(int(sfreq * 1), n_samples - sfreq, int(sfreq * 2))
+events = np.column_stack([
+    event_samples,
+    np.zeros(len(event_samples), dtype=int),
+    np.ones(len(event_samples), dtype=int)
+])
+
+# Insert a P300-like bump at ~300 ms after each event on channel Pz
+bump_centre = int(0.3 * sfreq)  # 300 ms in samples
+bump_width = int(0.05 * sfreq)  # 50 ms half-width
+bump_samples = np.arange(-bump_width * 3, bump_width * 3)
+bump_shape = 3e-6 * np.exp(-0.5 * (bump_samples / bump_width) ** 2)
+
+pz_index = ch_names.index("Pz")
+for s in event_samples:
+    start = s + bump_centre - bump_width * 3
+    end = s + bump_centre + bump_width * 3
+    if end < n_samples:
+        data[pz_index, start:end] += bump_shape
+
+# Create Raw and Epochs
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+raw = mne.io.RawArray(data, info)
+
+event_id = {"stimulus": 1}
+epochs = mne.Epochs(
+    raw, events, event_id,
+    tmin=-0.2, tmax=0.6,
+    baseline=(-0.2, 0),
+    preload=True
+)
+
+print(f"Number of epochs: {len(epochs)}")
+
+# Average to get the Evoked object
+evoked = epochs.average()
+
+print(f"Evoked object: {evoked}")
+print(f"Time range: {evoked.tmin:.3f} to {evoked.tmax:.3f} s")
+
+# Plot the Evoked response
+evoked.plot(titles="Simulated P300 response")
+```
+
+After averaging, you should see a clear positive peak at around 300 ms on channel Pz. The other channels will stay near the baseline because the bump was only added to Pz.
+:::
+
+
+## Exercise 16: Concatenate two Raw objects
+
+Create two separate `Raw` objects that simulate two recording blocks (e.g. 30 seconds each). Concatenate them with `mne.concatenate_raws()` and verify that the total duration equals the sum of the two parts.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Both Raw objects must have the same channel names, types, and sampling rate. Use `mne.concatenate_raws([raw1, raw2])` to join them. The function modifies the first object in place, so pass copies if you want to keep the originals.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 256
+ch_names = ["Fp1", "Fp2", "C3", "C4", "O1", "O2"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Block 1: 30 seconds
+data1 = np.random.randn(len(ch_names), sfreq * 30) * 20e-6
+raw1 = mne.io.RawArray(data1, info)
+
+# Block 2: 30 seconds (with slightly different noise pattern)
+data2 = np.random.randn(len(ch_names), sfreq * 30) * 25e-6
+raw2 = mne.io.RawArray(data2, info)
+
+dur1 = raw1.times[-1] + 1 / sfreq
+dur2 = raw2.times[-1] + 1 / sfreq
+print(f"Block 1 duration: {dur1:.2f} s")
+print(f"Block 2 duration: {dur2:.2f} s")
+
+# Concatenate (use copies to keep originals intact)
+raw_combined = mne.concatenate_raws([raw1.copy(), raw2.copy()])
+dur_combined = raw_combined.times[-1] + 1 / sfreq
+
+print(f"Combined duration: {dur_combined:.2f} s")
+print(f"Sum of parts:      {dur1 + dur2:.2f} s")
+
+if np.isclose(dur_combined, dur1 + dur2):
+    print("\nDurations match: concatenation was successful.")
+else:
+    print("\nDuration mismatch: something went wrong.")
+```
+:::
+
+
+## Exercise 17: Pick channels by type and by name
+
+Create a `Raw` object with mixed channel types (EEG, EOG, EMG). Then demonstrate two ways of selecting channels:
+
+1. Pick by type with `raw.copy().pick_types(eeg=True)`
+2. Pick by name with `raw.copy().pick_channels()`
+
+Compare the resulting channel counts.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Both `pick_types()` and `pick_channels()` modify the object in place, so always call `.copy()` first if you want to keep the original. `pick_channels()` takes a list of channel names; make sure they exist in the Raw object.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Create a Raw with mixed types
+montage = mne.channels.make_standard_montage("standard_1020")
+eeg_names = montage.ch_names[:16]
+other_names = ["EOG1", "EOG2", "EMG1", "EMG2"]
+ch_names = eeg_names + other_names
+ch_types = ["eeg"] * 16 + ["eog"] * 2 + ["emg"] * 2
+
+sfreq = 256
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
+data = np.random.randn(len(ch_names), sfreq * 10) * 15e-6
+raw = mne.io.RawArray(data, info)
+
+print(f"Original: {len(raw.ch_names)} channels")
+print(f"  Names: {raw.ch_names}\n")
+
+# Method 1: pick by type
+raw_eeg = raw.copy().pick_types(eeg=True)
+print(f"After pick_types(eeg=True): {len(raw_eeg.ch_names)} channels")
+print(f"  Names: {raw_eeg.ch_names}\n")
+
+# Method 2: pick by name (select just two specific EEG channels)
+raw_subset = raw.copy().pick_channels(["Oz", "Pz"])
+print(f"After pick_channels(['Oz', 'Pz']): {len(raw_subset.ch_names)} channels")
+print(f"  Names: {raw_subset.ch_names}\n")
+
+# Compare
+print("Summary:")
+print(f"  pick_types(eeg=True) kept {len(raw_eeg.ch_names)} channels (all EEG)")
+print(f"  pick_channels(['Oz', 'Pz']) kept {len(raw_subset.ch_names)} channels (named selection)")
+```
+:::
+
+
+## Exercise 18: Create a BIDS-like directory structure
+
+Without installing `mne-bids`, manually create a minimal BIDS folder hierarchy using Python's `os` module. The structure should contain:
+
+- `sub-01/eeg/` (a folder for the subject's EEG data)
+- `dataset_description.json` at the root
+- `participants.tsv` at the root
+
+Write appropriate content to each file and print the directory tree.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `os.makedirs()` with `exist_ok=True` to create nested directories. Write the JSON file with Python's `json` module. For the TSV, write a header line and one row separated by tab characters. Use `os.walk()` or a simple loop to print the tree.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import os
+import json
+import shutil
+
+# Use a temporary directory so we do not clutter the file system
+bids_root = "/tmp/my_bids_dataset"
+
+# Clean up if it already exists
+if os.path.exists(bids_root):
+    shutil.rmtree(bids_root)
+
+# Create the directory structure
+os.makedirs(os.path.join(bids_root, "sub-01", "eeg"), exist_ok=True)
+
+# Write dataset_description.json
+description = {
+    "Name": "My EEG Experiment",
+    "BIDSVersion": "1.8.0",
+    "License": "CC0",
+    "Authors": ["Researcher A", "Researcher B"]
+}
+with open(os.path.join(bids_root, "dataset_description.json"), "w") as f:
+    json.dump(description, f, indent=2)
+
+# Write participants.tsv
+participants_header = "participant_id\tage\tsex"
+participants_row = "sub-01\t25\tM"
+with open(os.path.join(bids_root, "participants.tsv"), "w") as f:
+    f.write(participants_header + "\n")
+    f.write(participants_row + "\n")
+
+# Write a placeholder EEG sidecar JSON in the subject folder
+eeg_sidecar = {
+    "TaskName": "rest",
+    "SamplingFrequency": 256,
+    "EEGReference": "Cz",
+    "PowerLineFrequency": 50
+}
+with open(os.path.join(bids_root, "sub-01", "eeg", "sub-01_task-rest_eeg.json"), "w") as f:
+    json.dump(eeg_sidecar, f, indent=2)
+
+# Print the directory tree
+print(f"BIDS directory tree at {bids_root}:\n")
+for root, dirs, files in os.walk(bids_root):
+    level = root.replace(bids_root, "").count(os.sep)
+    indent = "  " * level
+    folder_name = os.path.basename(root) or os.path.basename(bids_root)
+    print(f"{indent}{folder_name}/")
+    sub_indent = "  " * (level + 1)
+    for file in files:
+        print(f"{sub_indent}{file}")
+
+# Clean up
+shutil.rmtree(bids_root)
+print("\nTemporary BIDS directory removed.")
+```
+:::
+
+
+## Exercise 19: Set a custom montage from a dictionary
+
+Create a montage from scratch using `mne.channels.make_dig_montage()` with x, y, z coordinates for 8 channels arranged in a ring. Apply it to a `Raw` object and plot the sensor positions.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Define a dictionary mapping channel names to `(x, y, z)` tuples. Arrange the 8 channels in a circle using `np.cos` and `np.sin` with evenly spaced angles. Pass `ch_pos=your_dict` to `make_dig_montage()`. Apply the montage with `raw.set_montage()` and plot with `raw.plot_sensors()`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Define 8 channels arranged in a ring on the scalp
+ch_names = ["Pos1", "Pos2", "Pos3", "Pos4", "Pos5", "Pos6", "Pos7", "Pos8"]
+n_ch = len(ch_names)
+radius = 0.09  # approximate head radius in metres
+
+angles = np.linspace(0, 2 * np.pi, n_ch, endpoint=False)
+ch_pos = {}
+for name, angle in zip(ch_names, angles):
+    x = radius * np.cos(angle)
+    y = radius * np.sin(angle)
+    z = 0.0  # all on the same horizontal plane
+    ch_pos[name] = (x, y, z)
+
+print("Channel positions (x, y, z) in metres:")
+for name, pos in ch_pos.items():
+    print(f"  {name}: ({pos[0]:.4f}, {pos[1]:.4f}, {pos[2]:.4f})")
+
+# Create the montage
+montage = mne.channels.make_dig_montage(ch_pos=ch_pos, coord_frame="head")
+
+# Create a Raw object with matching channel names
+sfreq = 256
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(n_ch, sfreq * 10) * 15e-6
+raw = mne.io.RawArray(data, info)
+
+# Apply the custom montage
+raw.set_montage(montage)
+
+# Plot the sensor positions
+raw.plot_sensors(show_names=True, title="Custom 8-channel ring montage")
+```
+:::
+
+
+## Exercise 20: Export Raw data to a pandas DataFrame
+
+Export a `Raw` object to a pandas `DataFrame` with `raw.to_data_frame()`. Compute the mean, standard deviation, and range (max minus min) for each channel. Print the summary statistics as a table.
+
+::: {.callout-tip collapse="true" title="Hint"}
+`raw.to_data_frame()` returns a DataFrame where each column is a channel (values in volts by default) and the index is the time in seconds. Use `.describe()` for a quick summary, or compute statistics manually with `.mean()`, `.std()`, and `.max() - .min()`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import pandas as pd
+
+# Create a Raw object
+sfreq = 256
+ch_names = ["Fp1", "Fp2", "C3", "C4", "Pz", "O1", "O2", "Oz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(len(ch_names), sfreq * 10) * 20e-6
+raw = mne.io.RawArray(data, info)
+
+# Export to DataFrame
+df = raw.to_data_frame()
+
+print(f"DataFrame shape: {df.shape}")
+print(f"Columns: {list(df.columns)}\n")
+
+# Compute summary statistics for each channel
+# (to_data_frame returns values in volts by default;
+#  multiply by 1e6 to show in microvolts for readability)
+stats = pd.DataFrame({
+    "mean (uV)": df[ch_names].mean() * 1e6,
+    "std (uV)": df[ch_names].std() * 1e6,
+    "range (uV)": (df[ch_names].max() - df[ch_names].min()) * 1e6,
+})
+
+print("Summary statistics (in microvolts):")
+print(stats.to_string(float_format="{:.2f}".format))
+```
+:::
