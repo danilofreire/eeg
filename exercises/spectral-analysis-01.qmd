@@ -1,0 +1,416 @@
+---
+title: "Spectral analysis: exercises"
+description: "Practice computing PSDs with Welch's method, extracting band power, visualising spectrograms, comparing groups, and building a reusable band-power function."
+module: 4
+date: 2026-03-31
+date-modified: last-modified
+categories: [spectral, frequency-bands]
+---
+
+These exercises go with [Module 4: Spectral and time-frequency analysis](../modules/04-spectral-analysis.qmd). They cover the practical side of frequency-domain analysis: computing power spectral density, extracting power in the standard EEG bands, tracking how spectral content changes over time, and comparing spectral features between groups. All exercises use simulated data so you always know the ground truth.
+
+## Exercise 1: Compute PSD with Welch's method and identify peaks
+
+Create a simulated signal that combines a 10 Hz alpha oscillation, a 22 Hz beta oscillation, and pink (1/f) background noise. Compute the power spectral density using `scipy.signal.welch` and plot it. Identify the two spectral peaks and label them on the plot.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Generate pink noise by filtering white noise in the frequency domain: take the FFT, scale each frequency bin by $1/\sqrt{f}$ (to get a $1/f$ power spectrum), then take the inverse FFT. Add two sine waves at 10 Hz and 22 Hz with different amplitudes (alpha is usually stronger than beta). For Welch's method, use `scipy.signal.welch(signal, fs=sfreq, nperseg=512)`. Plot on a log scale (`ax.semilogy()`) so both peaks are visible above the 1/f background.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 30
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Generate pink noise (1/f background)
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1  # avoid division by zero
+pink_filter = 1 / np.sqrt(freqs_fft)
+pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+pink = pink / pink.std()
+
+# Add oscillatory components
+alpha = 1.5 * np.sin(2 * np.pi * 10 * times)   # 10 Hz alpha
+beta = 0.7 * np.sin(2 * np.pi * 22 * times)    # 22 Hz beta (weaker)
+eeg = pink + alpha + beta
+
+# Compute PSD with Welch's method
+freqs_psd, psd = signal.welch(eeg, fs=sfreq, nperseg=512, noverlap=256)
+
+# Plot
+fig, ax = plt.subplots(figsize=(8, 4))
+ax.semilogy(freqs_psd, psd, linewidth=1.2, color="#2c3e50")
+ax.axvline(10, color="#e74c3c", linestyle="--", alpha=0.7, label="Alpha (10 Hz)")
+ax.axvline(22, color="#3498db", linestyle="--", alpha=0.7, label="Beta (22 Hz)")
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("Power spectral density")
+ax.set_title("PSD of simulated EEG (alpha + beta + pink noise)")
+ax.set_xlim(0, 50)
+ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+You should see the characteristic 1/f slope of the pink noise with two peaks rising above it: a taller one at 10 Hz and a shorter one at 22 Hz. The log scale on the y-axis makes both peaks easy to spot, even though the alpha component has roughly twice the amplitude of the beta component.
+:::
+
+
+## Exercise 2: Compute band power and relative power for the five standard bands
+
+Create a simulated signal with a strong alpha peak (similar to Exercise 1) and compute the absolute power in each of the five standard EEG frequency bands: delta (0.5--4 Hz), theta (4--8 Hz), alpha (8--13 Hz), beta (13--30 Hz), and gamma (30--45 Hz). Then compute the relative power of each band as a percentage of the total power across all bands. Print a table of results.
+
+::: {.callout-tip collapse="true" title="Hint"}
+After computing the PSD with `scipy.signal.welch`, use `np.trapz()` (or `scipy.integrate.trapezoid()`) to integrate the PSD over each frequency range. To select the right frequencies, create a boolean mask: `mask = (freqs >= f_low) & (freqs < f_high)`. Relative power is simply `band_power / total_power * 100`. Total power is the sum of all five bands (or the integral over the full range).
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Signal: pink noise + alpha oscillation + some beta
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1
+pink_filter = 1 / np.sqrt(freqs_fft)
+pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+pink = pink / pink.std()
+
+alpha = 2.0 * np.sin(2 * np.pi * 10 * times)
+beta = 0.5 * np.sin(2 * np.pi * 20 * times)
+eeg = pink + alpha + beta
+
+# Compute PSD
+freqs_psd, psd = signal.welch(eeg, fs=sfreq, nperseg=1024, noverlap=512)
+
+# Define the standard EEG bands
+bands = {
+    "Delta": (0.5, 4),
+    "Theta": (4, 8),
+    "Alpha": (8, 13),
+    "Beta":  (13, 30),
+    "Gamma": (30, 45),
+}
+
+# Compute absolute band power by integrating the PSD
+band_powers = {}
+for name, (f_low, f_high) in bands.items():
+    mask = (freqs_psd >= f_low) & (freqs_psd < f_high)
+    band_powers[name] = np.trapz(psd[mask], freqs_psd[mask])
+
+total_power = sum(band_powers.values())
+
+# Print the results
+print(f"{'Band':<8} {'Abs. power':>12} {'Rel. power (%)':>15}")
+print("-" * 38)
+for name, power in band_powers.items():
+    rel = power / total_power * 100
+    print(f"{name:<8} {power:>12.4f} {rel:>14.1f}%")
+print("-" * 38)
+print(f"{'Total':<8} {total_power:>12.4f} {'100.0%':>15}")
+```
+
+Alpha should dominate because we injected a strong 10 Hz oscillation. Delta will also have a fair share because the 1/f pink noise concentrates power at low frequencies. Beta and gamma should be low, and theta will be somewhere in between.
+:::
+
+
+## Exercise 3: Visualise time-varying alpha power with a spectrogram
+
+Create a 20-second signal where alpha power is strong in the first 10 seconds and weak (or absent) in the last 10 seconds, simulating an "eyes closed then eyes open" transition. Use `scipy.signal.spectrogram` to compute and plot the spectrogram. Verify that the alpha band (8--13 Hz) shows a clear drop at the midpoint.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Build the signal in two halves: for the first half, add a large-amplitude 10 Hz sine wave to the noise; for the second half, use noise only (or add a much smaller sine wave). `scipy.signal.spectrogram` returns `(frequencies, times, Sxx)` where `Sxx[i, j]` is the power at `frequencies[i]` and `times[j]`. Plot it with `ax.pcolormesh(times, frequencies, 10 * np.log10(Sxx))` for a dB scale. Use `nperseg=256` and `noverlap=128` for reasonable time-frequency resolution at 256 Hz sampling rate.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 20
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+midpoint = n_samples // 2
+
+# Background noise for the full signal
+noise = rng.standard_normal(n_samples) * 0.5
+
+# Alpha oscillation: strong in first half, absent in second half
+alpha = np.zeros(n_samples)
+alpha[:midpoint] = 2.0 * np.sin(2 * np.pi * 10 * times[:midpoint])
+
+eeg = noise + alpha
+
+# Compute the spectrogram
+freqs_spec, times_spec, Sxx = signal.spectrogram(
+    eeg, fs=sfreq, nperseg=256, noverlap=128
+)
+
+# Plot
+fig, axes = plt.subplots(2, 1, figsize=(10, 7))
+
+# Top panel: time-domain signal
+ax = axes[0]
+ax.plot(times, eeg, linewidth=0.3, color="#2c3e50")
+ax.axvline(10, color="#e74c3c", linestyle="--", alpha=0.7, label="Transition")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Amplitude (a.u.)")
+ax.set_title("Simulated EEG: strong alpha (0-10 s), then noise only (10-20 s)")
+ax.legend()
+
+# Bottom panel: spectrogram
+ax = axes[1]
+mesh = ax.pcolormesh(
+    times_spec, freqs_spec, 10 * np.log10(Sxx),
+    shading="gouraud", cmap="viridis"
+)
+ax.set_ylim(0, 40)
+ax.axhline(8, color="white", linestyle="--", linewidth=0.7, alpha=0.7)
+ax.axhline(13, color="white", linestyle="--", linewidth=0.7, alpha=0.7)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Frequency (Hz)")
+ax.set_title("Spectrogram (dB)")
+fig.colorbar(mesh, ax=ax, label="Power (dB)")
+
+plt.tight_layout()
+plt.show()
+```
+
+The spectrogram should show a bright horizontal band between 8 and 13 Hz in the first half of the recording, which disappears abruptly at the 10-second mark. The white dashed lines mark the alpha band boundaries. This is the spectral signature of alpha desynchronisation, which is what happens in real EEG when someone opens their eyes.
+:::
+
+
+## Exercise 4: Compare PSD between two simulated groups
+
+Simulate two "groups" of subjects. Group A has a strong alpha peak (10 Hz); Group B has a weak alpha peak. Generate 15 subjects per group, compute the alpha band power for each, and run an independent-samples t-test to determine whether the groups differ significantly. Plot the group-averaged PSDs and a box plot of alpha band power.
+
+::: {.callout-tip collapse="true" title="Hint"}
+For each subject, generate a fresh noise signal and add a 10 Hz sine wave with a group-specific amplitude (e.g., amplitude = 2.0 for Group A, amplitude = 0.5 for Group B, plus some between-subject variability drawn from a normal distribution). Compute the PSD for each subject with `scipy.signal.welch`, then integrate across the alpha band (8--13 Hz) to get one band-power value per subject. Use `scipy.stats.ttest_ind` for the t-test.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+from scipy.stats import ttest_ind
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+n_subjects = 15
+
+def simulate_subject(alpha_amp, rng):
+    """Simulate one subject's EEG and return alpha band power."""
+    # Pink noise
+    white = rng.standard_normal(n_samples)
+    freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+    freqs_fft[0] = 1
+    pink_filter = 1 / np.sqrt(freqs_fft)
+    pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+    pink = pink / pink.std()
+
+    # Add alpha oscillation
+    eeg = pink + alpha_amp * np.sin(2 * np.pi * 10 * times)
+
+    # Compute PSD
+    freqs_psd, psd = signal.welch(eeg, fs=sfreq, nperseg=1024, noverlap=512)
+    return freqs_psd, psd
+
+# Simulate both groups
+alpha_powers_a = []
+alpha_powers_b = []
+psds_a = []
+psds_b = []
+
+for i in range(n_subjects):
+    # Group A: strong alpha (mean amplitude 2.0, sd 0.3)
+    amp_a = rng.normal(2.0, 0.3)
+    freqs_psd, psd_a = simulate_subject(amp_a, rng)
+    psds_a.append(psd_a)
+    mask_alpha = (freqs_psd >= 8) & (freqs_psd < 13)
+    alpha_powers_a.append(np.trapz(psd_a[mask_alpha], freqs_psd[mask_alpha]))
+
+    # Group B: weak alpha (mean amplitude 0.5, sd 0.2)
+    amp_b = rng.normal(0.5, 0.2)
+    freqs_psd, psd_b = simulate_subject(amp_b, rng)
+    psds_b.append(psd_b)
+    alpha_powers_b.append(np.trapz(psd_b[mask_alpha], freqs_psd[mask_alpha]))
+
+alpha_powers_a = np.array(alpha_powers_a)
+alpha_powers_b = np.array(alpha_powers_b)
+
+# T-test
+t_stat, p_value = ttest_ind(alpha_powers_a, alpha_powers_b)
+print(f"Group A alpha power: mean = {alpha_powers_a.mean():.3f}, "
+      f"sd = {alpha_powers_a.std():.3f}")
+print(f"Group B alpha power: mean = {alpha_powers_b.mean():.3f}, "
+      f"sd = {alpha_powers_b.std():.3f}")
+print(f"t-test: t = {t_stat:.3f}, p = {p_value:.6f}")
+
+# Plot
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+# Left: group-averaged PSDs
+ax = axes[0]
+mean_psd_a = np.mean(psds_a, axis=0)
+mean_psd_b = np.mean(psds_b, axis=0)
+ax.semilogy(freqs_psd, mean_psd_a, label="Group A (strong alpha)",
+            color="#e74c3c", linewidth=1.5)
+ax.semilogy(freqs_psd, mean_psd_b, label="Group B (weak alpha)",
+            color="#3498db", linewidth=1.5)
+ax.axvspan(8, 13, alpha=0.15, color="orange", label="Alpha band")
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("PSD")
+ax.set_xlim(0, 45)
+ax.set_title("Group-averaged PSD")
+ax.legend(fontsize=9)
+
+# Right: box plot of alpha band power
+ax = axes[1]
+bp = ax.boxplot(
+    [alpha_powers_a, alpha_powers_b],
+    labels=["Group A\n(strong alpha)", "Group B\n(weak alpha)"],
+    patch_artist=True
+)
+bp["boxes"][0].set_facecolor("#e74c3c")
+bp["boxes"][1].set_facecolor("#3498db")
+for box in bp["boxes"]:
+    box.set_alpha(0.5)
+ax.set_ylabel("Alpha band power (8-13 Hz)")
+ax.set_title(f"Alpha power comparison (p = {p_value:.2e})")
+
+plt.tight_layout()
+plt.show()
+```
+
+You should see a highly significant p-value (well below 0.05) because the two groups have very different alpha amplitudes by design. The PSD plot will show Group A with a tall alpha peak and Group B with a much smaller one. In real studies, the effect sizes are usually much smaller, but the analysis workflow is the same.
+:::
+
+
+## Exercise 5: Build a reusable band-power function
+
+Write a function `compute_band_powers(data, sfreq)` that takes a 2D NumPy array (channels x samples) and a sampling rate, and returns a dictionary where each key is a band name (`"delta"`, `"theta"`, `"alpha"`, `"beta"`, `"gamma"`) and each value is a 1D array of band powers (one value per channel). Test it on a simulated multi-channel signal and print the results.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Inside the function, loop over channels and compute the PSD for each one using `scipy.signal.welch`. Then, for each band, integrate the PSD between the band's frequency limits using `np.trapz`. Return a dictionary of arrays. You could also compute the PSD for all channels at once by passing a 2D array to `scipy.signal.welch` (it operates along the last axis by default, so you may need to handle the axis parameter).
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+from scipy import signal
+
+
+BANDS = {
+    "delta": (0.5, 4),
+    "theta": (4, 8),
+    "alpha": (8, 13),
+    "beta":  (13, 30),
+    "gamma": (30, 45),
+}
+
+
+def compute_band_powers(data, sfreq, nperseg=1024):
+    """Compute band power for each channel in the standard EEG bands.
+
+    Parameters
+    ----------
+    data : numpy.ndarray
+        2D array of shape (n_channels, n_samples).
+    sfreq : float
+        Sampling frequency in Hz.
+    nperseg : int
+        Number of samples per Welch segment (controls frequency resolution).
+
+    Returns
+    -------
+    band_powers : dict
+        Keys are band names ('delta', 'theta', 'alpha', 'beta', 'gamma').
+        Values are 1D arrays of shape (n_channels,) with the band power
+        for each channel.
+    """
+    n_channels = data.shape[0]
+    band_powers = {name: np.zeros(n_channels) for name in BANDS}
+
+    for ch in range(n_channels):
+        freqs_psd, psd = signal.welch(
+            data[ch], fs=sfreq, nperseg=nperseg, noverlap=nperseg // 2
+        )
+        for name, (f_low, f_high) in BANDS.items():
+            mask = (freqs_psd >= f_low) & (freqs_psd < f_high)
+            band_powers[name][ch] = np.trapz(psd[mask], freqs_psd[mask])
+
+    return band_powers
+
+
+# ── Test the function ──────────────────────────────────────────
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 30
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+ch_names = ["Fp1", "Fp2", "C3", "C4", "O1", "O2", "Oz", "Pz"]
+n_channels = len(ch_names)
+
+# Simulate data: noise + alpha in occipital channels + beta in central
+data = rng.standard_normal((n_channels, n_samples)) * 0.5
+
+# Add alpha to O1, O2, Oz
+for ch_name in ["O1", "O2", "Oz"]:
+    idx = ch_names.index(ch_name)
+    data[idx] += 2.0 * np.sin(2 * np.pi * 10 * times)
+
+# Add beta to C3, C4
+for ch_name in ["C3", "C4"]:
+    idx = ch_names.index(ch_name)
+    data[idx] += 1.0 * np.sin(2 * np.pi * 20 * times)
+
+# Compute band powers
+bp = compute_band_powers(data, sfreq)
+
+# Print the results
+print(f"{'Channel':<8}", end="")
+for name in BANDS:
+    print(f"{name:>10}", end="")
+print()
+print("-" * 58)
+for ch in range(n_channels):
+    print(f"{ch_names[ch]:<8}", end="")
+    for name in BANDS:
+        print(f"{bp[name][ch]:>10.4f}", end="")
+    print()
+```
+
+The occipital channels (O1, O2, Oz) should show high alpha power relative to the others. The central channels (C3, C4) should show higher beta power. Frontal channels (Fp1, Fp2) and Pz will only have noise, so their band powers should be roughly uniform and much lower.
+:::

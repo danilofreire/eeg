@@ -1,0 +1,247 @@
+---
+title: "Detecting and interpolating bad channels"
+description: "What makes an EEG channel 'bad' (noise, flat signal, drift), how to detect bad channels manually and automatically, interpolation via spherical splines, and when to interpolate vs exclude."
+date: 2026-03-31
+date-modified: last-modified
+module: 2
+categories: [preprocessing, quality-control]
+---
+
+## What makes a channel "bad"
+
+Not every electrode in an EEG recording works perfectly. Gel dries out, electrodes lose contact with the scalp, cables pick up interference, and amplifiers sometimes misbehave. The result is one or more channels that record something other than brain activity. If you leave these channels in your data, they will contaminate your averages, distort your topographic maps, and throw off algorithms like ICA that assume all channels carry meaningful signal.
+
+A bad channel typically shows one (or more) of these patterns:
+
+- **Excessive noise**: the channel is much noisier than its neighbours, with large, rapid voltage fluctuations that do not resemble brain activity.
+- **Flat signal**: the channel records little or no variation, either because the electrode lost contact or because the amplifier is saturated.
+- **Slow drift**: the channel shows a large, gradual shift in baseline voltage, usually from electrode polarisation or sweat bridging.
+- **Uncorrelated activity**: the channel's signal does not resemble the signals at nearby electrodes. Since neighbouring electrodes should pick up similar brain activity (because of volume conduction), a channel that looks completely different from its neighbours is suspect.
+
+## Manual detection
+
+The most direct way to identify bad channels is to look at the data. MNE-Python provides interactive plotting tools for this.
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# ── Create simulated data with one bad channel ────────────────
+ch_names = ["Fp1", "Fp2", "F3", "F4", "C3", "C4",
+            "P3", "P4", "O1", "O2"]
+info = mne.create_info(ch_names=ch_names, sfreq=256, ch_types="eeg")
+
+rng = np.random.default_rng(42)
+n_samples = 256 * 30  # 30 seconds
+
+# Normal channels: pink-ish noise
+data = rng.standard_normal((10, n_samples)) * 5e-6
+
+# Make channel "F4" (index 3) excessively noisy
+data[3, :] *= 10  # 10x the amplitude of other channels
+
+# Make channel "O2" (index 9) flat
+data[9, :] = 0.1e-6 * rng.standard_normal(n_samples)  # near-zero signal
+
+raw = mne.io.RawArray(data, info)
+
+# ── Interactive plot (scroll through and click bad channels) ──
+# In an interactive session, this opens a window where you can
+# click on channel names to mark them as bad
+# raw.plot(scalings="auto", n_channels=10)
+```
+
+When you click on a channel name in the interactive plot, MNE marks it as bad and adds it to `raw.info['bads']`. You can also set bad channels programmatically:
+
+```{python}
+#| eval: false
+# Mark channels as bad manually
+raw.info["bads"] = ["F4", "O2"]
+print(f"Bad channels: {raw.info['bads']}")
+```
+
+## Automated detection
+
+For large datasets or when you want a reproducible pipeline, you can detect bad channels automatically. The two most common approaches are variance-based and correlation-based detection.
+
+### Variance-based detection
+
+A noisy channel has much higher variance than a normal channel. A flat channel has much lower variance. You can flag channels whose variance falls outside a reasonable range.
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# ── Compute the variance of each channel ──────────────────────
+data_array = raw.get_data()
+channel_vars = np.var(data_array, axis=1)
+
+# Compute the median and median absolute deviation (MAD) of variances
+median_var = np.median(channel_vars)
+mad_var = np.median(np.abs(channel_vars - median_var))
+
+# Flag channels whose variance is more than 5 MADs from the median
+threshold_high = median_var + 5 * mad_var
+threshold_low = median_var - 5 * mad_var
+
+bads_by_variance = []
+for i, ch_name in enumerate(raw.ch_names):
+    if channel_vars[i] > threshold_high:
+        bads_by_variance.append(ch_name)
+        print(f"{ch_name}: HIGH variance ({channel_vars[i]:.2e})")
+    elif channel_vars[i] < max(threshold_low, 0):
+        bads_by_variance.append(ch_name)
+        print(f"{ch_name}: LOW variance ({channel_vars[i]:.2e})")
+
+print(f"\nBad channels (variance): {bads_by_variance}")
+```
+
+### Correlation-based detection
+
+A channel that carries genuine brain signal will be correlated with its neighbours (because of volume conduction). A bad channel will show low correlation with nearby channels. This approach requires electrode locations (a montage) so that MNE can determine which channels are neighbours.
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# ── Compute pairwise correlations between channels ────────────
+data_array = raw.get_data()
+n_channels = data_array.shape[0]
+
+# Correlation matrix
+corr_matrix = np.corrcoef(data_array)
+
+# For each channel, compute its mean correlation with all other channels
+mean_corr = np.zeros(n_channels)
+for i in range(n_channels):
+    # Exclude self-correlation
+    other_corrs = np.delete(corr_matrix[i, :], i)
+    mean_corr[i] = np.mean(np.abs(other_corrs))
+
+# Flag channels with very low mean correlation
+corr_threshold = 0.4  # channels below this are suspicious
+bads_by_corr = []
+for i, ch_name in enumerate(raw.ch_names):
+    if mean_corr[i] < corr_threshold:
+        bads_by_corr.append(ch_name)
+        print(f"{ch_name}: low correlation ({mean_corr[i]:.3f})")
+
+print(f"\nBad channels (correlation): {bads_by_corr}")
+```
+
+### Using RANSAC (via the autoreject package)
+
+The `autoreject` package provides a more sophisticated approach called RANSAC (Random Sample Consensus). It predicts each channel's signal from its neighbours using spherical spline interpolation, then flags channels where the prediction and the actual signal disagree. This is more robust than simple variance or correlation checks.
+
+```{python}
+#| eval: false
+# Install autoreject if needed: pip install autoreject
+# from autoreject import Ransac
+#
+# ransac = Ransac(verbose=True)
+# epochs_clean = ransac.fit_transform(epochs)
+# print(f"Bad channels (RANSAC): {ransac.bad_chs_}")
+```
+
+## Interpolation via spherical splines
+
+Once you have identified bad channels, you have two options: exclude them or interpolate them. **Interpolation** estimates what the bad channel should have recorded, based on the signals at surrounding channels. MNE uses **spherical spline interpolation** (Perrin et al., 1989), which fits a smooth surface over the scalp and reads off the estimated value at the bad channel's location.
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# ── Set up data with a standard montage ───────────────────────
+ch_names = ["Fp1", "Fp2", "F3", "F4", "C3", "C4",
+            "P3", "P4", "O1", "O2"]
+info = mne.create_info(ch_names=ch_names, sfreq=256, ch_types="eeg")
+
+rng = np.random.default_rng(42)
+data = rng.standard_normal((10, 256 * 10)) * 5e-6
+
+# Make F4 noisy
+data[3, :] *= 10
+
+raw = mne.io.RawArray(data, info)
+
+# Set a standard montage (needed for interpolation)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+
+# Mark the bad channel
+raw.info["bads"] = ["F4"]
+
+# Interpolate
+raw_interp = raw.copy().interpolate_bads(reset_bads=True)
+
+# After interpolation, the bad channel is replaced with an estimate
+# and removed from the bads list (because reset_bads=True)
+print(f"Bad channels after interpolation: {raw_interp.info['bads']}")
+```
+
+Spherical spline interpolation works by fitting a smooth surface across the scalp using the good channels as anchor points. The interpolated value at a bad channel is a weighted average of the surrounding channels, with weights that depend on the distance between electrodes. Channels that are closer contribute more.
+
+## When to interpolate vs when to exclude
+
+The decision between interpolation and exclusion depends on what you plan to do with the data.
+
+### Interpolate when:
+
+- You need all channels for topographic maps or source localisation. Missing channels leave gaps in the spatial coverage.
+- You want to use the average reference. Dropping channels changes the average and can introduce bias.
+- Only a few channels are bad (say, 1--3 out of 64). The interpolated values will be reliable because there are plenty of good neighbours.
+
+### Exclude when:
+
+- Many channels are bad (more than 10--15% of the total). Interpolation becomes unreliable when there are not enough good neighbours to estimate the missing signals.
+- The bad channels are at the edge of the array (e.g., the outermost ring), where there are few neighbours on one side.
+- You are doing a channel-level analysis (e.g., comparing specific channels across conditions) and do not want to include estimated data.
+
+### A general guideline
+
+A common approach is:
+
+1. Mark bad channels before any other preprocessing.
+2. Keep them marked (but present in the data) during filtering and ICA, so that ICA does not try to decompose their noise.
+3. Interpolate after ICA, just before computing Epochs or ERPs.
+4. If a recording has too many bad channels (more than about 10--15% of the total), consider excluding that participant from the study rather than interpolating.
+
+```{python}
+#| eval: false
+import mne
+
+# ── Recommended workflow ──────────────────────────────────────
+# 1. Load data and mark bad channels
+# raw = mne.io.read_raw_edf("recording.edf", preload=True)
+# raw.info["bads"] = ["F4", "T8"]
+
+# 2. Filter (bad channels are ignored automatically)
+# raw.filter(1, 40)
+
+# 3. Run ICA (bad channels are excluded automatically)
+# ica = mne.preprocessing.ICA(n_components=20)
+# ica.fit(raw)
+# ica.apply(raw)
+
+# 4. Interpolate bad channels
+# raw.interpolate_bads(reset_bads=True)
+
+# 5. Re-reference (now with all channels restored)
+# raw.set_eeg_reference("average", projection=False)
+
+# 6. Epoch
+# epochs = mne.Epochs(raw, events, event_id, tmin=-0.2, tmax=0.8)
+```
+
+## Key takeaways
+
+- A bad channel is one that records something other than brain activity: excessive noise, flat signal, slow drifts, or activity uncorrelated with its neighbours.
+- **Manual detection** by scrolling through the data is the most reliable method for small datasets. Mark bad channels by adding their names to `raw.info['bads']`.
+- **Automated detection** using variance and correlation metrics provides a reproducible way to flag bad channels in larger datasets. The RANSAC method from the `autoreject` package is a more sophisticated option.
+- **Spherical spline interpolation** estimates the signal at a bad channel from its neighbours. It requires a montage (electrode locations) and works best when only a few channels are bad.
+- **Interpolate** when you need complete spatial coverage (for topographic maps, source localisation, or average referencing). **Exclude** when too many channels are bad or when the bad channels are at the edges of the array.
+- Mark bad channels early in the pipeline, but interpolate late (after ICA). This way, ICA does not waste components on channel noise, and the interpolated values are based on cleaned data.

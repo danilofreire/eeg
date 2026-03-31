@@ -1,0 +1,202 @@
+/*-- scss:defaults --*/
+
+// EEG / neuroscience palette
+$deep-teal:     #1a3a4a;
+$light-bg:      #f0f6f8;
+$medium-teal:   #3a8a9e;
+$teal-grey:     #4a6a7a;
+$light-border:  #c8dce4;
+$light-teal:    #daeef4;
+
+$body-bg:       $light-bg;
+$body-color:    $deep-teal;
+$link-color:    $deep-teal;
+$link-hover-color: $medium-teal;
+$primary:       $deep-teal;
+$secondary:     $medium-teal;
+
+$font-family-sans-serif: "Charter", "Georgia", serif;
+$headings-font-family:   "Charter", "Georgia", serif;
+$headings-font-weight:   600;
+$headings-color:         $deep-teal;
+$font-family-monospace:  "JetBrains Mono", monospace;
+
+$border-radius: 0.25rem;
+
+/*-- scss:rules --*/
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+// Navbar
+.navbar {
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-bottom: 2px solid $medium-teal;
+}
+
+.navbar-brand {
+  font-family: $headings-font-family;
+  font-weight: 700;
+  font-size: 1.15rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+// Headings
+h1, .h1 {
+  font-size: 2.2rem;
+  margin-bottom: 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 3px solid $medium-teal;
+}
+
+h2, .h2 {
+  font-size: 1.5rem;
+  color: $deep-teal;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+}
+
+h3, .h3 {
+  font-size: 1.15rem;
+  color: $teal-grey;
+  font-weight: 600;
+  margin-top: 1.8em;
+}
+
+.lead, .subtitle {
+  font-family: $headings-font-family;
+  font-style: italic;
+  color: $teal-grey;
+  font-size: 1.15rem;
+}
+
+// Tables
+.table, table {
+  font-size: 0.92rem;
+  border-collapse: collapse;
+
+  thead {
+    background-color: $deep-teal;
+    color: $light-bg;
+
+    th {
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      padding: 0.7em 1em;
+      border: none;
+    }
+  }
+
+  tbody {
+    td {
+      padding: 0.6em 1em;
+      border-bottom: 1px solid $light-border;
+      vertical-align: top;
+    }
+
+    tr:hover {
+      background-color: rgba($medium-teal, 0.08);
+    }
+  }
+}
+
+// Module cards
+.module-card {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid $light-border;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.module-card:hover {
+  border-color: $medium-teal;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.module-card h3 {
+  color: $deep-teal;
+  margin-top: 0;
+  font-size: 1.1rem;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+// Callouts
+.callout-note {
+  border-left-color: $medium-teal !important;
+}
+
+.callout-tip {
+  border-left-color: $deep-teal !important;
+}
+
+.callout-warning {
+  border-left-color: #d4a017 !important;
+}
+
+// Blockquotes
+blockquote {
+  border-left: 4px solid $medium-teal;
+  background: rgba($medium-teal, 0.06);
+  padding: 1em 1.2em;
+  margin: 1.5em 0;
+  font-family: $headings-font-family;
+  font-style: italic;
+  color: $teal-grey;
+  border-radius: 0 $border-radius $border-radius 0;
+}
+
+// Quick links
+.quick-links {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+}
+
+.quick-links a {
+  background: $deep-teal;
+  color: $light-bg;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.quick-links a:hover {
+  background: $medium-teal;
+  color: #ffffff;
+}
+
+// TOC
+.sidebar nav[role="doc-toc"] {
+  font-size: 0.85rem;
+}
+
+// Footer
+.nav-footer {
+  border-top: 2px solid $medium-teal;
+  font-size: 0.8rem;
+  color: $teal-grey;
+}
+
+// Code blocks
+div.sourceCode {
+  border-left: 3px solid $medium-teal;
+  border-radius: 0 4px 4px 0;
+}
+
+input[type="checkbox"] {
+  accent-color: $medium-teal;
+}

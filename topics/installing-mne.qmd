@@ -1,0 +1,144 @@
+---
+title: "Installing MNE-Python"
+description: "How to install MNE-Python with pip or conda, verify the installation, import the library, check the version, and install optional dependencies."
+date: 2026-03-31
+date-modified: last-modified
+module: 1
+categories: [getting-started, setup]
+---
+
+## What MNE-Python is
+
+MNE-Python is an open-source Python library for processing and analysing electrophysiological data: EEG, MEG, and related signals. It provides tools for loading data in many formats, preprocessing (filtering, re-referencing, artifact removal), epoching, time-frequency analysis, source localisation, and connectivity analysis.
+
+If you are coming from EEGLAB in MATLAB, MNE-Python covers similar ground but follows Python conventions: it is object-oriented, integrates with NumPy and SciPy, and produces publication-quality figures through Matplotlib. This page walks you through getting it installed and ready to use.
+
+## Installing with pip
+
+The simplest way to install MNE-Python is with pip. Open a terminal and run:
+
+```{python}
+#| eval: false
+# Install MNE-Python from PyPI
+# Run this in your terminal, not inside Python
+# pip install mne
+```
+
+This installs the core MNE library along with its required dependencies (NumPy, SciPy, and a few others). If you want to install MNE inside a virtual environment (recommended), create one first:
+
+```{python}
+#| eval: false
+# Create and activate a virtual environment, then install MNE
+# Run these commands in your terminal:
+# python -m venv eeg-env
+# source eeg-env/bin/activate    # on macOS/Linux
+# eeg-env\Scripts\activate       # on Windows
+# pip install mne
+```
+
+## Installing with conda
+
+If you use Anaconda or Miniconda for managing your Python environments, you can install MNE from the conda-forge channel:
+
+```{python}
+#| eval: false
+# Install MNE-Python with conda
+# Run this in your terminal:
+# conda install -c conda-forge mne
+```
+
+Conda handles dependency resolution differently from pip and can be more reliable when you need packages that rely on compiled C or Fortran libraries (like some SciPy routines). If you are already using conda for your other scientific Python work, this is probably the easier route.
+
+You can also create a dedicated conda environment for your EEG work:
+
+```{python}
+#| eval: false
+# Create a new conda environment with MNE
+# Run this in your terminal:
+# conda create -n eeg python=3.12 mne -c conda-forge
+# conda activate eeg
+```
+
+## Verifying the installation
+
+After installing, open a Python session (or a Jupyter notebook) and check that MNE imports without errors:
+
+```{python}
+#| eval: false
+import mne
+
+# Print the installed version
+print(mne.__version__)
+
+# Print system and dependency information
+print(mne.sys_info())
+```
+
+The `mne.sys_info()` function prints a summary of your Python version, operating system, and the versions of all MNE dependencies. This output is useful for troubleshooting and for including in bug reports.
+
+If the import works and you see a version number (e.g., `1.9.0`), you are ready to go.
+
+## Optional dependencies
+
+The core MNE package handles most tasks, but some features require additional packages. You do not need to install all of these right away. Install them as you need them.
+
+| Package | What it adds | Install command |
+|:--------|:-------------|:----------------|
+| `matplotlib` | Plotting (topomaps, time courses, spectra) | `pip install matplotlib` |
+| `scipy` | Signal processing, statistics (usually installed with MNE) | `pip install scipy` |
+| `scikit-learn` | Machine learning, decoding, cross-validation | `pip install scikit-learn` |
+| `mne-icalabel` | Automatic ICA component classification | `pip install mne-icalabel` |
+| `h5py` | Reading HDF5 files (used by some data formats) | `pip install h5py` |
+| `pyedflib` | Reading/writing EDF+ files | `pip install pyedflib` |
+
+The `mne-icalabel` package deserves special mention. It uses pre-trained classifiers to automatically label ICA components as brain, eye, muscle, heart, line noise, channel noise, or other. This can save a lot of time compared to manually inspecting each component.
+
+To install it:
+
+```{python}
+#| eval: false
+# Install mne-icalabel for automated ICA component classification
+# pip install mne-icalabel
+
+# Verify it works
+from mne_icalabel import label_components
+print("mne-icalabel imported successfully")
+```
+
+## A quick test
+
+Here is a minimal script that creates some simulated data and plots it, just to confirm everything is working:
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Create a simple Info object with 3 EEG channels
+info = mne.create_info(
+    ch_names=["Fz", "Cz", "Pz"],
+    sfreq=256,
+    ch_types="eeg"
+)
+
+# Generate 5 seconds of random data (3 channels x 1280 samples)
+rng = np.random.default_rng(42)
+data = rng.standard_normal((3, 5 * 256)) * 1e-6  # scale to microvolts
+
+# Create a Raw object
+raw = mne.io.RawArray(data, info)
+
+# Print a summary
+print(raw)
+print(raw.info)
+```
+
+If this runs without errors, your MNE installation is working correctly.
+
+## Key takeaways
+
+- Install MNE-Python with `pip install mne` or `conda install -c conda-forge mne`. Both methods work well; choose whichever matches your existing Python setup.
+- Use a virtual environment (venv or conda environment) to keep your EEG analysis dependencies separate from other projects.
+- After installing, run `import mne` and `mne.sys_info()` to verify the installation and check dependency versions.
+- Install optional packages as you need them. `matplotlib` is needed for plotting, `scikit-learn` for decoding, and `mne-icalabel` for automated ICA component labelling.
+- If something goes wrong during installation, the output from `mne.sys_info()` is the most useful thing to include when asking for help.

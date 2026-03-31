@@ -1,0 +1,33 @@
+---
+title: "TOPIC NAME"
+description: "SHORT DESCRIPTION"
+module: 0
+date: 2026-01-01
+date-modified: last-modified
+categories: [MODULE-NAME, CATEGORY]
+---
+
+## Overview
+
+Why this topic matters and what you will learn.
+
+## Main content
+
+Your notes, explanations, and worked examples go here.
+
+## Code example
+
+```{python}
+# Working code example with simulated data
+import numpy as np
+```
+
+## Key takeaways
+
+- Point 1
+- Point 2
+- Point 3
+
+## Related exercises
+
+- [Exercise name](../exercises/FILENAME.qmd)

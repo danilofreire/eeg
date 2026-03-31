@@ -1,0 +1,228 @@
+---
+title: "Phase synchronisation"
+description: "What phase synchronisation means for neural oscillations, the communication through coherence hypothesis, types of synchronisation (in-phase, anti-phase, phase lag), and why phase matters more than amplitude for studying brain connectivity."
+date: 2026-03-31
+date-modified: last-modified
+module: 5
+categories: [connectivity, phase, theory]
+---
+
+## Why this topic matters
+
+If you want to understand how the brain works as a network, you need a way to measure whether two regions are coordinating their activity. Phase synchronisation is one of the most widely used approaches. It looks at the timing of oscillations, not their size, and asks a simple question: do these two signals maintain a consistent phase relationship over time?
+
+This page covers the conceptual foundations of phase synchronisation, the different types that exist, and the theoretical framework that connects synchronisation to neural communication. These ideas underpin the connectivity measures (PLV, coherence, the phase alignment matrix) and the metastability analysis that Natalia will use in her project.
+
+## What synchronisation means for oscillations
+
+Two oscillations are **synchronised** when their phase relationship is consistent over time. The key word is "consistent". The phases do not need to be identical; they just need to maintain a stable relationship.
+
+Think of two people walking side by side. If they always step with their left foot at the same time, they are in phase. If one person's left foot always hits the ground when the other's right foot does, they are in anti-phase. If one person consistently steps half a beat behind the other, they have a stable phase lag. In all three cases, the relationship is predictable. That is synchronisation.
+
+Now think of two people walking at different paces, with no particular relationship between their steps. Sometimes one is ahead, sometimes the other. The phase difference drifts randomly. That is desynchronisation.
+
+For neural oscillations, synchronisation means that the phase difference between two signals, $\Delta\phi(t) = \phi_1(t) - \phi_2(t)$, stays approximately constant (or at least has a preferred value) rather than wandering uniformly around the circle.
+
+## Types of phase synchronisation
+
+### In-phase synchronisation
+
+Two signals are **in phase** when $\Delta\phi \approx 0$. They peak at the same time and trough at the same time. This is the simplest form of synchronisation.
+
+In-phase synchronisation between two brain regions suggests that they are doing similar things at similar times. For example, two motor cortex regions that are both active during a movement task might show in-phase synchronisation in the beta band.
+
+### Anti-phase synchronisation
+
+Two signals are **in anti-phase** when $\Delta\phi \approx \pi$ (half a cycle apart). When one signal is at its peak, the other is at its trough.
+
+Anti-phase synchronisation is not "the opposite of synchronisation". It is still a stable, consistent relationship. It often occurs between regions that have an inhibitory or competitive relationship. For instance, regions on opposite sides of a functional boundary (one active, one suppressed) may show anti-phase coupling.
+
+### Constant phase lag
+
+A **constant phase lag** means $\Delta\phi \approx c$ for some fixed value $c$ that is neither 0 nor $\pi$. The signals are synchronised but offset by a fixed delay.
+
+Phase lags are common in EEG because signals take time to propagate between regions. A consistent lag of, say, 20 milliseconds at 10 Hz corresponds to a phase difference of about $0.4\pi$ radians. This is still meaningful synchronisation; it just reflects a transmission delay.
+
+### Summary
+
+| Type | Phase difference | Interpretation |
+|------|-----------------|----------------|
+| In-phase | $\Delta\phi \approx 0$ | Regions co-activate simultaneously |
+| Anti-phase | $\Delta\phi \approx \pi$ | Regions alternate (one up, one down) |
+| Constant lag | $\Delta\phi \approx c$ | Synchronised with a fixed delay |
+| Desynchronised | $\Delta\phi$ drifts randomly | No consistent relationship |
+
+## Why phase matters more than amplitude
+
+EEG amplitude varies for many reasons that have nothing to do with neural communication: electrode impedance, scalp thickness, distance from the cortex, and reference choice all affect how large the signal appears at each electrode. Two regions could have very different amplitudes but still communicate effectively.
+
+Phase, by contrast, is less affected by these physical factors. The timing of the oscillation (when it peaks and troughs) reflects the underlying neural dynamics more directly than the size of the signal. This is why most EEG connectivity measures focus on phase rather than amplitude.
+
+There is a second reason. The brain appears to use phase as a mechanism for communication. If a region sends a burst of activity that arrives at a target region during the target's excitable phase (near the trough for some cell types, near the peak for others), the message gets through. If it arrives during the refractory phase, it does not. Phase alignment determines whether communication is effective.
+
+## The communication through coherence hypothesis
+
+Fries (2005, 2015) formalised this idea as the **communication through coherence** (CTC) hypothesis. The core claim is:
+
+> Effective communication between two neural populations requires that their oscillations are coherent (phase-aligned) in the relevant frequency band.
+
+The logic runs as follows:
+
+1. Neural populations oscillate, alternating between excitable and non-excitable phases.
+2. A sending population produces output at a particular phase of its cycle.
+3. The receiving population is most sensitive to input at a particular phase of its own cycle.
+4. If the two oscillations are coherent, the output of the sender arrives during the receiver's excitable window, and information is transmitted.
+5. If they are not coherent, the output arrives at random phases and is not effectively processed.
+
+This means that the brain can route information by changing which pairs of regions are phase-aligned. To connect A with B, synchronise their oscillations. To disconnect them, desynchronise. This provides a flexible mechanism for selective communication without changing the physical wiring.
+
+The CTC hypothesis is influential but not universally accepted. Some researchers argue that communication can occur through other mechanisms (amplitude correlations, broadband activity). Nonetheless, it provides a strong theoretical motivation for measuring phase synchronisation in EEG.
+
+## Frequency-specific synchronisation
+
+Different frequency bands support different types of communication:
+
+- **Theta (4--8 Hz)**: long-range communication, particularly between frontal and temporal regions. Important for memory encoding, spatial navigation, and cognitive control.
+- **Alpha (8--13 Hz)**: often interpreted as a "gating" mechanism. Regions that are alpha-synchronised may be jointly suppressed (functional inhibition), allowing other regions to process information without interference.
+- **Beta (13--30 Hz)**: associated with motor coordination and sensorimotor communication. In Parkinson's disease, excessive beta synchronisation between the basal ganglia and cortex is a hallmark finding.
+- **Gamma (30--100 Hz)**: local processing and binding. Gamma synchronisation between nearby regions is thought to support feature integration (e.g., binding the colour, shape, and motion of an object into a unified percept).
+
+Because different frequency bands carry different types of information, you should always analyse phase synchronisation within a specific frequency band. Mixing frequencies (or using broadband signals) produces uninterpretable results, because the instantaneous phase of a broadband signal does not correspond to any single oscillation.
+
+This is why band-pass filtering must come before the Hilbert transform: you first isolate the frequency band of interest, then extract the phase within that band.
+
+## Measuring synchronisation: an overview of methods
+
+Several methods exist for quantifying phase synchronisation. They differ in what exactly they measure and how they handle noise and volume conduction.
+
+### Cross-correlation
+
+The simplest approach. Compute the correlation between two time series. High correlation means the signals go up and down together. This captures both amplitude and phase similarity, making it less specific than phase-based measures. It also does not distinguish between different types of synchronisation (in-phase vs anti-phase).
+
+### Phase-locking value (PLV)
+
+PLV measures the consistency of the phase difference over time:
+
+$$\text{PLV} = \left| \frac{1}{T} \sum_{t=1}^{T} e^{i\Delta\phi(t)} \right|$$
+
+PLV = 1 means perfect phase locking (constant phase difference); PLV = 0 means no phase locking (uniformly distributed phase difference). PLV ignores amplitude entirely, focusing only on phase. See the [PLV topic page](plv.qmd) for details.
+
+### Coherence
+
+Coherence is the normalised cross-spectral density. It captures both phase and amplitude relationships between two signals in the frequency domain. Coherence and PLV often give similar results, but coherence retains amplitude information while PLV discards it.
+
+### Phase alignment matrix
+
+For multi-channel analysis, you can compute $A_{ij}(t) = \cos(\phi_i(t) - \phi_j(t))$ at each time point to get a full matrix of pairwise phase relationships. This is the starting point for eigendecomposition and metastability analysis. See the [phase alignment matrix topic page](phase-alignment.qmd) for details.
+
+## Functional connectivity vs effective connectivity
+
+Phase synchronisation measures fall under the umbrella of **functional connectivity**: they detect statistical relationships between signals. Two signals that are phase-synchronised have a functional connection.
+
+But functional connectivity does not tell you about the direction of influence. If A and B are synchronised, it could be because A drives B, B drives A, both are driven by a common source C, or some combination of these. Functional connectivity is symmetric: $\text{PLV}_{AB} = \text{PLV}_{BA}$.
+
+**Effective connectivity**, by contrast, attempts to infer the direction and causal structure of neural interactions. Methods like Granger causality, dynamic causal modelling (DCM), and transfer entropy estimate whether one signal predicts or causes changes in another.
+
+For Natalia's project, we focus on functional connectivity (specifically, phase-based measures and metastability). Effective connectivity methods are more complex and require stronger assumptions, but they are worth knowing about as context.
+
+| Feature | Functional connectivity | Effective connectivity |
+|---------|------------------------|----------------------|
+| What it measures | Statistical dependence | Causal influence |
+| Directionality | No (symmetric) | Yes (directional) |
+| Methods | PLV, coherence, correlation | Granger causality, DCM, transfer entropy |
+| Assumptions | Fewer | More (model-dependent) |
+| Computational cost | Lower | Higher |
+
+## Working example: coupled oscillators
+
+Let us simulate two oscillators with adjustable coupling strength and see how the phase difference distribution changes.
+
+When two oscillators are uncoupled, their phases drift independently and the phase difference is uniformly distributed around the circle. When they are coupled, the phase difference concentrates around a preferred value.
+
+```{python}
+#| fig-cap: "Phase difference distributions for uncoupled (left) and coupled (right) oscillators. The uncoupled pair shows a nearly uniform distribution, while the coupled pair shows concentration around zero, indicating in-phase synchronisation."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parameters
+fs = 256          # sampling rate (Hz)
+duration = 30     # seconds
+t = np.arange(0, duration, 1 / fs)
+n_points = len(t)
+freq = 10         # natural frequency (Hz)
+
+# Simulate two oscillators using the Kuramoto model
+# d(phi)/dt = omega + K * sin(phi_other - phi)
+np.random.seed(42)
+
+def simulate_kuramoto_pair(coupling_strength, freq, t, noise_std=0.5):
+    """Simulate two Kuramoto-coupled oscillators."""
+    dt = t[1] - t[0]
+    n = len(t)
+    phi1 = np.zeros(n)
+    phi2 = np.zeros(n)
+
+    # Slightly different natural frequencies
+    omega1 = 2 * np.pi * freq
+    omega2 = 2 * np.pi * (freq + 0.3)  # 0.3 Hz detuning
+
+    phi1[0] = np.random.uniform(0, 2 * np.pi)
+    phi2[0] = np.random.uniform(0, 2 * np.pi)
+
+    for i in range(1, n):
+        dphi1 = omega1 + coupling_strength * np.sin(phi2[i-1] - phi1[i-1])
+        dphi2 = omega2 + coupling_strength * np.sin(phi1[i-1] - phi2[i-1])
+        phi1[i] = phi1[i-1] + dphi1 * dt + noise_std * np.sqrt(dt) * np.random.randn()
+        phi2[i] = phi2[i-1] + dphi2 * dt + noise_std * np.sqrt(dt) * np.random.randn()
+
+    return phi1, phi2
+
+# Simulate uncoupled (K=0) and coupled (K=8) pairs
+phi1_uncoupled, phi2_uncoupled = simulate_kuramoto_pair(0.0, freq, t)
+phi1_coupled, phi2_coupled = simulate_kuramoto_pair(8.0, freq, t)
+
+# Compute phase differences (wrapped to [-pi, pi])
+def wrap_phase(phi):
+    return (phi + np.pi) % (2 * np.pi) - np.pi
+
+dphi_uncoupled = wrap_phase(phi1_uncoupled - phi2_uncoupled)
+dphi_coupled = wrap_phase(phi1_coupled - phi2_coupled)
+
+# Compute PLV for each case
+plv_uncoupled = np.abs(np.mean(np.exp(1j * dphi_uncoupled)))
+plv_coupled = np.abs(np.mean(np.exp(1j * dphi_coupled)))
+
+# Plot
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), subplot_kw={"projection": "polar"})
+
+# Uncoupled
+axes[0].hist(dphi_uncoupled, bins=36, density=True, color="steelblue", alpha=0.7,
+             edgecolor="white", linewidth=0.5)
+axes[0].set_title(f"Uncoupled (K = 0)\nPLV = {plv_uncoupled:.3f}", pad=15, fontsize=11)
+axes[0].set_yticklabels([])
+
+# Coupled
+axes[1].hist(dphi_coupled, bins=36, density=True, color="indianred", alpha=0.7,
+             edgecolor="white", linewidth=0.5)
+axes[1].set_title(f"Coupled (K = 8)\nPLV = {plv_coupled:.3f}", pad=15, fontsize=11)
+axes[1].set_yticklabels([])
+
+plt.tight_layout()
+plt.show()
+```
+
+In the uncoupled case, the phase difference is spread around the circle, giving a low PLV. In the coupled case, the phase difference is concentrated near zero, giving a high PLV. The coupling forces the oscillators to align their phases, creating in-phase synchronisation.
+
+Try changing the coupling strength to see the transition: with very weak coupling (K = 1 or 2), the oscillators are partially synchronised and the PLV is intermediate. This is analogous to the moderate synchronisation levels seen in real EEG data.
+
+## Key takeaways
+
+1. **Phase synchronisation** means a consistent phase relationship over time, not necessarily identical phases.
+2. The three main types are **in-phase** ($\Delta\phi \approx 0$), **anti-phase** ($\Delta\phi \approx \pi$), and **constant phase lag** ($\Delta\phi \approx c$).
+3. Phase matters more than amplitude for EEG connectivity because it is less affected by physical factors and more directly reflects neural communication timing.
+4. The **communication through coherence** hypothesis (Fries, 2005) proposes that phase alignment between two regions is what makes effective communication possible.
+5. Different **frequency bands** support different types of communication; always analyse synchronisation within a specific band.
+6. Phase-based measures give you **functional connectivity** (statistical dependence). If you need directionality, you need effective connectivity methods.
+7. The PLV is the most common phase synchronisation measure: PLV = 1 means perfect locking, PLV = 0 means no locking.

@@ -1,0 +1,230 @@
+---
+title: "MNE data structures"
+description: "The four main MNE-Python objects (Raw, Epochs, Evoked, Info), what each represents, when to use each, how they relate to each other, and code examples for creating them."
+date: 2026-03-31
+date-modified: last-modified
+module: 1
+categories: [getting-started, data-structures]
+---
+
+## Why data structures matter
+
+When you work with EEG data in MNE-Python, you do not deal with plain NumPy arrays (though you can always extract the underlying array if you need to). Instead, MNE wraps your data in specialised objects that carry metadata alongside the numbers: channel names, sampling frequency, channel types, montage information, event markers, and more.
+
+Understanding these objects is important because every MNE function expects a specific type of input. You cannot pass a Raw object to a function that expects Epochs, or vice versa. Knowing which object to use at each stage of your analysis pipeline saves time and prevents confusing error messages.
+
+## The four main objects
+
+MNE-Python organises EEG data into four main objects. They form a natural progression from raw recording to statistical summary:
+
+```
+Raw  ──>  Epochs  ──>  Evoked
+                 │
+              (Info is attached to all three)
+```
+
+### Raw: continuous data
+
+A `Raw` object holds the continuous EEG recording as it comes off the amplifier. It is a two-dimensional array of shape `(n_channels, n_times)`, paired with metadata about the channels, sampling rate, and recording parameters.
+
+You use Raw when you are:
+
+- Loading data from a file
+- Filtering
+- Re-referencing
+- Inspecting the continuous recording
+- Running ICA
+
+Raw is your starting point. Almost every analysis begins by creating or loading a Raw object.
+
+### Epochs: segmented data
+
+An `Epochs` object contains segments of data cut from the continuous recording around events of interest. Each segment (epoch) has the same duration and is time-locked to an event marker (e.g., stimulus onset, button press).
+
+The underlying array has three dimensions: `(n_epochs, n_channels, n_times)`. If you recorded 200 trials with 64 channels and each epoch spans 1 second at 256 Hz, your Epochs object contains 200 x 64 x 256 numbers.
+
+You use Epochs when you are:
+
+- Computing event-related potentials (ERPs)
+- Doing time-frequency analysis on single trials
+- Running statistical tests across trials
+- Decoding stimulus conditions from brain activity
+
+### Evoked: averaged data
+
+An `Evoked` object is the average of a set of epochs for one experimental condition. It has shape `(n_channels, n_times)`, like Raw, but it represents an averaged response rather than continuous data.
+
+Evoked objects are what you typically see in ERP publications: a waveform showing the average brain response to a stimulus, with clear components like the N170 (a negative peak at about 170 ms for face stimuli) or the P300 (a positive peak at about 300 ms for rare target stimuli).
+
+You use Evoked when you are:
+
+- Plotting ERPs
+- Comparing conditions (e.g., faces vs. houses)
+- Running sensor-level statistics across participants
+- Identifying ERP components
+
+### Info: metadata container
+
+An `Info` object is not a data container itself but a dictionary-like structure that holds all the metadata about a recording. Every Raw, Epochs, and Evoked object has an `.info` attribute.
+
+The Info object stores:
+
+- Channel names and types (EEG, EOG, ECG, etc.)
+- Sampling frequency
+- Channel locations (montage)
+- Bad channels
+- Reference scheme
+- Recording date and subject information
+
+You create an Info object explicitly when building data from scratch (e.g., from a NumPy array). When loading data from a file, MNE creates the Info object automatically from the file header.
+
+## How the objects relate to each other
+
+The typical flow is:
+
+1. **Load or create Raw** from a file or array.
+2. **Preprocess** the Raw (filter, re-reference, run ICA).
+3. **Extract Epochs** by cutting segments around events.
+4. **Average Epochs** to get Evoked for each condition.
+
+Each step produces a new object, and the Info metadata travels along:
+
+```
+Raw (continuous, 2D)
+ │
+ │  find events, cut segments
+ ▼
+Epochs (segmented, 3D)
+ │
+ │  average across trials
+ ▼
+Evoked (averaged, 2D)
+```
+
+You can always go back and access the underlying NumPy array with `.get_data()` (for Raw and Epochs) or `.data` (for Evoked). But working with the MNE objects is usually easier because the metadata stays attached.
+
+## Code examples
+
+### Creating Raw from scratch
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Create metadata
+info = mne.create_info(
+    ch_names=["Fp1", "Fp2", "F3", "F4", "C3", "C4", "O1", "O2"],
+    sfreq=256,
+    ch_types="eeg"
+)
+
+# Simulate 10 seconds of data (8 channels x 2560 samples)
+rng = np.random.default_rng(42)
+n_channels = 8
+n_samples = 256 * 10
+data = rng.standard_normal((n_channels, n_samples)) * 1e-6
+
+# Create Raw object
+raw = mne.io.RawArray(data, info)
+print(raw)
+print(f"Duration: {raw.times[-1]:.1f} seconds")
+print(f"Channels: {raw.ch_names}")
+```
+
+### Creating Epochs from Raw
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# ── Set up simulated continuous data ───────────────────────────
+info = mne.create_info(
+    ch_names=["Fz", "Cz", "Pz", "Oz"],
+    sfreq=256,
+    ch_types="eeg"
+)
+
+rng = np.random.default_rng(42)
+duration = 60  # 60 seconds of data
+n_samples = 256 * duration
+data = rng.standard_normal((4, n_samples)) * 1e-6
+
+raw = mne.io.RawArray(data, info)
+
+# ── Create events (every 2 seconds, alternating between two types) ──
+n_events = 25
+event_samples = np.arange(256, n_events * 2 * 256, 2 * 256)
+event_ids = np.tile([1, 2], n_events)[:len(event_samples)]
+events = np.column_stack([
+    event_samples,
+    np.zeros(len(event_samples), dtype=int),
+    event_ids
+])
+
+event_id = {"stimulus_A": 1, "stimulus_B": 2}
+
+# ── Create Epochs ──────────────────────────────────────────────
+epochs = mne.Epochs(
+    raw,
+    events,
+    event_id=event_id,
+    tmin=-0.2,         # 200 ms before event
+    tmax=0.8,          # 800 ms after event
+    baseline=(None, 0) # baseline correct using pre-stimulus period
+)
+
+print(epochs)
+print(f"Number of epochs: {len(epochs)}")
+print(f"Epoch shape: {epochs.get_data().shape}")
+```
+
+### Creating Evoked from Epochs
+
+```{python}
+#| eval: false
+# Continuing from the Epochs example above
+
+# Average all epochs for condition "stimulus_A"
+evoked_A = epochs["stimulus_A"].average()
+print(evoked_A)
+print(f"Evoked shape: {evoked_A.data.shape}")
+
+# Average all epochs for condition "stimulus_B"
+evoked_B = epochs["stimulus_B"].average()
+print(evoked_B)
+
+# You can also get a list of Evoked objects for all conditions at once
+all_evoked = [epochs[cond].average() for cond in event_id]
+```
+
+### Inspecting the Info object
+
+```{python}
+#| eval: false
+# The Info object is attached to Raw, Epochs, and Evoked
+print(raw.info)
+
+# Access specific fields
+print(f"Sampling frequency: {raw.info['sfreq']} Hz")
+print(f"Channel names: {raw.info['ch_names']}")
+print(f"Number of channels: {raw.info['nchan']}")
+print(f"Bad channels: {raw.info['bads']}")
+
+# You can also create an Info object directly
+info = mne.create_info(
+    ch_names=["Fz", "Cz", "Pz"],
+    sfreq=512,
+    ch_types=["eeg", "eeg", "eeg"]
+)
+print(info)
+```
+
+## Key takeaways
+
+- MNE-Python uses four main objects: **Raw** (continuous data), **Epochs** (trial segments), **Evoked** (averaged responses), and **Info** (metadata).
+- Raw is two-dimensional (channels x time), Epochs is three-dimensional (trials x channels x time), and Evoked is two-dimensional again (channels x time, after averaging).
+- The Info object carries metadata (channel names, sampling rate, montage) and is attached to all three data objects.
+- The typical workflow is Raw -> Epochs -> Evoked, with preprocessing applied to the Raw object before epoching.
+- You can always extract the underlying NumPy array with `.get_data()`, but working with MNE objects keeps your metadata intact and lets you use MNE's built-in functions.

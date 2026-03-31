@@ -1,0 +1,230 @@
+---
+title: "Setting channel locations (montages)"
+description: "What a montage is, standard EEG montages (10-20, 10-10, 10-05), how to set and plot montages in MNE-Python, and how to create custom montages from CSV files."
+date: 2026-03-31
+date-modified: last-modified
+module: 1
+categories: [getting-started, channels]
+---
+
+## What is a montage?
+
+A montage is a mapping from channel names to physical locations on the scalp. It tells MNE-Python where each electrode sits in three-dimensional space. Without a montage, MNE can still filter, epoch, and average your data, but it cannot produce topographic maps, interpolate bad channels, or estimate source locations, because all of these operations need to know where the electrodes are.
+
+Most EEG file formats do not store electrode locations, or store them in a non-standard way. So setting the montage is usually something you do manually after loading your data. This page explains the standard montage systems, how to apply them, and how to handle non-standard setups.
+
+## Standard montage systems
+
+### The 10-20 system
+
+The original 10-20 system, introduced by Jasper in 1958, places 21 electrodes on the scalp using anatomical landmarks: the nasion (bridge of the nose), the inion (bump at the back of the skull), and the left and right preauricular points (in front of each ear). Electrodes are spaced at intervals of 10% and 20% of the distance between these landmarks.
+
+The channel names follow a convention: letters indicate the brain region (F for frontal, C for central, P for parietal, O for occipital, T for temporal) and numbers indicate laterality (odd numbers on the left, even numbers on the right, z for the midline). So Fp1 is the left frontopolar electrode, O2 is the right occipital electrode, and Cz is the central midline electrode.
+
+The 10-20 system has 21 positions: Fp1, Fp2, F7, F3, Fz, F4, F8, T3 (or T7), C3, Cz, C4, T4 (or T8), T5 (or P7), P3, Pz, P4, T6 (or P8), O1, O2, A1, A2.
+
+### The 10-10 and 10-05 systems
+
+The 10-10 system (also called the extended 10-20 system) adds electrodes between the 10-20 positions, giving about 75 locations. It uses the same naming convention but with more positions filled in. This is the most common system for research-grade EEG caps with 32 or 64 channels.
+
+The 10-05 system goes even further, filling in positions at 5% intervals, producing over 300 possible electrode sites. This is used for high-density arrays (128 or 256 channels).
+
+### Available montages in MNE
+
+MNE-Python includes many standard montages. You can see the full list with:
+
+```{python}
+#| eval: false
+import mne
+
+# List all built-in montages
+print(mne.channels.get_builtin_montages())
+```
+
+The most commonly used ones are:
+
+| Montage name | System | Channels |
+|:-------------|:-------|:---------|
+| `standard_1020` | 10-20 | 94 positions (includes 10-10 extensions) |
+| `standard_1005` | 10-05 | 343 positions |
+| `biosemi16` | BioSemi 16-channel | 16 |
+| `biosemi32` | BioSemi 32-channel | 32 |
+| `biosemi64` | BioSemi 64-channel | 64 |
+| `biosemi128` | BioSemi 128-channel | 128 |
+| `biosemi256` | BioSemi 256-channel | 256 |
+| `easycap-M1` | EasyCap M1 layout | 74 |
+| `GSN-HydroCel-129` | EGI 128-channel + Cz | 129 |
+| `GSN-HydroCel-257` | EGI 256-channel + Cz | 257 |
+
+## Setting a montage in MNE-Python
+
+### Basic usage
+
+```{python}
+#| eval: false
+import mne
+
+# Load your data
+raw = mne.io.read_raw_edf("recording.edf", preload=True)
+
+# Create a standard montage
+montage = mne.channels.make_standard_montage("standard_1020")
+
+# Apply it to the data
+raw.set_montage(montage)
+```
+
+### Handling mismatched channel names
+
+Your data may use channel names that do not exactly match the montage. For example, the montage uses "T7" but your data has "T3" (an older naming convention for the same electrode). MNE will raise an error by default when channel names do not match.
+
+You have several options:
+
+```{python}
+#| eval: false
+# Option 1: warn instead of raising an error
+raw.set_montage(montage, on_missing="warn")
+
+# Option 2: ignore missing channels entirely
+raw.set_montage(montage, on_missing="ignore")
+
+# Option 3: rename channels before setting the montage
+raw.rename_channels({"T3": "T7", "T4": "T8", "T5": "P7", "T6": "P8"})
+raw.set_montage(montage)
+```
+
+Option 3 is usually the best approach, because it solves the problem at the source rather than hiding it.
+
+### Checking what happened
+
+After setting a montage, you can verify that it worked by inspecting the channel positions:
+
+```{python}
+#| eval: false
+# Check that channels have positions
+for ch in raw.info["chs"][:5]:
+    print(f"{ch['ch_name']}: {ch['loc'][:3]}")
+```
+
+## Plotting channel locations
+
+Once a montage is set, you can visualise the electrode positions. This is useful for verifying that the montage was applied correctly and for generating figures.
+
+### 2D topographic view
+
+```{python}
+#| eval: false
+import mne
+
+montage = mne.channels.make_standard_montage("standard_1020")
+
+# Plot the montage directly
+montage.plot(kind="topomap", show_names=True)
+```
+
+### 3D view
+
+```{python}
+#| eval: false
+# 3D scatter plot of electrode positions
+montage.plot(kind="3d", show_names=True)
+```
+
+### Plotting from a Raw object
+
+```{python}
+#| eval: false
+# Plot the sensor layout from an existing Raw object
+raw.plot_sensors(kind="topomap", show_names=True)
+
+# Or in 3D
+raw.plot_sensors(kind="3d", show_names=True)
+```
+
+## Custom montages from CSV
+
+If your recording system uses electrode positions that do not match any standard montage (for example, a custom cap or intracranial electrodes), you can create a montage from a CSV file containing the channel names and their coordinates.
+
+### CSV format
+
+Your CSV file should have columns for the channel name and the x, y, z coordinates (in metres). For example:
+
+```
+name,x,y,z
+Fp1,-0.0309,0.0838,0.0415
+Fp2,0.0309,0.0838,0.0415
+F3,-0.0549,0.0571,0.0694
+F4,0.0549,0.0571,0.0694
+C3,-0.0684,0.0,0.0753
+C4,0.0684,0.0,0.0753
+```
+
+### Loading and applying a custom montage
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Read the CSV file
+data = np.genfromtxt(
+    "electrode_positions.csv",
+    delimiter=",",
+    names=True,
+    dtype=None,
+    encoding="utf-8"
+)
+
+# Build a dictionary of channel positions
+ch_pos = {}
+for row in data:
+    name = str(row["name"])
+    ch_pos[name] = np.array([row["x"], row["y"], row["z"]])
+
+# Create a custom montage
+montage = mne.channels.make_dig_montage(
+    ch_pos=ch_pos,
+    coord_frame="head"
+)
+
+print(montage)
+
+# Apply to your data
+raw.set_montage(montage)
+```
+
+### Using digitised positions
+
+Some labs use a 3D digitiser (such as a Polhemus) to measure the exact position of each electrode on each participant's head. MNE can read several digitiser formats:
+
+```{python}
+#| eval: false
+# Read positions from a Polhemus .elp file
+montage = mne.channels.read_dig_polhemus_isotrak("digitisation.elp")
+
+# Read positions from a .hsp file
+montage = mne.channels.read_dig_polhemus_isotrak("headshape.hsp")
+
+# Read from BESA .elp format
+montage = mne.channels.read_custom_montage("positions.elp")
+```
+
+## When does the montage matter?
+
+The montage affects several downstream analyses:
+
+- **Topographic plots** (`mne.viz.plot_topomap`, `evoked.plot_topomap`): the montage determines where each channel's value is plotted on the scalp map.
+- **Bad channel interpolation** (`raw.interpolate_bads`): interpolation uses the spatial distances between channels to estimate what a bad channel should look like. Without a montage, interpolation will fail.
+- **Source localisation**: estimating brain sources from scalp data requires accurate electrode positions. Errors in the montage translate directly into errors in source estimates.
+- **Average reference**: the quality of an average reference depends on electrode coverage. The montage helps you judge whether your coverage is sufficient.
+
+If you are only doing temporal analyses (filtering, epoching, averaging, time-frequency) without any spatial component, you can technically skip the montage. But setting it takes one line of code and prevents errors later, so there is little reason not to.
+
+## Key takeaways
+
+- A montage maps channel names to physical locations on the scalp. It is needed for topographic plots, bad channel interpolation, and source localisation.
+- The 10-20 system is the original standard with 21 positions. The 10-10 and 10-05 systems extend it to 75 and 300+ positions, respectively. MNE includes all of these as built-in montages.
+- Use `mne.channels.make_standard_montage("standard_1020")` to create a montage and `raw.set_montage(montage)` to apply it.
+- If your channel names do not match the montage, rename them with `raw.rename_channels()` rather than ignoring the mismatch.
+- For non-standard electrode layouts, create a custom montage from a CSV file with x, y, z coordinates using `mne.channels.make_dig_montage()`.
+- Setting the montage is quick and prevents hard-to-diagnose errors later. Do it as part of your standard loading workflow.

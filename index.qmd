@@ -1,0 +1,69 @@
+---
+title: "EEG with Python"
+subtitle: "From raw signal to metastability"
+---
+
+This site covers everything you need to analyse EEG data in Python, using [MNE-Python](https://mne.tools) as the main library. The content follows the structure of the [EEGLAB tutorials](https://eeglab.org/tutorials/), but translated to Python, with examples using simulated data you can run without needing real patient recordings.
+
+## Modules
+
+::: {.module-card}
+### [1. Getting started](modules/01-getting-started.qmd)
+Installing MNE-Python, understanding the `Raw` and `Epochs` data structures, loading files, and visually inspecting the signal.
+:::
+
+::: {.module-card}
+### [2. Preprocessing](modules/02-preprocessing.qmd)
+Band-pass and notch filtering, re-referencing, resampling, bad channel detection, and interpolation.
+:::
+
+::: {.module-card}
+### [3. Artifact rejection](modules/03-artifacts.qmd)
+Visual inspection, automated epoch rejection, and Independent Component Analysis (ICA) for removing blinks, eye movements, and muscle artifacts.
+:::
+
+::: {.module-card}
+### [4. Spectral and time-frequency analysis](modules/04-spectral-analysis.qmd)
+Power spectral density (PSD), time-frequency decomposition, topographic maps by band, and event-related potentials (ERPs).
+:::
+
+::: {.module-card}
+### [5. Connectivity and metastability](modules/05-metastability.qmd)
+Instantaneous phase via the Hilbert transform, relative phase alignment, dominant eigenvector, and regional metastability computation. The core module for the master's project.
+:::
+
+## Quick links
+
+::: {.quick-links}
+[Topics](topics/index.qmd)
+[Exercises](exercises/index.qmd)
+[Log](log/index.qmd)
+:::
+
+## Libraries used
+
+| Library | Purpose |
+|:--------|:--------|
+| `mne` | EEG processing: loading, filtering, ICA, spectra, connectivity |
+| `numpy` | Numerical operations, linear algebra |
+| `scipy` | Hilbert transform, filters, statistics |
+| `matplotlib` | Signal visualisation, topographies, spectra |
+| `pandas` | Organising demographic and clinical data |
+| `pingouin` | ANOVA, post-hoc tests, effect sizes |
+
+## Quick install
+
+```bash
+pip install mne numpy scipy matplotlib pandas pingouin
+```
+
+Or with conda:
+
+```bash
+conda install -c conda-forge mne numpy scipy matplotlib pandas
+pip install pingouin
+```
+
+## About this site
+
+This site supports the master's project of Natalia Sayuri Melo at the Neuroscience and Cognition programme, UFABC. The project investigates the metastability of resting-state brain dynamics measured by EEG in Parkinson's disease.

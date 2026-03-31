@@ -1,0 +1,22 @@
+---
+title: "Exercises"
+description: "Practice problems and coding exercises for EEG analysis with Python."
+date: 2026-03-31
+date-modified: last-modified
+listing:
+  id: exercises-listing
+  contents: "*.qmd"
+  type: table
+  fields: [title, description, categories]
+  field-display-names:
+    title: "Title"
+    description: "Description"
+    categories: "Categories"
+  sort: "title asc"
+  filter-ui: true
+---
+
+Each exercise pairs with one of the [topic pages](../topics/index.qmd) or [modules](../modules/01-getting-started.qmd). Work through them after reading the corresponding material to test your understanding. Solutions are included in collapsible blocks so you can check your work.
+
+::: {#exercises-listing}
+:::

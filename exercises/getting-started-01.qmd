@@ -1,0 +1,237 @@
+---
+title: "Getting started: exercises"
+description: "Practice creating Raw objects, inspecting Info, simulating oscillations, cropping signals, and converting between data formats."
+module: 1
+date: 2026-03-31
+date-modified: last-modified
+categories: [getting-started, basics]
+---
+
+These exercises go with [Module 1: Getting started](../modules/01-getting-started.qmd). They cover the building blocks of MNE-Python: creating `Raw` objects from scratch, reading metadata, simulating known signals, extracting time segments, and saving and reloading data. Work through them in order; each one adds a small piece to what you already know.
+
+All exercises use simulated data so you do not need any external files.
+
+## Exercise 1: Create a simulated Raw object
+
+Create a `Raw` object from scratch with:
+
+- 32 EEG channels
+- a sampling rate of 500 Hz
+- 60 seconds of random data
+
+After creating it, set all channels to type `"eeg"` and apply the standard 10-20 montage. Print the `Info` object to confirm everything looks right.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `numpy.random.randn()` to generate a `(32, n_samples)` array and `mne.io.RawArray()` to wrap it in a Raw object. Create the `Info` first with `mne.create_info()`, passing `sfreq=500` and `ch_types="eeg"`. For channel names, use the first 32 channels from `mne.channels.make_standard_montage("standard_1020").ch_names`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Get 32 channel names from the standard 10-20 montage
+montage = mne.channels.make_standard_montage("standard_1020")
+ch_names = montage.ch_names[:32]
+
+# Create the Info object
+info = mne.create_info(ch_names=ch_names, sfreq=500, ch_types="eeg")
+
+# Generate 60 seconds of random data (32 channels x 30000 samples)
+# MNE expects data in volts, so scale to a realistic EEG amplitude (~20 µV)
+n_samples = 500 * 60
+data = np.random.randn(32, n_samples) * 20e-6
+
+# Create the Raw object
+raw = mne.io.RawArray(data, info)
+
+# Apply the montage
+raw.set_montage(montage)
+
+# Check the result
+print(raw.info)
+print(f"Number of channels: {len(raw.ch_names)}")
+print(f"Sampling rate: {raw.info['sfreq']} Hz")
+print(f"Duration: {raw.times[-1]:.1f} seconds")
+```
+:::
+
+
+## Exercise 2: Inspect the Info object
+
+Load the MNE sample dataset (or create a synthetic Raw object with mixed channel types) and answer these questions by examining its `Info` object:
+
+1. How many channels does it have?
+2. What is the sampling rate?
+3. What channel types are present, and how many of each?
+
+Print each answer to the console.
+
+::: {.callout-tip collapse="true" title="Hint"}
+The `Info` object behaves like a dictionary. Use `info['nchan']` for the channel count and `info['sfreq']` for the sampling rate. To count channel types, try `mne.channel_type(info, k)` for each channel index, or use `raw.get_channel_types()` and count with a `Counter` or a simple loop.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from collections import Counter
+
+# Create a synthetic dataset with mixed channel types
+# 20 EEG channels, 2 EOG channels, 1 stim channel
+ch_names_eeg = [f"EEG{i:03d}" for i in range(1, 21)]
+ch_names_eog = ["EOG1", "EOG2"]
+ch_names_stim = ["STI 014"]
+ch_names = ch_names_eeg + ch_names_eog + ch_names_stim
+ch_types = ["eeg"] * 20 + ["eog"] * 2 + ["stim"] * 1
+
+sfreq = 256
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
+
+# Generate random data (23 channels x 10 seconds)
+data = np.random.randn(23, sfreq * 10) * 20e-6
+raw = mne.io.RawArray(data, info)
+
+# Answer the three questions
+print(f"1. Number of channels: {raw.info['nchan']}")
+print(f"2. Sampling rate: {raw.info['sfreq']} Hz")
+
+type_counts = Counter(raw.get_channel_types())
+print("3. Channel types:")
+for ch_type, count in type_counts.items():
+    print(f"   {ch_type}: {count}")
+```
+:::
+
+
+## Exercise 3: Simulate and plot a 12 Hz oscillation
+
+Create a `Raw` object that contains a known 12 Hz sine wave in a channel called `"Oz"`. Include at least a few other channels with random noise so the data looks like a realistic (if simplified) recording. Plot the first 2 seconds of channel `"Oz"` and verify that you can see roughly 24 cycles (12 Hz times 2 seconds).
+
+::: {.callout-tip collapse="true" title="Hint"}
+Build a time vector with `np.arange(0, duration, 1/sfreq)`, then create the 12 Hz sine with `np.sin(2 * np.pi * 12 * times)`. Scale it to a realistic amplitude (say 10 µV = `10e-6` V). For the other channels, use `np.random.randn()` with a smaller amplitude. Use `raw.plot()` with `duration=2` and `picks=["Oz"]` to zoom in on the channel of interest.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 10  # seconds
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+# Channel setup: Oz will carry the 12 Hz oscillation,
+# the rest will have background noise
+ch_names = ["Fp1", "Fp2", "C3", "C4", "O1", "O2", "Oz"]
+n_channels = len(ch_names)
+
+# Random background noise for all channels (~5 µV)
+data = np.random.randn(n_channels, n_samples) * 5e-6
+
+# Add a 12 Hz sine wave to Oz (index 6) with amplitude 10 µV
+oz_index = ch_names.index("Oz")
+data[oz_index] += 10e-6 * np.sin(2 * np.pi * 12 * times)
+
+# Create the Raw object
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+raw = mne.io.RawArray(data, info)
+
+# Apply a standard montage so MNE knows channel positions
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+
+# Plot channel Oz for the first 2 seconds
+raw.plot(duration=2, picks=["Oz"], title="12 Hz oscillation in Oz")
+```
+
+You should see a clear sinusoidal pattern with about 24 full cycles across the 2-second window. The other channels will look like flat noise at this scale.
+:::
+
+
+## Exercise 4: Crop a 5-second segment
+
+Starting from any `Raw` object (create one if you need to), extract a 5-second segment from the middle of the recording using `raw.crop()`. Print the duration of the cropped object to confirm it is 5 seconds, then plot the segment.
+
+::: {.callout-tip collapse="true" title="Hint"}
+`raw.crop(tmin, tmax)` modifies the object in place by default. If you want to keep the original, call `raw.copy().crop(tmin, tmax)` instead. For a 60-second recording, cropping from 27.5 to 32.5 seconds gives you a 5-second window from the middle.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# Create a 60-second recording
+sfreq = 500
+ch_names = ["Fp1", "Fp2", "C3", "C4", "Pz", "O1", "O2", "Oz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(len(ch_names), sfreq * 60) * 20e-6
+raw = mne.io.RawArray(data, info)
+
+print(f"Original duration: {raw.times[-1]:.1f} seconds")
+
+# Crop a 5-second segment from the middle (keep original intact)
+raw_cropped = raw.copy().crop(tmin=27.5, tmax=32.5)
+
+print(f"Cropped duration: {raw_cropped.times[-1]:.1f} seconds")
+
+# Plot the segment
+raw_cropped.plot(title="5-second cropped segment")
+```
+:::
+
+
+## Exercise 5: Save and reload a FIF file
+
+Create a `Raw` object, save it to MNE's native FIF format, reload it from disk, and verify that the data in the reloaded object matches the original. Use `numpy.allclose()` to compare the arrays numerically.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Save with `raw.save("filename_raw.fif", overwrite=True)`. Reload with `mne.io.read_raw_fif("filename_raw.fif", preload=True)`. To compare the data arrays, use `raw.get_data()` on both objects and pass them to `np.allclose()`. MNE file names should end with `_raw.fif` for raw data (MNE will warn you otherwise).
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import os
+
+# Create a small Raw object
+sfreq = 256
+ch_names = ["C3", "C4", "Cz", "Pz", "Oz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(len(ch_names), sfreq * 10) * 15e-6
+raw_original = mne.io.RawArray(data, info)
+
+# Save to FIF
+fif_path = "/tmp/test_raw.fif"
+raw_original.save(fif_path, overwrite=True)
+
+# Reload
+raw_loaded = mne.io.read_raw_fif(fif_path, preload=True)
+
+# Compare
+data_original = raw_original.get_data()
+data_loaded = raw_loaded.get_data()
+
+if np.allclose(data_original, data_loaded):
+    print("Data matches: the save/load round-trip preserved all values.")
+else:
+    print("Data mismatch! Something went wrong.")
+
+# Check that metadata also matches
+print(f"Original sfreq: {raw_original.info['sfreq']}")
+print(f"Loaded sfreq:   {raw_loaded.info['sfreq']}")
+print(f"Original channels: {raw_original.ch_names}")
+print(f"Loaded channels:   {raw_loaded.ch_names}")
+
+# Clean up
+os.remove(fif_path)
+```
+:::

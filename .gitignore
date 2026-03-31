@@ -1,0 +1,10 @@
+_site/
+.quarto/
+*.html
+*.pdf
+__pycache__/
+*.pyc
+.DS_Store
+.env
+CLAUDE.md
+AGENTS.md

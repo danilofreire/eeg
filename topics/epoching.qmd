@@ -1,0 +1,259 @@
+---
+title: "Extracting epochs from continuous data"
+description: "What epochs are, how event markers work, creating Epochs from Raw, baseline correction, rejecting noisy epochs by amplitude, and using metadata for condition labels."
+date: 2026-03-31
+date-modified: last-modified
+module: 2
+categories: [preprocessing, epochs]
+---
+
+## What epochs are and why we need them
+
+A continuous EEG recording is a long stream of voltages. To study the brain's response to a specific event (a flash of light, a word appearing on screen, a button press), you need to cut out short segments around each event and compare them. These segments are called **epochs**.
+
+Each epoch is time-locked to an event: it starts at a fixed time before the event (e.g., 200 ms before stimulus onset) and ends at a fixed time after it (e.g., 800 ms after). By averaging many epochs for the same condition, random noise cancels out and the consistent brain response emerges. This averaged response is the **event-related potential** (ERP).
+
+Epoching is where your analysis transitions from continuous data (where you cannot easily tell what happened when) to structured, trial-level data (where you can compare conditions and compute statistics).
+
+## Event markers
+
+Events are time-stamped labels in your data that mark when something happened during the experiment. They come from different sources:
+
+- **Trigger channels**: many EEG systems have a dedicated channel that records digital trigger codes sent by the stimulus presentation software (e.g., PsychoPy, E-Prime, Psychtoolbox). A trigger value of 1 might mean "stimulus onset", 2 might mean "response", and so on.
+- **Annotations**: some file formats (EDF+, BrainVision) store events as text annotations rather than trigger codes.
+
+In MNE-Python, events are represented as a NumPy array with three columns:
+
+| Column | Contents |
+|:-------|:---------|
+| 0 | Sample number (when the event occurred) |
+| 1 | Previous event value (usually 0) |
+| 2 | Event ID (integer code identifying the event type) |
+
+You can extract events from annotations or from a trigger channel:
+
+```{python}
+#| eval: false
+import mne
+
+# From annotations (common for EDF+, BrainVision)
+events, event_id = mne.events_from_annotations(raw)
+
+# From a trigger channel (common for BioSemi, Neuroscan)
+events = mne.find_events(raw, stim_channel="STI 014")
+```
+
+## Creating epochs from Raw
+
+Here is a complete example that simulates a continuous recording with embedded events, then cuts epochs around those events.
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# ── Simulate continuous EEG data ───────────────────────────────
+sfreq = 256
+duration = 120  # 2 minutes of data
+n_channels = 8
+ch_names = ["Fp1", "Fp2", "F3", "F4", "C3", "C4", "P3", "P4"]
+
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+rng = np.random.default_rng(42)
+n_samples = int(sfreq * duration)
+data = rng.standard_normal((n_channels, n_samples)) * 1e-6
+
+# Add a 10 Hz oscillation to make it look more like real EEG
+times = np.arange(n_samples) / sfreq
+alpha = 2e-6 * np.sin(2 * np.pi * 10 * times)
+data += alpha[np.newaxis, :]
+
+raw = mne.io.RawArray(data, info)
+
+# ── Create simulated events ───────────────────────────────────
+# Two conditions: "target" (event_id=1) and "standard" (event_id=2)
+# Events occur every 2 seconds with some jitter
+n_trials = 50
+event_times = np.cumsum(rng.uniform(1.5, 2.5, n_trials))
+event_times = event_times[event_times < duration - 1]  # keep within recording
+event_samples = (event_times * sfreq).astype(int)
+
+# Assign conditions: 20% targets, 80% standards
+n_events = len(event_samples)
+event_ids = rng.choice([1, 2], size=n_events, p=[0.2, 0.8])
+
+events = np.column_stack([
+    event_samples,
+    np.zeros(n_events, dtype=int),
+    event_ids
+])
+
+event_id = {"target": 1, "standard": 2}
+
+print(f"Total events: {n_events}")
+print(f"Targets: {np.sum(event_ids == 1)}, Standards: {np.sum(event_ids == 2)}")
+
+# ── Create Epochs ──────────────────────────────────────────────
+epochs = mne.Epochs(
+    raw,
+    events,
+    event_id=event_id,
+    tmin=-0.2,           # 200 ms before the event
+    tmax=0.8,            # 800 ms after the event
+    baseline=(None, 0),  # baseline correction: subtract mean of pre-stimulus
+    preload=True         # load all epochs into memory
+)
+
+print(epochs)
+print(f"Epoch time window: {epochs.tmin} to {epochs.tmax} seconds")
+print(f"Data shape: {epochs.get_data().shape}")
+# shape is (n_epochs, n_channels, n_times)
+```
+
+## Baseline correction
+
+Baseline correction removes slow voltage drifts that vary from trial to trial. Without it, some epochs might be shifted up or down relative to others simply because of electrode drift, not because of any difference in brain activity.
+
+The baseline period is typically the pre-stimulus interval (the time before the event). MNE computes the mean voltage during this period for each channel and each epoch, then subtracts it.
+
+```{python}
+#| eval: false
+# Baseline correction using the pre-stimulus period (-0.2 to 0 seconds)
+epochs = mne.Epochs(
+    raw, events, event_id,
+    tmin=-0.2, tmax=0.8,
+    baseline=(-0.2, 0),   # mean of this window is subtracted
+    preload=True
+)
+
+# You can also apply no baseline correction
+epochs_no_baseline = mne.Epochs(
+    raw, events, event_id,
+    tmin=-0.2, tmax=0.8,
+    baseline=None,         # no baseline correction
+    preload=True
+)
+
+# Or use a custom baseline window
+epochs_custom = mne.Epochs(
+    raw, events, event_id,
+    tmin=-0.5, tmax=1.0,
+    baseline=(-0.5, -0.2), # baseline from -500 to -200 ms
+    preload=True
+)
+```
+
+The `baseline=(None, 0)` syntax uses the beginning of the epoch as the start of the baseline window. Since the epoch starts at `tmin`, `(None, 0)` is equivalent to `(tmin, 0)`.
+
+## Epoch rejection by amplitude
+
+Some epochs contain large artifacts (blinks, muscle bursts, electrode pops) that would distort the average. You can reject these by setting an amplitude threshold: any epoch where any EEG channel exceeds the threshold is dropped.
+
+```{python}
+#| eval: false
+# Reject epochs where any EEG channel exceeds 100 microvolts (peak-to-peak)
+reject = dict(eeg=100e-6)  # 100 uV in volts (MNE uses SI units)
+
+epochs = mne.Epochs(
+    raw, events, event_id,
+    tmin=-0.2, tmax=0.8,
+    baseline=(None, 0),
+    reject=reject,          # amplitude-based rejection
+    preload=True
+)
+
+print(f"Epochs kept: {len(epochs)} / {n_events}")
+print(epochs.drop_log_stats())  # percentage of dropped epochs
+```
+
+You can also set a **flat** threshold to catch channels that are dead (not recording any signal):
+
+```{python}
+#| eval: false
+# Reject epochs that are too large OR too flat
+reject = dict(eeg=100e-6)   # reject if > 100 uV
+flat = dict(eeg=0.5e-6)     # reject if < 0.5 uV (likely a dead channel)
+
+epochs = mne.Epochs(
+    raw, events, event_id,
+    tmin=-0.2, tmax=0.8,
+    baseline=(None, 0),
+    reject=reject,
+    flat=flat,
+    preload=True
+)
+```
+
+A common guideline is to set the rejection threshold at 100--150 microvolts for EEG. If you are losing more than 20--30% of your epochs, the threshold may be too strict, or there may be a systematic artifact that you should address with ICA or channel interpolation before epoching.
+
+## Using metadata
+
+MNE allows you to attach a pandas DataFrame as metadata to your Epochs object. Each row of the DataFrame corresponds to one epoch and can contain any trial-level information: reaction time, accuracy, stimulus category, participant condition, and so on.
+
+This is powerful because you can then select epochs using pandas-style queries.
+
+```{python}
+#| eval: false
+import numpy as np
+import pandas as pd
+import mne
+
+# Suppose you have trial-level information
+metadata = pd.DataFrame({
+    "condition": rng.choice(["face", "house"], size=n_events),
+    "response_time": rng.uniform(0.3, 1.2, size=n_events),
+    "accuracy": rng.choice([0, 1], size=n_events, p=[0.1, 0.9])
+})
+
+# Attach metadata when creating Epochs
+epochs = mne.Epochs(
+    raw, events, event_id,
+    tmin=-0.2, tmax=0.8,
+    baseline=(None, 0),
+    metadata=metadata,
+    preload=True
+)
+
+# Select epochs using pandas queries
+fast_correct = epochs["response_time < 0.5 and accuracy == 1"]
+faces_only = epochs["condition == 'face'"]
+
+print(f"Fast correct trials: {len(fast_correct)}")
+print(f"Face trials: {len(faces_only)}")
+```
+
+Metadata is particularly useful in designs with many conditions or continuous variables (like reaction time) that do not map neatly onto integer event codes.
+
+## Selecting and indexing epochs
+
+You can select subsets of epochs by condition name, index, or metadata query:
+
+```{python}
+#| eval: false
+# By condition name (from event_id)
+targets = epochs["target"]
+standards = epochs["standard"]
+
+# By index
+first_ten = epochs[:10]
+
+# By metadata query (if metadata is attached)
+# fast_trials = epochs["response_time < 0.5"]
+
+# Get the data as a NumPy array
+data_array = epochs.get_data()  # shape: (n_epochs, n_channels, n_times)
+print(f"Data shape: {data_array.shape}")
+
+# Get the times vector
+print(f"Time points: {epochs.times[:5]} ... {epochs.times[-5:]}")
+```
+
+## Key takeaways
+
+- **Epochs** are short segments of EEG data cut from the continuous recording around event markers. They are the basis for ERP analysis, time-frequency analysis, and single-trial decoding.
+- **Events** are stored as a NumPy array with three columns: sample number, previous value, and event ID. Extract them from annotations with `mne.events_from_annotations()` or from a trigger channel with `mne.find_events()`.
+- **Baseline correction** subtracts the mean voltage of the pre-stimulus period from each epoch, removing slow drifts. The standard baseline window is from the start of the epoch to time zero (stimulus onset).
+- **Amplitude rejection** drops epochs where any channel exceeds a threshold (typically 100--150 microvolts for EEG). This removes trials contaminated by large artifacts. If you are dropping more than 20--30% of epochs, investigate the source of the artifacts.
+- **Metadata** lets you attach trial-level variables (condition, reaction time, accuracy) to epochs and select subsets with pandas-style queries. This is especially useful for complex experimental designs.
+- Always epoch after filtering and re-referencing, but before computing ERPs or running statistical analyses.

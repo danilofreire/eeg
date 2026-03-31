@@ -1,0 +1,212 @@
+---
+title: "Types of EEG artifacts"
+description: "Ocular artifacts (blinks, saccades), muscular artifacts (EMG), cardiac artifacts (ECG), and movement artifacts: what causes each type, what it looks like in the signal, which channels are most affected, and their frequency characteristics."
+date: 2026-03-31
+date-modified: last-modified
+module: 3
+categories: [artifacts, preprocessing]
+---
+
+## Why this topic matters
+
+EEG electrodes pick up electrical activity from the brain, but they also pick up electrical activity from other sources: eye movements, muscle contractions, the heartbeat, and physical movement of the electrodes. These non-brain signals are called artifacts. They can be much larger than the brain signals you care about (a single eye blink can be 10 times the amplitude of an alpha oscillation), and they can distort your analysis if you do not recognise and handle them.
+
+Before you can remove artifacts, you need to know what they look like. Each type has a characteristic signature in the time domain, a typical frequency range, and a predictable spatial distribution across the scalp. Learning to recognise these patterns is the first step in any preprocessing pipeline.
+
+## Ocular artifacts
+
+### Eye blinks
+
+Eye blinks are the most common and most recognisable EEG artifact. When you blink, the eyelid slides over the positively charged cornea, creating a large electrical potential change that propagates across the scalp.
+
+**What it looks like**: a sharp, positive-going deflection lasting about 200 to 400 milliseconds, followed by a return to baseline. The waveform has a roughly triangular or bell-shaped appearance.
+
+**Which channels are affected**: blink artifacts are largest at frontal electrodes, especially Fp1 and Fp2 (the frontopolar sites, right above the eyes). The amplitude decreases as you move towards the back of the head. Central electrodes (Cz, C3, C4) show a moderate effect, and occipital electrodes (O1, O2) are usually unaffected.
+
+**Frequency characteristics**: the energy is concentrated below 5 Hz, mostly in the delta range. This means that blinks overlap spectrally with slow brain oscillations, and you cannot remove them by simple low-pass filtering without also destroying delta and theta activity.
+
+### Saccades (horizontal and vertical eye movements)
+
+When you move your eyes, the corneal-retinal dipole (the eye acts like a small battery, positive at the front and negative at the back) rotates. This creates a sustained potential shift in the EEG.
+
+**What it looks like**: a step-like shift in the signal that lasts as long as the eye is in its new position. Horizontal saccades produce opposite-polarity deflections on the left and right sides of the scalp: if F7 goes positive, F8 goes negative, and vice versa. Vertical eye movements produce a bilateral frontal deflection similar to blinks, but smaller and more sustained.
+
+**Which channels are affected**: horizontal saccades affect lateral frontal channels (F7, F8, AF7, AF8) most strongly. Vertical eye movements affect midline frontal channels (Fp1, Fp2, Fpz). Both types diminish towards posterior electrodes.
+
+**Frequency characteristics**: the frequency content depends on the speed of the eye movement, but most of the energy is below 8 Hz.
+
+## Muscular artifacts (EMG)
+
+Muscles produce electrical activity when they contract. Any muscle near the head (jaw, forehead, neck, scalp) can inject artifact into EEG electrodes. Common sources include jaw clenching (temporalis and masseter muscles), teeth grinding (bruxism), frowning, and neck tension.
+
+**What it looks like**: EMG artifact has a distinctive high-frequency, spiky appearance. It looks like a burst of rapid, irregular oscillations superimposed on the EEG. In mild cases, it adds a "fuzzy" quality to the signal. In severe cases, it can completely obscure the underlying brain activity.
+
+**Which channels are affected**: temporal electrodes (T7, T8, FT9, FT10) are most susceptible because they sit directly over the temporalis muscle. Frontal electrodes pick up forehead muscle activity. Posterior channels can be affected by neck muscles, especially during head movements.
+
+**Frequency characteristics**: EMG energy is concentrated above 20 Hz, with a broad spectral bump that can extend up to 200 Hz or higher. This overlaps with beta and gamma bands, making it a serious concern for any analysis involving high-frequency brain activity. At the same time, very strong muscle contractions can also inject energy into lower frequencies (down to about 10 Hz).
+
+## Cardiac artifacts (ECG)
+
+The heart is a powerful electrical generator. Its electrical field can propagate through the body and reach the scalp, appearing as a periodic artifact in the EEG.
+
+**What it looks like**: a regular, repeating waveform that follows the heart rate (typically 60 to 100 beats per minute). The artifact looks like a small, sharp spike (corresponding to the QRS complex of the ECG) followed by a slower wave. The shape is consistent across heartbeats, which helps distinguish it from random noise.
+
+**Which channels are affected**: the cardiac artifact is typically diffuse, affecting many channels at once. It is often most visible at temporal and mastoid electrodes, and it can be particularly prominent in recordings with linked-ear references. Its amplitude is usually small compared to blinks and muscle artifacts, but it can become noticeable in high-density recordings or when other noise sources have been removed.
+
+**Frequency characteristics**: the heart rate determines the fundamental frequency (about 1 to 1.7 Hz for rates of 60 to 100 bpm), but the sharp QRS complex introduces harmonics that can extend into the alpha and beta ranges (up to about 30 Hz). This means the cardiac artifact can contaminate spectral analyses across a wide range of frequencies.
+
+## Movement artifacts
+
+Physical movement of the electrodes, the cable, or the participant's head creates artifacts through two mechanisms: changes in the electrode-skin impedance and changes in the static charge on the electrode.
+
+**What it looks like**: large, slow, irregular deflections that do not follow any rhythmic pattern. Movement artifacts are often asymmetric (one side of the head shifts more than the other if the participant turns their head) and can include sudden jumps or baseline shifts. In severe cases, one or more channels may "rail", meaning they hit the amplifier's maximum or minimum voltage and saturate.
+
+**Which channels are affected**: movement artifacts tend to be widespread, affecting many or all channels at once. The specific pattern depends on the type of movement. Head rotations affect channels on the side the participant turns towards. Cable movement tends to affect the channels nearest to the disturbed cable. Electrode pops (brief losses of skin contact) typically affect a single channel with a sharp, vertical spike.
+
+**Frequency characteristics**: the energy is concentrated at very low frequencies, mostly below 2 Hz, because the movements are slow compared to brain oscillations. Single-channel electrode pops, however, can produce broadband artifacts that extend across all frequencies.
+
+## Summary table
+
+| Artifact type | Typical shape | Most affected channels | Frequency range |
+|---|---|---|---|
+| Eye blinks | Sharp positive deflection, 200-400 ms | Fp1, Fp2 (frontal) | Below 5 Hz |
+| Saccades | Step-like shift, sustained | F7/F8 (horizontal), Fp1/Fp2 (vertical) | Below 8 Hz |
+| Muscle (EMG) | High-frequency bursts, spiky | T7, T8 (temporal), frontal | Above 20 Hz |
+| Cardiac (ECG) | Regular QRS-like spikes | Diffuse, temporal/mastoid | 1-30 Hz (harmonics) |
+| Movement | Slow, irregular drifts | Widespread | Below 2 Hz |
+
+## Working example
+
+The code below simulates all four artifact types and plots them side by side so you can see how each one appears in a time series. We add each artifact to a common alpha oscillation background so you can see how it distorts the underlying brain signal.
+
+```{python}
+#| fig-cap: "Four common EEG artifact types, each shown alongside a clean alpha oscillation for comparison. Top left: eye blink (sharp frontal deflection). Top right: muscle artifact (high-frequency burst). Bottom left: cardiac artifact (regular QRS-like spikes). Bottom right: movement artifact (slow baseline drift)."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(42)
+
+# ── Simulation parameters ─────────────────────────────────────
+sfreq = 256
+duration = 4
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# ── Clean alpha oscillation (shared background) ──────────────
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+alpha += 2e-6 * rng.standard_normal(n_samples)
+
+# ── 1. Eye blink artifact ────────────────────────────────────
+blink = np.zeros(n_samples)
+blink_times = [0.8, 2.0, 3.2]
+for bt in blink_times:
+    idx = int(bt * sfreq)
+    width = int(0.2 * sfreq)
+    if idx + width < n_samples:
+        t_bl = np.arange(width) / sfreq
+        blink[idx:idx + width] = 80e-6 * np.sin(np.pi * t_bl / (width / sfreq))
+
+signal_blink = alpha + blink
+
+# ── 2. Muscle artifact (EMG) ─────────────────────────────────
+emg = np.zeros(n_samples)
+emg_start = int(1.2 * sfreq)
+emg_end = int(2.5 * sfreq)
+emg_burst = 15e-6 * rng.standard_normal(emg_end - emg_start)
+# Add high-frequency content (30-80 Hz)
+for freq in np.arange(30, 80, 5):
+    emg_burst += 5e-6 * np.sin(
+        2 * np.pi * freq * np.arange(emg_end - emg_start) / sfreq
+        + rng.uniform(0, 2 * np.pi)
+    )
+# Taper the onset and offset
+taper_len = int(0.05 * sfreq)
+taper = np.ones(emg_end - emg_start)
+taper[:taper_len] = np.linspace(0, 1, taper_len)
+taper[-taper_len:] = np.linspace(1, 0, taper_len)
+emg[emg_start:emg_end] = emg_burst * taper
+
+signal_emg = alpha + emg
+
+# ── 3. Cardiac artifact (ECG) ────────────────────────────────
+ecg = np.zeros(n_samples)
+heart_rate = 72  # bpm
+beat_interval = sfreq * 60 / heart_rate
+beat_positions = np.arange(0, n_samples, beat_interval).astype(int)
+for bp in beat_positions:
+    # QRS complex: sharp spike lasting about 80 ms
+    qrs_width = int(0.04 * sfreq)
+    if bp + qrs_width < n_samples:
+        t_qrs = np.arange(qrs_width) / sfreq
+        qrs = 8e-6 * np.sin(np.pi * t_qrs / (qrs_width / sfreq))
+        ecg[bp:bp + qrs_width] += qrs
+    # T-wave: slower, broader bump about 200 ms after QRS
+    t_offset = int(0.2 * sfreq)
+    t_width = int(0.12 * sfreq)
+    if bp + t_offset + t_width < n_samples:
+        t_tw = np.arange(t_width) / sfreq
+        t_wave = 3e-6 * np.sin(np.pi * t_tw / (t_width / sfreq))
+        ecg[bp + t_offset:bp + t_offset + t_width] += t_wave
+
+signal_ecg = alpha + ecg
+
+# ── 4. Movement artifact ─────────────────────────────────────
+# Slow baseline drift with a sudden shift
+movement = np.zeros(n_samples)
+# Slow sinusoidal drift (0.3 Hz)
+movement += 30e-6 * np.sin(2 * np.pi * 0.3 * times)
+# Sudden baseline shift at t = 2.5 s
+shift_start = int(2.5 * sfreq)
+shift_duration = int(0.3 * sfreq)
+if shift_start + shift_duration < n_samples:
+    movement[shift_start:shift_start + shift_duration] += np.linspace(
+        0, 50e-6, shift_duration
+    )
+    movement[shift_start + shift_duration:] += 50e-6
+
+signal_movement = alpha + movement
+
+# ── Visualisation ─────────────────────────────────────────────
+fig, axes = plt.subplots(2, 2, figsize=(13, 7), sharex=True)
+scale = 1e6  # convert to microvolts
+
+titles = [
+    "Eye blink artifact (Fp1)",
+    "Muscle artifact / EMG (T7)",
+    "Cardiac artifact / ECG (T8)",
+    "Movement artifact (Cz)"
+]
+signals = [signal_blink, signal_emg, signal_ecg, signal_movement]
+artifacts = [blink, emg, ecg, movement]
+colours = ["#e74c3c", "#e67e22", "#8e44ad", "#27ae60"]
+
+for ax, title, sig, art, col in zip(
+    axes.flat, titles, signals, artifacts, colours
+):
+    ax.plot(times, sig * scale, color="#2c3e50", linewidth=0.5,
+            label="Signal + artifact")
+    ax.plot(times, alpha * scale, color="#bdc3c7", linewidth=0.4,
+            label="Clean alpha", alpha=0.7)
+    ax.fill_between(times, (alpha * scale), (sig * scale),
+                     color=col, alpha=0.15, label="Artifact contribution")
+    ax.set_title(title, fontsize=10)
+    ax.set_ylabel(r"Amplitude ($\mu$V)")
+    ax.legend(fontsize=7, loc="upper right")
+
+axes[1, 0].set_xlabel("Time (s)")
+axes[1, 1].set_xlabel("Time (s)")
+plt.tight_layout()
+plt.show()
+```
+
+Each panel shows the clean alpha oscillation (grey) alongside the contaminated signal (dark blue). The shaded region highlights the artifact contribution. Notice how the blink artifact dwarfs the alpha rhythm, the muscle artifact adds high-frequency fuzz, the cardiac artifact produces regularly spaced small spikes, and the movement artifact creates a slow drift that shifts the baseline.
+
+## Key takeaways
+
+- **Eye blinks** are the largest and most common artifact. They produce sharp, positive deflections at frontal electrodes, with energy below 5 Hz. Saccades (eye movements) produce step-like shifts, strongest at lateral frontal sites.
+- **Muscle artifacts** (EMG) look like high-frequency bursts and affect temporal and frontal electrodes. Their energy is above 20 Hz, which overlaps with beta and gamma bands.
+- **Cardiac artifacts** (ECG) produce regular, small spikes at the heart rate. They are diffuse across the scalp and contain harmonics that extend into the alpha and beta ranges.
+- **Movement artifacts** cause slow baseline drifts and sudden shifts. They are widespread and concentrated below 2 Hz, though electrode pops can produce broadband spikes.
+- Each artifact type has a characteristic time-domain shape, spatial distribution, and frequency range. Learning to recognise these patterns is the first step in deciding how to handle them (filtering, ICA, rejection, or a combination).

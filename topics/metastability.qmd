@@ -1,0 +1,295 @@
+---
+title: "Metastability: theory and computation"
+description: "What metastability means in neuroscience, the energy landscape analogy, computing metastability from EEG using the dominant eigenvector approach, regional vs global metastability, and clinical relevance for Parkinson's disease."
+date: 2026-03-31
+date-modified: last-modified
+module: 5
+categories: [metastability, connectivity, dynamics]
+---
+
+## Why this topic matters
+
+Most measures of brain connectivity give you a static picture: region A is connected to region B with strength 0.6. But the brain is not static. Its coordination patterns change constantly, shifting between different configurations as you think, rest, move, or sleep. Some transitions happen in milliseconds; others unfold over seconds.
+
+Metastability captures this dynamic quality. It quantifies how much a brain region's role in the network changes over time. A region with high metastability is flexible, moving between different coordination states. A region with low metastability is rigid, stuck in one configuration. This distinction has direct clinical relevance: several neurological conditions, including Parkinson's disease, are characterised by abnormal rigidity in brain dynamics.
+
+## What metastability means
+
+The word "metastability" comes from physics, where it describes a system that is neither fully stable nor fully unstable. A ball sitting in a shallow dip on a hilltop is metastable: it rests there for a while, but a small push sends it rolling to a new position.
+
+In neuroscience, Tognoli and Kelso (2014) proposed that the healthy brain operates in a metastable regime. This means that the brain does not settle into a single, fixed coordination pattern. Instead, it dwells temporarily in one pattern, transitions to another, dwells again, and so on. Each temporary dwelling state is like the ball sitting in a shallow dip: stable enough to persist for a while, but not so stable that the system cannot move on.
+
+This framework provides a natural language for describing brain dynamics:
+
+- **High metastability** indicates flexible, adaptive dynamics. The brain transitions between different coordination states, which may support cognitive flexibility, attention switching, and adaptive behaviour.
+- **Low metastability** indicates rigid dynamics. The brain is locked into one coordination pattern and does not explore alternatives. This rigidity may underlie the motor and cognitive symptoms of Parkinson's disease, the reduced awareness of disorders of consciousness, and certain features of other neurological conditions.
+
+### The energy landscape analogy
+
+Imagine the brain's state as a marble rolling on a hilly landscape, where each valley represents a coordination pattern (a "state"):
+
+- In a **high-metastability landscape**, the valleys are shallow and the barriers between them are low. The marble moves easily from one valley to another, spending some time in each but never getting trapped.
+- In a **low-metastability landscape**, the valleys are deep and the barriers are high. The marble settles into one valley and stays there. It takes a large perturbation to push it to a different state.
+- In a **zero-metastability landscape**, there is only one deep valley. The marble sits at the bottom and never moves. This is complete synchrony or complete desynchrony, with no dynamics.
+
+The healthy brain is thought to occupy a landscape with moderate-depth valleys, supporting flexible yet structured dynamics. Disease may alter this landscape, deepening some valleys (creating rigidity) or flattening others (creating instability).
+
+## Computing metastability from EEG
+
+The computation of metastability from EEG data follows the approach described by Hancock et al. (2025). The pipeline has five steps:
+
+### Step 1: Band-pass filter and extract phase
+
+Filter the EEG data to the frequency band of interest (e.g., 8--13 Hz for alpha) and apply the Hilbert transform to obtain the instantaneous phase $\phi_k(t)$ for each channel $k$ at each time point $t$.
+
+### Step 2: Build the phase alignment matrix
+
+At each time point, compute the pairwise phase alignment matrix:
+
+$$A_{ij}(t) = \cos\!\big(\phi_i(t) - \phi_j(t)\big)$$
+
+This is an $N \times N$ symmetric matrix with ones on the diagonal, where $N$ is the number of channels.
+
+### Step 3: Extract the dominant eigenvector
+
+Compute the eigendecomposition of $\mathbf{A}(t)$ and take the eigenvector corresponding to the largest eigenvalue. This dominant eigenvector $\mathbf{v}(t)$ captures the primary coordination pattern at time $t$.
+
+Each element $v_k(t)$ describes how channel $k$ participates in the dominant pattern:
+
+- Channels with the same sign are in phase with each other.
+- Channels with opposite signs are in anti-phase.
+- The magnitude indicates how strongly the channel participates.
+
+A sign convention is needed because eigenvectors can flip sign arbitrarily. At each time point, check whether $\mathbf{v}(t) \cdot \mathbf{v}(t-1) < 0$ and flip if necessary, so that the eigenvector varies smoothly over time.
+
+### Step 4: Compute regional metastability
+
+Regional metastability for channel $k$ is the temporal variance of its eigenvector element:
+
+$$\text{MS}_k = \text{Var}_t\!\big(v_k(t)\big)$$
+
+A channel with high $\text{MS}_k$ changes its role in the coordination pattern frequently (flexible). A channel with low $\text{MS}_k$ maintains a consistent role (rigid).
+
+### Step 5: Compute global metastability (optional)
+
+Global metastability uses the Kuramoto order parameter instead:
+
+$$R(t) = \frac{1}{N} \left| \sum_{k=1}^{N} e^{i\phi_k(t)} \right|$$
+
+$$\text{MS}_{\text{global}} = \text{Var}_t\!\big(R(t)\big)$$
+
+Global metastability tells you how much the overall level of synchrony fluctuates. It is a single number for the entire recording, whereas regional metastability gives one value per channel.
+
+## Regional vs global metastability
+
+Global metastability answers the question: "Does the overall level of synchrony change over time?" It is useful as a summary statistic, but it can miss regionally specific effects. Two groups might have similar global metastability but differ in which brain regions are flexible or rigid.
+
+Regional metastability answers the question: "Which brain regions change their coordination role over time, and which stay fixed?" This is more informative for understanding the spatial organisation of brain dynamics and for comparing clinical populations.
+
+For Natalia's project, regional metastability is the primary outcome variable. The hypothesis is that Parkinson's patients (especially those with Freezing of Gait) will show reduced regional metastability in frontal and motor regions, reflecting the rigidity of their neural dynamics. Global metastability will be reported as a complementary measure.
+
+## Interpreting high vs low values
+
+There is no universal threshold for "high" or "low" metastability. The values depend on the frequency band, the number of channels, the recording duration, and the noise level. What matters is the *comparison* between groups or conditions.
+
+That said, some guidelines:
+
+- **Very low metastability** (near zero for all channels) suggests that the coordination pattern is essentially static. This could mean the signal is dominated by noise (no real oscillatory structure), or the brain is in a deeply synchronised state (e.g., during a seizure).
+- **Moderate metastability** suggests healthy, flexible dynamics with transitions between coordination states.
+- **Very high metastability** could indicate instability or noise-driven fluctuations rather than meaningful state transitions. Check whether the phase estimates are reliable (is the signal-to-noise ratio in the filtered band adequate?).
+
+When comparing groups, effect sizes and confidence intervals are more informative than raw metastability values. A difference of 0.001 in metastability between groups might be large or small depending on the overall scale.
+
+## Clinical relevance: Parkinson's disease
+
+Parkinson's disease is characterised by the progressive loss of dopaminergic neurones in the substantia nigra, which disrupts the basal ganglia circuits that regulate movement and cognitive flexibility.
+
+At the level of brain dynamics, PD is associated with:
+
+- **Excessive beta synchrony**: abnormally strong and persistent 13--30 Hz oscillations in the basal ganglia-thalamocortical circuits. This pathological synchrony is thought to "freeze" the motor system.
+- **Reduced flexibility**: the brain's ability to switch between coordination states is impaired. This maps directly onto the metastability framework as reduced temporal variance of the dominant eigenvector.
+- **Dopaminergic modulation**: levodopa and other dopaminergic medications reduce pathological beta synchrony and may restore some flexibility. Comparing patients ON vs OFF medication can reveal the effect of dopamine on metastability.
+
+Freezing of Gait (FoG) is an episodic symptom where patients suddenly become unable to step forward. It may represent an extreme case of reduced metastability: the brain becomes trapped in a coordination state that prevents the initiation of the stepping motor programme.
+
+## Working example
+
+The code below implements the full metastability pipeline on simulated data. It creates two groups of channels (flexible and rigid), computes regional metastability, and shows that the pipeline correctly recovers the difference.
+
+```{python}
+#| fig-cap: "Regional metastability computed from simulated EEG. Weakly coupled channels (simulating flexible regions) show higher metastability than strongly coupled channels (simulating rigid regions). This is the pattern we expect to see reversed in Parkinson's disease: motor and frontal regions may show abnormally low metastability."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert, butter, filtfilt
+
+rng = np.random.default_rng(42)
+
+# ── 1. Simulation parameters ──────────────────────────────────
+n_channels = 12
+sfreq = 256
+duration = 60  # seconds (need enough data for stable variance)
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+freq_osc = 10.0  # alpha frequency
+
+# Define two groups of channels:
+# - "Rigid" channels (0-5): strongly coupled, low metastability
+# - "Flexible" channels (6-11): weakly coupled, high metastability
+coupling = np.array([
+    0.92, 0.90, 0.88, 0.91, 0.89, 0.93,  # rigid group
+    0.30, 0.25, 0.35, 0.28, 0.32, 0.22,  # flexible group
+])
+
+channel_labels = (
+    ["F3", "F4", "C3", "C4", "P3", "P4"]     # "rigid" (frontal/central/parietal)
+    + ["T7", "T8", "O1", "O2", "Fp1", "Fp2"]  # "flexible" (temporal/occipital/frontal-pole)
+)
+
+# ── 2. Generate coupled oscillatory data ──────────────────────
+# Common reference oscillation
+ref_phase = (2 * np.pi * freq_osc * times
+             + 0.3 * np.cumsum(rng.standard_normal(n_samples) / sfreq))
+ref_signal = np.sin(ref_phase)
+
+data = np.zeros((n_channels, n_samples))
+for ch in range(n_channels):
+    ind_phase = (2 * np.pi * freq_osc * times
+                 + 2.0 * np.cumsum(rng.standard_normal(n_samples) / sfreq))
+    ind_signal = np.sin(ind_phase)
+    data[ch] = (coupling[ch] * ref_signal
+                + (1 - coupling[ch]) * ind_signal
+                + 0.3 * rng.standard_normal(n_samples))
+
+# ── 3. Band-pass filter and Hilbert transform ─────────────────
+b, a = butter(4, [8, 13], btype="band", fs=sfreq)
+phases = np.zeros_like(data)
+for ch in range(n_channels):
+    filtered = filtfilt(b, a, data[ch])
+    phases[ch] = np.angle(hilbert(filtered))
+
+# ── 4. Dominant eigenvector at each time point ────────────────
+step = max(1, sfreq // 100)  # compute every 10 ms
+time_indices = np.arange(0, n_samples, step)
+n_timepoints = len(time_indices)
+
+eigvec_series = np.zeros((n_channels, n_timepoints))
+
+for ti, t in enumerate(time_indices):
+    phi = phases[:, t]
+    phase_diff = phi[:, None] - phi[None, :]
+    A = np.cos(phase_diff)
+
+    eigenvalues, eigenvectors = np.linalg.eigh(A)
+    dominant = eigenvectors[:, -1]
+
+    # Sign continuity
+    if ti > 0 and np.dot(dominant, eigvec_series[:, ti - 1]) < 0:
+        dominant = -dominant
+
+    eigvec_series[:, ti] = dominant
+
+# ── 5. Regional metastability ─────────────────────────────────
+regional_ms = np.var(eigvec_series, axis=1)
+
+# ── 6. Global metastability (Kuramoto) ────────────────────────
+R = np.abs(np.mean(np.exp(1j * phases[:, time_indices]), axis=0))
+global_ms = np.var(R)
+
+# ── Print results ─────────────────────────────────────────────
+print("Regional metastability:")
+print("-" * 45)
+for ch in range(n_channels):
+    group = "rigid" if ch < 6 else "flexible"
+    print(f"  {channel_labels[ch]:>4s} (coupling={coupling[ch]:.2f}, "
+          f"{group:>8s}):  MS = {regional_ms[ch]:.6f}")
+
+print(f"\nMean MS (rigid group):    {regional_ms[:6].mean():.6f}")
+print(f"Mean MS (flexible group): {regional_ms[6:].mean():.6f}")
+print(f"Global metastability:     {global_ms:.6f}")
+
+# ── 7. Visualisation ──────────────────────────────────────────
+fig, axes = plt.subplots(2, 2, figsize=(13, 8))
+
+# Panel A: Eigenvector dynamics for selected channels
+ax = axes[0, 0]
+t_plot = time_indices / sfreq
+for ch, colour, ls in [(1, "#2c3e50", "-"), (3, "#34495e", "--"),
+                        (7, "#e67e22", "-"), (9, "#e74c3c", "--")]:
+    label = f"{channel_labels[ch]} ({'rigid' if ch < 6 else 'flexible'})"
+    ax.plot(t_plot, eigvec_series[ch], linewidth=0.5,
+            color=colour, linestyle=ls, alpha=0.8, label=label)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel(r"$v_k(t)$")
+ax.set_title("A. Dominant eigenvector over time")
+ax.legend(fontsize=8, loc="upper right")
+ax.set_xlim(0, 20)  # first 20 seconds
+
+# Panel B: Regional metastability bar chart
+ax = axes[0, 1]
+colours = ["#2c3e50"] * 6 + ["#e67e22"] * 6
+bars = ax.bar(range(n_channels), regional_ms, color=colours,
+              edgecolor="white", linewidth=0.5)
+ax.set_xlabel("Channel")
+ax.set_ylabel("Regional metastability (variance)")
+ax.set_title("B. Regional metastability by channel")
+ax.set_xticks(range(n_channels))
+ax.set_xticklabels(channel_labels, rotation=45, ha="right", fontsize=8)
+# Group labels
+ax.text(2.5, ax.get_ylim()[1] * 0.9, "Rigid group",
+        ha="center", fontsize=9, color="#2c3e50", fontstyle="italic")
+ax.text(8.5, ax.get_ylim()[1] * 0.9, "Flexible group",
+        ha="center", fontsize=9, color="#e67e22", fontstyle="italic")
+
+# Panel C: Kuramoto order parameter
+ax = axes[1, 0]
+ax.plot(t_plot, R, linewidth=0.4, color="#8e44ad", alpha=0.7)
+ax.axhline(np.mean(R), color="#8e44ad", linestyle="--", linewidth=1.2,
+           label=f"Mean R = {np.mean(R):.3f}")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Kuramoto R(t)")
+ax.set_title("C. Global synchrony over time")
+ax.set_ylim(0, 1)
+ax.legend(fontsize=9)
+
+# Panel D: Group comparison box plot
+ax = axes[1, 1]
+group_data = [regional_ms[:6], regional_ms[6:]]
+bp = ax.boxplot(group_data, labels=["Rigid\n(strongly coupled)",
+                                     "Flexible\n(weakly coupled)"],
+                patch_artist=True, widths=0.5)
+bp["boxes"][0].set_facecolor("#2c3e50")
+bp["boxes"][0].set_alpha(0.6)
+bp["boxes"][1].set_facecolor("#e67e22")
+bp["boxes"][1].set_alpha(0.6)
+for median in bp["medians"]:
+    median.set_color("black")
+    median.set_linewidth(1.5)
+ax.set_ylabel("Regional metastability")
+ax.set_title("D. Group comparison")
+
+plt.tight_layout()
+plt.show()
+```
+
+### Reading the output
+
+**Panel A** shows the dominant eigenvector element $v_k(t)$ for four channels over the first 20 seconds. The rigid channels (dark blue tones) hold a relatively steady value, meaning their role in the coordination pattern does not change much. The flexible channels (orange/red tones) fluctuate considerably, indicating that their coordination role keeps shifting.
+
+**Panel B** is the main result. The bar chart shows regional metastability for each channel. The six rigid channels (left, dark) have low metastability, while the six flexible channels (right, orange) have high metastability. This matches the coupling strengths we set in the simulation.
+
+**Panel C** shows the Kuramoto order parameter $R(t)$ over time. It fluctuates around a moderate value, reflecting the mix of strongly and weakly coupled channels.
+
+**Panel D** compares the two groups as a box plot. The separation is clear, demonstrating that the metastability pipeline can distinguish between regions with different dynamic properties.
+
+## Key takeaways
+
+- **Metastability** quantifies how much a brain region's coordination role changes over time. It is computed as the temporal variance of the dominant eigenvector of the phase alignment matrix.
+- The concept comes from dynamical systems theory (Tognoli and Kelso, 2014). A metastable brain dwells temporarily in coordination patterns but transitions flexibly between them.
+- The computation follows five steps: (1) band-pass filter, (2) Hilbert transform for phase, (3) phase alignment matrix, (4) dominant eigenvector extraction, (5) temporal variance.
+- **Regional metastability** gives one value per channel, telling you which brain regions are flexible and which are rigid. This is more informative than **global metastability**, which gives a single summary number.
+- In Parkinson's disease, the hypothesis is that motor and frontal regions show reduced metastability (excessive rigidity), especially in patients with Freezing of Gait.
+- Metastability values are meaningful only in comparison (between groups, conditions, or frequency bands). There is no universal threshold for "high" or "low".
+- Practical considerations: use enough data (at least 30--60 seconds of clean recording) for stable variance estimates, and choose the frequency band based on the research question (beta for motor-related hypotheses, alpha for resting-state).

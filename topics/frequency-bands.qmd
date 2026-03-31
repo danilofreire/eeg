@@ -1,0 +1,293 @@
+---
+title: "EEG frequency bands"
+description: "The five classical EEG frequency bands (delta, theta, alpha, beta, gamma), their functional associations, how to compute band power in Python, relative vs absolute power, and common sub-band divisions."
+date: 2026-03-31
+date-modified: last-modified
+module: 4
+categories: [spectral, frequency-bands]
+---
+
+## The language of brain rhythms
+
+When neuroscientists talk about brain activity, they often talk in terms of frequency bands: "alpha power increased when participants closed their eyes" or "theta oscillations were stronger during memory encoding." These frequency bands are the vocabulary of EEG research, and understanding them is essential for interpreting both your own data and the published literature.
+
+The brain produces electrical activity across a wide range of frequencies, from below 1 Hz to above 100 Hz. Early EEG researchers noticed that activity in different frequency ranges tended to appear under different behavioural conditions, and they gave these ranges Greek letter names. The boundaries between bands are somewhat arbitrary (different sources use slightly different cutoffs), but the conventional divisions have been stable for decades.
+
+## The five classical bands
+
+### Delta (1--4 Hz)
+
+Delta waves are the slowest EEG oscillations. They are large, high-amplitude waves that dominate the EEG during deep (stage 3) sleep. In waking adults, prominent delta activity is unusual and can indicate brain pathology (e.g., focal brain lesions, encephalopathy) or drowsiness.
+
+Delta activity is also studied in the context of slow oscillations during sleep, where it plays a role in memory consolidation. The "up states" and "down states" of cortical neurons during deep sleep cycle at delta frequencies.
+
+### Theta (4--8 Hz)
+
+Theta oscillations are associated with memory processes, spatial navigation, and drowsiness. In the hippocampus (measured with intracranial electrodes or estimated from scalp EEG), theta is linked to memory encoding and retrieval. Frontal midline theta (strongest at Fz) increases during tasks that require sustained attention or working memory.
+
+In clinical settings, excessive theta in the waking EEG can indicate drowsiness, cognitive decline, or certain neurological conditions. Theta is also prominent during light sleep (stage 1) and in the transition from wakefulness to sleep.
+
+### Alpha (8--13 Hz)
+
+Alpha is the most studied EEG rhythm and was the first to be identified by Hans Berger in 1929. It is strongest over the posterior scalp (O1, O2, Oz, P3, P4, Pz) and increases when participants close their eyes and relax. It decreases (or "desynchronises") when participants open their eyes, engage in mental calculation, or attend to a visual stimulus.
+
+Alpha is widely interpreted as reflecting cortical "idling" or active inhibition of task-irrelevant regions. If you are not using the visual cortex, alpha power increases over occipital electrodes. If you are not using the motor cortex, a similar rhythm (called the mu rhythm, also in the alpha range) increases over central electrodes.
+
+### Beta (13--30 Hz)
+
+Beta oscillations are associated with active cognitive processing, motor planning, and sustained attention. Over the motor cortex (C3, C4, Cz), beta decreases before and during movement (event-related desynchronisation) and increases after movement ends (beta rebound).
+
+Pharmacologically, beta activity increases with drugs that enhance GABAergic inhibition (such as benzodiazepines and barbiturates) and with alertness-promoting agents. In clinical EEG, excessive fast (beta) activity is sometimes seen with sedative medications or anxiety.
+
+### Gamma (30--100+ Hz)
+
+Gamma oscillations are the fastest rhythms studied in scalp EEG. They are associated with perception, attention, consciousness, and the "binding" of features into coherent percepts. For example, gamma power increases when participants perceive a meaningful visual object compared to a scrambled version of the same stimulus.
+
+Gamma is the most difficult band to study with scalp EEG because it overlaps with the frequency range of muscle artifact (EMG). A burst of jaw clenching or forehead tension can produce broadband activity in the 20--100 Hz range that looks like gamma. Careful artifact handling is essential when working with gamma, and some researchers argue that scalp-recorded gamma should be interpreted with caution unless EMG contamination has been ruled out.
+
+## Reference table
+
+| Band | Frequency range | Typical location | Functional associations |
+|:-----|:----------------|:-----------------|:------------------------|
+| Delta | 1--4 Hz | Diffuse | Deep sleep, brain pathology, slow cortical potentials |
+| Theta | 4--8 Hz | Frontal midline (Fz) | Memory encoding/retrieval, working memory, drowsiness |
+| Alpha | 8--13 Hz | Posterior (Oz, Pz) | Relaxed wakefulness, eyes closed, cortical idling/inhibition |
+| Beta | 13--30 Hz | Central (C3, C4) | Active thinking, motor planning, sustained attention |
+| Gamma | 30--100+ Hz | Variable | Perception, attention, feature binding, consciousness |
+
+## Sub-bands
+
+Each band can be divided into sub-bands that have somewhat different functional profiles.
+
+### Alpha sub-bands
+
+- **Low alpha (8--10 Hz)**: associated with general arousal and attention. Tends to show widespread desynchronisation during cognitive tasks.
+- **High alpha (10--13 Hz)**: associated with more specific, task-related processing. Desynchronises more selectively (e.g., only over the cortical region engaged by the task).
+
+The split at 10 Hz is approximate. Some researchers use each participant's individual alpha frequency (IAF) as the boundary: low alpha is IAF minus 2 Hz to IAF, and high alpha is IAF to IAF plus 2 Hz.
+
+### Beta sub-bands
+
+- **Low beta (13--20 Hz)**: sometimes called beta-1. Associated with relaxed but alert states and light motor activity.
+- **High beta (20--30 Hz)**: sometimes called beta-2. Associated with active problem-solving, anxiety, and intense concentration.
+
+### Theta sub-bands
+
+Some researchers distinguish between **slow theta (4--6 Hz)** and **fast theta (6--8 Hz)**, with slow theta being more associated with drowsiness and fast theta with cognitive processes. This distinction is less established than the alpha and beta sub-bands.
+
+## Computing band power
+
+Band power is the amount of energy in a specific frequency range. There are several ways to compute it, but the most common approach is to estimate the power spectral density (PSD) and then integrate over the frequency range of interest.
+
+### Using Welch's method
+
+```{python}
+#| eval: false
+import numpy as np
+from scipy.signal import welch
+
+# Assume 'signal' is a 1D numpy array and sfreq is the sampling rate
+sfreq = 256
+freqs, psd = welch(signal, fs=sfreq, nperseg=2 * sfreq)
+
+# Define band boundaries
+bands = {
+    "delta": (1, 4),
+    "theta": (4, 8),
+    "alpha": (8, 13),
+    "beta":  (13, 30),
+    "gamma": (30, 45)
+}
+
+# Compute absolute power in each band
+band_power = {}
+for band_name, (low, high) in bands.items():
+    idx = np.logical_and(freqs >= low, freqs <= high)
+    # Integrate PSD over the band using the trapezoidal rule
+    band_power[band_name] = np.trapz(psd[idx], freqs[idx])
+
+for band_name, power in band_power.items():
+    print(f"{band_name}: {power:.4e} V^2")
+```
+
+### Using MNE's compute_psd()
+
+```{python}
+#| eval: false
+import mne
+import numpy as np
+
+# Load and filter data
+raw = mne.io.read_raw_edf("recording.edf", preload=True)
+raw.filter(l_freq=0.5, h_freq=45.0)
+
+# Compute the PSD
+psd = raw.compute_psd(method="welch", fmin=0.5, fmax=45.0)
+freqs = psd.freqs
+psd_data = psd.get_data()  # shape: (n_channels, n_freqs)
+
+# Compute band power for each channel
+bands = {
+    "delta": (1, 4),
+    "theta": (4, 8),
+    "alpha": (8, 13),
+    "beta":  (13, 30),
+    "gamma": (30, 45)
+}
+
+for band_name, (low, high) in bands.items():
+    idx = np.logical_and(freqs >= low, freqs <= high)
+    # Average across channels, integrate across frequencies
+    mean_power = np.trapz(psd_data[:, idx], freqs[idx], axis=1).mean()
+    print(f"{band_name}: {mean_power:.4e} V^2")
+```
+
+## Absolute vs relative power
+
+**Absolute power** is the total power in a frequency band, measured in units of V^2 (or V^2/Hz if you are working with power spectral density rather than integrated power). It tells you how much energy there is in that band.
+
+**Relative power** is the power in a band divided by the total power across all bands. It is expressed as a proportion (0 to 1) or a percentage. Relative power tells you what fraction of the total signal energy falls in a particular band.
+
+```{python}
+#| eval: false
+import numpy as np
+from scipy.signal import welch
+
+sfreq = 256
+freqs, psd = welch(signal, fs=sfreq, nperseg=2 * sfreq)
+
+bands = {
+    "delta": (1, 4),
+    "theta": (4, 8),
+    "alpha": (8, 13),
+    "beta":  (13, 30),
+    "gamma": (30, 45)
+}
+
+# Compute absolute power
+absolute = {}
+for name, (low, high) in bands.items():
+    idx = np.logical_and(freqs >= low, freqs <= high)
+    absolute[name] = np.trapz(psd[idx], freqs[idx])
+
+# Compute total power (1-45 Hz)
+total_idx = np.logical_and(freqs >= 1, freqs <= 45)
+total_power = np.trapz(psd[total_idx], freqs[total_idx])
+
+# Relative power
+relative = {name: power / total_power for name, power in absolute.items()}
+
+print("Band       Absolute (V^2)   Relative (%)")
+print("-" * 45)
+for name in bands:
+    print(f"{name:<10} {absolute[name]:.4e}    {relative[name]*100:.1f}%")
+```
+
+### When to use which
+
+**Absolute power** is sensitive to individual differences in skull thickness, electrode impedance, and overall signal amplitude. Two participants can have identical brain states but very different absolute power values simply because one has a thicker skull.
+
+**Relative power** normalises away these individual differences by expressing each band as a proportion of the total. This makes it easier to compare across participants and sessions. However, relative power can produce misleading results: if absolute alpha power stays the same but delta power decreases, relative alpha power will increase even though alpha activity has not changed.
+
+In practice, many studies report both. A common approach is to use **log-transformed absolute power** (which makes the distribution more normal and compresses the range) for statistical analyses, and relative power for visualisation and description.
+
+## Complete example: computing and visualising band powers
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+# ── Create simulated data ────────────────────────────────────
+rng = np.random.default_rng(42)
+sfreq = 256
+duration = 120  # 2 minutes
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Pink noise background
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1
+pink = np.fft.irfft(np.fft.rfft(white) / np.sqrt(freqs_fft), n=n_samples)
+signal = pink * 20e-6 / pink.std()
+
+# Add oscillatory components
+signal += 2e-6 * np.sin(2 * np.pi * 2 * times)    # delta
+signal += 2.5e-6 * np.sin(2 * np.pi * 6 * times)  # theta
+signal += 5e-6 * np.sin(2 * np.pi * 10 * times)    # alpha (strongest)
+signal += 1.5e-6 * np.sin(2 * np.pi * 20 * times)  # beta
+signal += 0.5e-6 * np.sin(2 * np.pi * 40 * times)  # gamma
+
+# Wrap in MNE Raw
+info = mne.create_info(ch_names=["Oz"], sfreq=sfreq, ch_types=["eeg"])
+raw = mne.io.RawArray(signal.reshape(1, -1), info)
+
+# ── Compute PSD ──────────────────────────────────────────────
+from scipy.signal import welch
+
+data = raw.get_data()[0]
+freqs, psd = welch(data, fs=sfreq, nperseg=2 * sfreq)
+
+# ── Compute band powers ─────────────────────────────────────
+bands = {
+    "Delta\n(1-4 Hz)": (1, 4),
+    "Theta\n(4-8 Hz)": (4, 8),
+    "Alpha\n(8-13 Hz)": (8, 13),
+    "Beta\n(13-30 Hz)": (13, 30),
+    "Gamma\n(30-45 Hz)": (30, 45)
+}
+
+absolute = {}
+for name, (low, high) in bands.items():
+    idx = np.logical_and(freqs >= low, freqs <= high)
+    absolute[name] = np.trapz(psd[idx], freqs[idx])
+
+total_idx = np.logical_and(freqs >= 1, freqs <= 45)
+total_power = np.trapz(psd[total_idx], freqs[total_idx])
+relative = {name: power / total_power * 100 for name, power in absolute.items()}
+
+# ── Plot ─────────────────────────────────────────────────────
+fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
+
+# PSD
+ax = axes[0]
+ax.semilogy(freqs, psd, color="#2c3e50", linewidth=0.8)
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("PSD (V^2/Hz)")
+ax.set_title("Power spectral density")
+ax.set_xlim(0, 50)
+# Shade frequency bands
+colours = ["#3498db", "#2ecc71", "#e74c3c", "#f39c12", "#9b59b6"]
+for (name, (low, high)), colour in zip(bands.items(), colours):
+    ax.axvspan(low, high, alpha=0.15, color=colour)
+
+# Absolute power
+ax = axes[1]
+ax.bar(range(len(bands)), list(absolute.values()), color=colours)
+ax.set_xticks(range(len(bands)))
+ax.set_xticklabels(list(bands.keys()), fontsize=8)
+ax.set_ylabel("Absolute power (V^2)")
+ax.set_title("Absolute band power")
+
+# Relative power
+ax = axes[2]
+ax.bar(range(len(bands)), list(relative.values()), color=colours)
+ax.set_xticks(range(len(bands)))
+ax.set_xticklabels(list(bands.keys()), fontsize=8)
+ax.set_ylabel("Relative power (%)")
+ax.set_title("Relative band power")
+
+plt.tight_layout()
+plt.show()
+```
+
+## Key takeaways
+
+- EEG activity is conventionally divided into five frequency bands: delta (1--4 Hz), theta (4--8 Hz), alpha (8--13 Hz), beta (13--30 Hz), and gamma (30--100+ Hz). Each band has different functional associations and topographic distributions.
+- Alpha is the dominant rhythm in relaxed, eyes-closed wakefulness. It was the first EEG rhythm discovered and remains the most studied. It is strongest at posterior electrodes and decreases when the brain region is engaged in active processing.
+- Sub-bands (low alpha vs high alpha, low beta vs high beta) can have different functional profiles. The boundary between low and high alpha is often set at each participant's individual alpha frequency.
+- Band power is computed by estimating the PSD (e.g., with Welch's method) and integrating over the frequency range of interest. Use `np.trapz()` for numerical integration.
+- Absolute power measures total energy in a band but is sensitive to individual differences in skull thickness and impedance. Relative power normalises these differences but can be misleading when total power changes. Reporting both is good practice.
+- Gamma (30--100+ Hz) overlaps with muscle artifact, so any gamma findings from scalp EEG should be interpreted carefully and only after thorough artifact rejection.

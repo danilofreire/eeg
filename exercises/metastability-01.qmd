@@ -1,0 +1,731 @@
+---
+title: "Metastability: exercises"
+description: "Practice the full metastability pipeline: Hilbert transform, phase alignment matrices, dominant eigenvector extraction, regional metastability computation, and group comparisons."
+module: 5
+date: 2026-03-31
+date-modified: last-modified
+categories: [metastability, connectivity, phase]
+---
+
+These exercises go with [Module 5: Connectivity and metastability](../modules/05-metastability.qmd). They build up the metastability pipeline one step at a time, from extracting instantaneous phase with the Hilbert transform to running a full group comparison between simulated patient and control data. Each exercise adds a piece to the pipeline, so work through them in order.
+
+This is the core of Natalia's project, so the exercises are more detailed than in earlier modules. Take your time with each one and make sure you understand what every intermediate result means before moving on.
+
+
+## Exercise 1: Extract instantaneous phase with the Hilbert transform
+
+Create a pure 10 Hz sine wave lasting 2 seconds. Apply the Hilbert transform to obtain the analytic signal, then extract the instantaneous amplitude (envelope) and instantaneous phase. Plot three things on separate subplots:
+
+1. The original signal
+2. The instantaneous amplitude (envelope) overlaid on the original signal
+3. The instantaneous phase (in radians, ranging from $-\pi$ to $\pi$)
+
+Verify that the envelope is approximately constant (because a pure sine wave has constant amplitude) and that the phase increases linearly from $-\pi$ to $\pi$ and wraps around.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `scipy.signal.hilbert()` to compute the analytic signal. This function returns a complex array; the real part is the original signal and the imaginary part is the Hilbert transform. Use `np.abs()` to get the instantaneous amplitude and `np.angle()` to get the phase. For a pure sine wave, the envelope should be nearly flat (equal to the sine amplitude) and the phase should be a sawtooth pattern that increases linearly and wraps at $\pm\pi$.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert
+
+sfreq = 256
+duration = 2.0
+times = np.arange(int(sfreq * duration)) / sfreq
+
+# Create a pure 10 Hz sine wave
+freq = 10
+amplitude = 1.0
+x = amplitude * np.sin(2 * np.pi * freq * times)
+
+# Hilbert transform
+analytic = hilbert(x)
+inst_amplitude = np.abs(analytic)
+inst_phase = np.angle(analytic)
+
+# Plot
+fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+
+# Panel 1: original signal
+ax = axes[0]
+ax.plot(times, x, color="#2c3e50", linewidth=1)
+ax.set_ylabel("Amplitude")
+ax.set_title("Original 10 Hz sine wave")
+
+# Panel 2: signal with envelope overlay
+ax = axes[1]
+ax.plot(times, x, color="#2c3e50", linewidth=0.8, alpha=0.5, label="Signal")
+ax.plot(times, inst_amplitude, color="#e74c3c", linewidth=1.5,
+        label="Envelope (instantaneous amplitude)")
+ax.plot(times, -inst_amplitude, color="#e74c3c", linewidth=1.5, alpha=0.5)
+ax.set_ylabel("Amplitude")
+ax.set_title("Signal with instantaneous amplitude envelope")
+ax.legend(fontsize=9)
+
+# Panel 3: instantaneous phase
+ax = axes[2]
+ax.plot(times, inst_phase, color="#27ae60", linewidth=1)
+ax.set_ylabel("Phase (radians)")
+ax.set_xlabel("Time (s)")
+ax.set_title("Instantaneous phase")
+ax.set_yticks([-np.pi, -np.pi/2, 0, np.pi/2, np.pi])
+ax.set_yticklabels([r"$-\pi$", r"$-\pi/2$", "0", r"$\pi/2$", r"$\pi$"])
+ax.axhline(0, color="grey", linestyle=":", linewidth=0.5)
+
+plt.tight_layout()
+plt.show()
+
+# Verify: envelope should be close to the amplitude
+print(f"Expected envelope: {amplitude:.3f}")
+print(f"Mean envelope: {inst_amplitude.mean():.3f}")
+print(f"Std of envelope: {inst_amplitude.std():.6f}")
+```
+
+The envelope should be very close to 1.0 everywhere (the amplitude of the sine wave), with tiny deviations at the edges due to boundary effects of the Hilbert transform. The phase should look like a sawtooth: it increases linearly from $-\pi$ to $\pi$ and then wraps back. Each complete cycle of the sawtooth corresponds to one period of the 10 Hz oscillation, so you should see 20 teeth across the 2-second window.
+:::
+
+
+## Exercise 2: Verify phase difference between two channels
+
+Create two channels, both oscillating at 10 Hz, but with a fixed phase offset of $\pi/4$ radians between them. Extract the instantaneous phase of each channel using the Hilbert transform. Compute $\cos(\phi_1(t) - \phi_2(t))$ at every time point and verify that it is approximately equal to $\cos(\pi/4) \approx 0.707$.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Generate the first channel as `np.sin(2 * pi * 10 * t)` and the second as `np.sin(2 * pi * 10 * t + pi/4)`. Apply the Hilbert transform to each. Compute the phase difference and take the cosine. The result should hover around 0.707 with very small fluctuations (due to numerical precision and edge effects). To avoid edge artifacts, discard the first and last 0.5 seconds before computing the mean.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert
+
+sfreq = 256
+duration = 5.0
+times = np.arange(int(sfreq * duration)) / sfreq
+
+# Two channels with a known phase offset of pi/4
+phase_offset = np.pi / 4
+ch1 = np.sin(2 * np.pi * 10 * times)
+ch2 = np.sin(2 * np.pi * 10 * times + phase_offset)
+
+# Extract instantaneous phase for each channel
+phase1 = np.angle(hilbert(ch1))
+phase2 = np.angle(hilbert(ch2))
+
+# Compute cos(phase difference)
+cos_phase_diff = np.cos(phase1 - phase2)
+
+# Trim edges (0.5 s from each end) to avoid boundary artifacts
+trim = int(0.5 * sfreq)
+cos_trimmed = cos_phase_diff[trim:-trim]
+
+expected = np.cos(phase_offset)
+actual_mean = cos_trimmed.mean()
+
+print(f"Phase offset: pi/4 = {phase_offset:.4f} radians")
+print(f"Expected cos(phase_diff): {expected:.4f}")
+print(f"Measured mean cos(phase_diff): {actual_mean:.4f}")
+print(f"Difference from expected: {abs(actual_mean - expected):.6f}")
+
+# Plot
+fig, axes = plt.subplots(2, 1, figsize=(10, 6))
+
+ax = axes[0]
+t_plot = times < 1  # show first second only
+ax.plot(times[t_plot], ch1[t_plot], label="Channel 1", color="#2c3e50")
+ax.plot(times[t_plot], ch2[t_plot], label="Channel 2 (offset pi/4)",
+        color="#e74c3c", linestyle="--")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Amplitude")
+ax.set_title("Two 10 Hz oscillations with pi/4 phase offset")
+ax.legend()
+
+ax = axes[1]
+ax.plot(times, cos_phase_diff, color="#27ae60", linewidth=0.5)
+ax.axhline(expected, color="#e74c3c", linestyle="--",
+           label=f"Expected: cos(pi/4) = {expected:.3f}")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("cos(phase difference)")
+ax.set_title("Cosine of phase difference over time")
+ax.legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+The cosine of the phase difference should sit very close to 0.707 across the entire recording. Small deviations at the start and end are normal: the Hilbert transform has edge effects where the filter does not have enough data on one side. In the interior of the signal, the measurement should be accurate to within a fraction of a percent. This exercise confirms that the Hilbert transform correctly recovers the known phase relationship we built into the data.
+:::
+
+
+## Exercise 3: Build a 4x4 phase alignment matrix
+
+Simulate 4 channels, each oscillating at 10 Hz with known phases. At a single time point, build the phase alignment matrix $A_{ij} = \cos(\phi_i - \phi_j)$ and print it. Verify that:
+
+- The matrix is symmetric: $A_{ij} = A_{ji}$
+- The diagonal is all ones: $A_{ii} = 1$
+- Off-diagonal values match what you would compute by hand
+
+Use these channel phases at the chosen time point: $\phi_1 = 0$, $\phi_2 = \pi/4$, $\phi_3 = \pi/2$, $\phi_4 = \pi$.
+
+::: {.callout-tip collapse="true" title="Hint"}
+You can construct the alignment matrix directly from a vector of phases. If `phi` is a 1D array of length 4, then `phi[:, None] - phi[None, :]` gives a 4x4 matrix of pairwise differences, and `np.cos()` of that matrix gives you $A$. Check symmetry with `np.allclose(A, A.T)`. The expected values can be computed by hand: for example, $A_{12} = \cos(0 - \pi/4) = \cos(\pi/4) \approx 0.707$.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+
+# Define the phases at a single time point
+phi = np.array([0, np.pi / 4, np.pi / 2, np.pi])
+channel_labels = ["Ch1 (0)", "Ch2 (pi/4)", "Ch3 (pi/2)", "Ch4 (pi)"]
+
+# Build the phase alignment matrix
+phase_diff = phi[:, None] - phi[None, :]
+A = np.cos(phase_diff)
+
+# Print the matrix
+print("Phase alignment matrix A:")
+print()
+
+# Header
+print(f"{'':>14}", end="")
+for label in channel_labels:
+    print(f"{label:>14}", end="")
+print()
+
+# Rows
+for i, label in enumerate(channel_labels):
+    print(f"{label:>14}", end="")
+    for j in range(len(phi)):
+        print(f"{A[i, j]:>14.4f}", end="")
+    print()
+
+print()
+
+# Verify properties
+print("Checks:")
+print(f"  Symmetric: {np.allclose(A, A.T)}")
+print(f"  Diagonal all ones: {np.allclose(np.diag(A), 1.0)}")
+
+# Verify specific entries by hand
+print()
+print("Spot checks:")
+print(f"  A[0,1] = cos(0 - pi/4) = cos(-pi/4) = {np.cos(-np.pi/4):.4f} "
+      f"(matrix: {A[0,1]:.4f})")
+print(f"  A[0,3] = cos(0 - pi) = cos(-pi) = {np.cos(-np.pi):.4f} "
+      f"(matrix: {A[0,3]:.4f})")
+print(f"  A[1,2] = cos(pi/4 - pi/2) = cos(-pi/4) = {np.cos(-np.pi/4):.4f} "
+      f"(matrix: {A[1,2]:.4f})")
+print(f"  A[2,3] = cos(pi/2 - pi) = cos(-pi/2) = {np.cos(-np.pi/2):.4f} "
+      f"(matrix: {A[2,3]:.4f})")
+```
+
+The matrix should be:
+
+| | Ch1 | Ch2 | Ch3 | Ch4 |
+|:---|:---:|:---:|:---:|:---:|
+| Ch1 | 1.0000 | 0.7071 | 0.0000 | -1.0000 |
+| Ch2 | 0.7071 | 1.0000 | 0.7071 | -0.7071 |
+| Ch3 | 0.0000 | 0.7071 | 1.0000 | 0.0000 |
+| Ch4 | -1.0000 | -0.7071 | 0.0000 | 1.0000 |
+
+Reading this: channels 1 and 2 are mostly aligned (0.707), channels 1 and 3 are a quarter-cycle apart (0), and channels 1 and 4 are in perfect anti-phase (-1). The matrix is symmetric and has ones on the diagonal, as expected. This is one snapshot; in the full pipeline, you build this matrix at every time point and track how it changes.
+:::
+
+
+## Exercise 4: Extract and interpret the dominant eigenvector
+
+Take the 4x4 phase alignment matrix from Exercise 3 and compute its eigenvalues and eigenvectors using `numpy.linalg.eigh`. Identify the dominant eigenvector (the one with the largest eigenvalue). Explain what the elements of the dominant eigenvector tell you about the grouping of the four channels.
+
+::: {.callout-tip collapse="true" title="Hint"}
+`numpy.linalg.eigh` returns eigenvalues in ascending order, so the dominant eigenvector is the last column of the eigenvectors matrix. Look at the signs of the eigenvector elements: channels with the same sign are in the same "community" (oscillating together), and channels with opposite signs are in anti-phase communities. Given the phases you used ($0, \pi/4, \pi/2, \pi$), channels 1--3 should cluster together (they are all within a half-cycle of each other), while channel 4 (at $\pi$) should have the opposite sign.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+
+# Reconstruct the phase alignment matrix from Exercise 3
+phi = np.array([0, np.pi / 4, np.pi / 2, np.pi])
+phase_diff = phi[:, None] - phi[None, :]
+A = np.cos(phase_diff)
+
+# Eigendecomposition
+eigenvalues, eigenvectors = np.linalg.eigh(A)
+
+print("Eigenvalues (ascending order):")
+for i, val in enumerate(eigenvalues):
+    print(f"  lambda_{i+1} = {val:.4f}")
+
+print()
+print("Dominant eigenvalue:", eigenvalues[-1])
+dominant = eigenvectors[:, -1]  # last column = largest eigenvalue
+
+print()
+print("Dominant eigenvector:")
+labels = ["Ch1 (phase=0)", "Ch2 (phase=pi/4)",
+          "Ch3 (phase=pi/2)", "Ch4 (phase=pi)"]
+for i, (label, val) in enumerate(zip(labels, dominant)):
+    print(f"  {label}: v = {val:+.4f}")
+
+print()
+print("Interpretation:")
+print("  Channels with the same sign are phase-aligned (in the same community).")
+print("  Channels with opposite signs are in anti-phase communities.")
+
+# The signs tell us the grouping
+signs = np.sign(dominant)
+group_positive = [labels[i] for i in range(len(labels)) if signs[i] > 0]
+group_negative = [labels[i] for i in range(len(labels)) if signs[i] < 0]
+
+print()
+print(f"  Community 1 (positive): {group_positive}")
+print(f"  Community 2 (negative): {group_negative}")
+```
+
+The dominant eigenvector should show channels 1, 2, and 3 with the same sign (they are within a half-cycle of each other, so they are more aligned than not) and channel 4 with the opposite sign (it is at $\pi$, which is anti-phase with channel 1).
+
+The magnitude of each element tells you how strongly that channel participates in the dominant pattern. Channel 1 (phase 0) and channel 4 (phase $\pi$) should have the largest magnitudes because they define the two extremes. Channel 3 (phase $\pi/2$) should have a smaller magnitude because it sits on the boundary between the two communities.
+
+This is what the eigenvector decomposition does: it finds the primary axis of coordination in the network and tells you which channels are on which side of that axis.
+:::
+
+
+## Exercise 5: Full metastability pipeline on 8 channels
+
+Implement the complete metastability pipeline on simulated data with 8 channels. Create two conditions and compute regional metastability for each:
+
+- **Condition A (tightly coupled)**: all 8 channels are strongly coupled to a common reference oscillation. The phases stay close together, so the alignment matrix changes little over time. This should produce low metastability.
+- **Condition B (time-varying coupling)**: the coupling strength between channels drifts over time (some channels synchronise and desynchronise periodically). The alignment matrix changes a lot, so metastability should be higher.
+
+For each condition, run the full pipeline:
+
+1. Generate 8 channels of band-limited oscillatory data
+2. Extract instantaneous phase with the Hilbert transform
+3. At each time point, build the 8x8 phase alignment matrix
+4. Extract the dominant eigenvector
+5. Compute regional metastability as the temporal variance of each eigenvector element
+
+Compare the mean regional metastability between the two conditions and plot the results.
+
+::: {.callout-tip collapse="true" title="Hint"}
+For Condition A, use a high coupling strength (e.g., 0.95) for all channels. For Condition B, make the coupling vary sinusoidally over time: `coupling(t) = 0.5 + 0.4 * sin(2 * pi * f_mod * t)`, where `f_mod` is a slow modulation frequency (e.g., 0.1 Hz). This makes channels periodically synchronise and desynchronise.
+
+To generate coupled oscillatory data, create a reference oscillation and mix each channel's signal as `coupling * reference + (1 - coupling) * independent`. Band-pass filter before applying the Hilbert transform.
+
+For computational efficiency, compute the alignment matrix at a downsampled rate (e.g., every 10 ms rather than every sample). Remember to enforce sign continuity on the eigenvector: if $v(t) \cdot v(t-1) < 0$, flip $v(t)$.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert, butter, filtfilt
+
+rng = np.random.default_rng(42)
+
+# ── Parameters ─────────────────────────────────────────────────
+n_channels = 8
+sfreq = 256
+duration = 60  # seconds
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+freq_osc = 10.0  # Hz
+
+channel_names = [f"Ch{i}" for i in range(n_channels)]
+
+
+def generate_coupled_data(coupling_array, rng):
+    """Generate multi-channel oscillatory data with given coupling.
+
+    Parameters
+    ----------
+    coupling_array : ndarray, shape (n_channels, n_samples)
+        Coupling strength for each channel at each time point.
+        Values between 0 (independent) and 1 (locked to reference).
+    rng : numpy.random.Generator
+        Random number generator.
+
+    Returns
+    -------
+    data : ndarray, shape (n_channels, n_samples)
+    """
+    # Common reference oscillation with slow phase drift
+    ref_phase = (2 * np.pi * freq_osc * times
+                 + 0.3 * np.cumsum(rng.standard_normal(n_samples) / sfreq))
+    ref_signal = np.sin(ref_phase)
+
+    data = np.zeros((n_channels, n_samples))
+    for ch in range(n_channels):
+        # Independent oscillation with its own phase drift
+        ind_phase = (2 * np.pi * freq_osc * times
+                     + 2.0 * np.cumsum(rng.standard_normal(n_samples) / sfreq))
+        ind_signal = np.sin(ind_phase)
+
+        # Mix reference and independent, sample by sample
+        c = coupling_array[ch]
+        data[ch] = c * ref_signal + (1 - c) * ind_signal
+        data[ch] += 0.3 * rng.standard_normal(n_samples)
+
+    return data
+
+
+def compute_metastability(data, sfreq, lo=8.0, hi=13.0):
+    """Run the full metastability pipeline.
+
+    Returns
+    -------
+    regional_ms : ndarray, shape (n_channels,)
+        Temporal variance of each eigenvector element.
+    eigvec_series : ndarray, shape (n_channels, n_timepoints)
+        Dominant eigenvector at each downsampled time point.
+    """
+    n_ch, n_samp = data.shape
+    b, a = butter(4, [lo, hi], btype="band", fs=sfreq)
+
+    # Extract instantaneous phase
+    phases = np.zeros_like(data)
+    for ch in range(n_ch):
+        filtered = filtfilt(b, a, data[ch])
+        phases[ch] = np.angle(hilbert(filtered))
+
+    # Downsample to 100 Hz for the alignment matrix
+    step = max(1, sfreq // 100)
+    time_indices = np.arange(0, n_samp, step)
+    n_tp = len(time_indices)
+
+    eigvec_series = np.zeros((n_ch, n_tp))
+
+    for ti, t in enumerate(time_indices):
+        phi = phases[:, t]
+        phase_diff = phi[:, None] - phi[None, :]
+        A = np.cos(phase_diff)
+
+        eigenvalues, eigenvectors = np.linalg.eigh(A)
+        dominant = eigenvectors[:, -1]
+
+        # Sign continuity
+        if ti > 0 and np.dot(dominant, eigvec_series[:, ti - 1]) < 0:
+            dominant = -dominant
+
+        eigvec_series[:, ti] = dominant
+
+    regional_ms = np.var(eigvec_series, axis=1)
+    return regional_ms, eigvec_series
+
+
+# ── Condition A: tightly coupled (constant high coupling) ─────
+coupling_a = np.full((n_channels, n_samples), 0.95)
+data_a = generate_coupled_data(coupling_a, rng)
+ms_a, eigvec_a = compute_metastability(data_a, sfreq)
+
+# ── Condition B: time-varying coupling ────────────────────────
+# Coupling oscillates between 0.1 and 0.9 at 0.1 Hz
+coupling_b = np.zeros((n_channels, n_samples))
+for ch in range(n_channels):
+    # Each channel has a slightly different modulation phase
+    mod_phase = 2 * np.pi * ch / n_channels
+    coupling_b[ch] = 0.5 + 0.4 * np.sin(
+        2 * np.pi * 0.1 * times + mod_phase
+    )
+data_b = generate_coupled_data(coupling_b, rng)
+ms_b, eigvec_b = compute_metastability(data_b, sfreq)
+
+# ── Report ────────────────────────────────────────────────────
+print("Condition A (tightly coupled):")
+for ch in range(n_channels):
+    print(f"  {channel_names[ch]}: MS = {ms_a[ch]:.6f}")
+print(f"  Mean regional MS: {ms_a.mean():.6f}")
+
+print()
+print("Condition B (time-varying coupling):")
+for ch in range(n_channels):
+    print(f"  {channel_names[ch]}: MS = {ms_b[ch]:.6f}")
+print(f"  Mean regional MS: {ms_b.mean():.6f}")
+
+print()
+print(f"Ratio (B / A): {ms_b.mean() / ms_a.mean():.2f}x")
+
+# ── Plot ──────────────────────────────────────────────────────
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+# Panel 1: eigenvector dynamics for condition A (first 15 s)
+ax = axes[0]
+step = max(1, sfreq // 100)
+t_plot = np.arange(0, n_samples, step) / sfreq
+for ch in range(n_channels):
+    ax.plot(t_plot, eigvec_a[ch], linewidth=0.5, alpha=0.7)
+ax.set_xlim(0, 15)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("v_k(t)")
+ax.set_title("A. Eigenvector (tight coupling)")
+
+# Panel 2: eigenvector dynamics for condition B (first 15 s)
+ax = axes[1]
+for ch in range(n_channels):
+    ax.plot(t_plot, eigvec_b[ch], linewidth=0.5, alpha=0.7)
+ax.set_xlim(0, 15)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("v_k(t)")
+ax.set_title("B. Eigenvector (varying coupling)")
+
+# Panel 3: comparison bar chart
+ax = axes[2]
+x = np.arange(n_channels)
+width = 0.35
+bars_a = ax.bar(x - width/2, ms_a, width, label="Condition A (tight)",
+                color="#2c3e50", alpha=0.7)
+bars_b = ax.bar(x + width/2, ms_b, width, label="Condition B (varying)",
+                color="#e74c3c", alpha=0.7)
+ax.set_xlabel("Channel")
+ax.set_ylabel("Regional metastability")
+ax.set_title("C. Regional MS comparison")
+ax.set_xticks(x)
+ax.set_xticklabels(channel_names, fontsize=9)
+ax.legend(fontsize=9)
+
+plt.tight_layout()
+plt.show()
+```
+
+Condition A (tight coupling) should show low metastability across all channels: the eigenvector elements stay nearly constant because all channels maintain the same phase relationship. Condition B (time-varying coupling) should show higher metastability: the eigenvector elements fluctuate because the coupling changes over time, causing different channels to move in and out of alignment.
+
+The eigenvector dynamics plots make this visible. In panel A, the lines are nearly flat. In panel B, they oscillate, reflecting the slow modulation of the coupling strength. The bar chart in panel C should show a clear difference between conditions for every channel.
+
+This is the core logic behind using metastability to study brain dynamics: if a brain region's role in the coordination pattern is flexible (high metastability), it is participating in a dynamic, adaptive network. If it is rigid (low metastability), something may be constraining its dynamics, as is hypothesised in Parkinson's disease.
+:::
+
+
+## Exercise 6: Simulated Parkinson's vs Control group comparison
+
+This exercise puts the entire pipeline together in a realistic analysis scenario. Simulate two groups of "subjects":
+
+- **Control group** (10 subjects): coupling parameters that produce moderate, flexible coordination (moderate metastability).
+- **Parkinson's group** (10 subjects): coupling parameters that produce rigid, excessive synchronisation (low metastability), consistent with the pathological beta synchrony seen in PD.
+
+For each subject, generate 8 channels of oscillatory data, run the full metastability pipeline, and store the mean regional metastability. Then run an independent-samples t-test to compare the groups and produce a publication-quality figure showing the results.
+
+::: {.callout-tip collapse="true" title="Hint"}
+For control subjects, use moderate coupling strengths drawn from a normal distribution with mean around 0.5 and standard deviation 0.1. For Parkinson's subjects, use higher coupling (mean 0.85, sd 0.05), reflecting the excessive synchronisation seen in PD.
+
+Add between-subject variability: each subject should have slightly different coupling strengths across channels (draw them from the group-level distribution). Compute the metastability pipeline for each subject separately and store one summary value per subject (the mean across all channels).
+
+Use `scipy.stats.ttest_ind` for the group comparison. Since PD subjects should have higher coupling and therefore lower metastability, you expect the PD group to have significantly lower mean metastability than the controls.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert, butter, filtfilt
+from scipy.stats import ttest_ind
+
+rng = np.random.default_rng(42)
+
+# ── Parameters ─────────────────────────────────────────────────
+n_channels = 8
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+freq_osc = 10.0
+n_subjects = 10
+
+channel_names = [f"Ch{i}" for i in range(n_channels)]
+
+
+def generate_subject_data(mean_coupling, sd_coupling, rng):
+    """Generate coupled oscillatory data for one subject.
+
+    Each channel gets a coupling value drawn from N(mean_coupling, sd_coupling),
+    clipped to [0.05, 0.99].
+    """
+    # Draw per-channel coupling strengths for this subject
+    couplings = rng.normal(mean_coupling, sd_coupling, size=n_channels)
+    couplings = np.clip(couplings, 0.05, 0.99)
+
+    # Common reference oscillation
+    ref_phase = (2 * np.pi * freq_osc * times
+                 + 0.3 * np.cumsum(rng.standard_normal(n_samples) / sfreq))
+    ref_signal = np.sin(ref_phase)
+
+    data = np.zeros((n_channels, n_samples))
+    for ch in range(n_channels):
+        ind_phase = (2 * np.pi * freq_osc * times
+                     + 2.0 * np.cumsum(rng.standard_normal(n_samples) / sfreq))
+        ind_signal = np.sin(ind_phase)
+        data[ch] = (couplings[ch] * ref_signal
+                    + (1 - couplings[ch]) * ind_signal
+                    + 0.3 * rng.standard_normal(n_samples))
+
+    return data, couplings
+
+
+def compute_regional_metastability(data, sfreq, lo=8.0, hi=13.0):
+    """Compute regional metastability for all channels."""
+    n_ch, n_samp = data.shape
+    b, a = butter(4, [lo, hi], btype="band", fs=sfreq)
+
+    phases = np.zeros_like(data)
+    for ch in range(n_ch):
+        filtered = filtfilt(b, a, data[ch])
+        phases[ch] = np.angle(hilbert(filtered))
+
+    step = max(1, sfreq // 100)
+    time_indices = np.arange(0, n_samp, step)
+    n_tp = len(time_indices)
+
+    eigvec_series = np.zeros((n_ch, n_tp))
+
+    for ti, t in enumerate(time_indices):
+        phi = phases[:, t]
+        phase_diff = phi[:, None] - phi[None, :]
+        A = np.cos(phase_diff)
+
+        eigenvalues, eigenvectors = np.linalg.eigh(A)
+        dominant = eigenvectors[:, -1]
+
+        if ti > 0 and np.dot(dominant, eigvec_series[:, ti - 1]) < 0:
+            dominant = -dominant
+
+        eigvec_series[:, ti] = dominant
+
+    regional_ms = np.var(eigvec_series, axis=1)
+    return regional_ms
+
+
+# ── Simulate both groups ──────────────────────────────────────
+ms_controls = []         # mean MS per subject
+ms_pd = []               # mean MS per subject
+ms_controls_per_ch = []  # per-channel MS for each subject
+ms_pd_per_ch = []
+
+print("Simulating control subjects...")
+for subj in range(n_subjects):
+    data, couplings = generate_subject_data(
+        mean_coupling=0.50, sd_coupling=0.10, rng=rng
+    )
+    ms = compute_regional_metastability(data, sfreq)
+    ms_controls.append(ms.mean())
+    ms_controls_per_ch.append(ms)
+    print(f"  Control {subj+1:2d}: mean coupling = {couplings.mean():.3f}, "
+          f"mean MS = {ms.mean():.6f}")
+
+print()
+print("Simulating Parkinson's subjects...")
+for subj in range(n_subjects):
+    data, couplings = generate_subject_data(
+        mean_coupling=0.85, sd_coupling=0.05, rng=rng
+    )
+    ms = compute_regional_metastability(data, sfreq)
+    ms_pd.append(ms.mean())
+    ms_pd_per_ch.append(ms)
+    print(f"  PD      {subj+1:2d}: mean coupling = {couplings.mean():.3f}, "
+          f"mean MS = {ms.mean():.6f}")
+
+ms_controls = np.array(ms_controls)
+ms_pd = np.array(ms_pd)
+ms_controls_per_ch = np.array(ms_controls_per_ch)  # (n_subjects, n_channels)
+ms_pd_per_ch = np.array(ms_pd_per_ch)
+
+# ── Statistical test ──────────────────────────────────────────
+t_stat, p_value = ttest_ind(ms_controls, ms_pd)
+
+print()
+print("=" * 50)
+print("Group comparison (independent-samples t-test)")
+print("=" * 50)
+print(f"Controls: mean MS = {ms_controls.mean():.6f} "
+      f"(sd = {ms_controls.std():.6f})")
+print(f"PD:       mean MS = {ms_pd.mean():.6f} "
+      f"(sd = {ms_pd.std():.6f})")
+print(f"t = {t_stat:.3f}, p = {p_value:.6f}")
+if p_value < 0.05:
+    print("Result: significant difference (p < 0.05)")
+else:
+    print("Result: no significant difference")
+
+# ── Effect size (Cohen's d) ───────────────────────────────────
+pooled_std = np.sqrt(
+    (ms_controls.std()**2 + ms_pd.std()**2) / 2
+)
+cohens_d = (ms_controls.mean() - ms_pd.mean()) / pooled_std
+print(f"Cohen's d = {cohens_d:.2f}")
+
+# ── Visualisation ─────────────────────────────────────────────
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+# Panel 1: individual subject metastability values
+ax = axes[0]
+jitter_c = rng.uniform(-0.1, 0.1, size=n_subjects)
+jitter_p = rng.uniform(-0.1, 0.1, size=n_subjects)
+ax.scatter(np.zeros(n_subjects) + jitter_c, ms_controls,
+           color="#3498db", s=60, alpha=0.7, label="Controls", zorder=3)
+ax.scatter(np.ones(n_subjects) + jitter_p, ms_pd,
+           color="#e74c3c", s=60, alpha=0.7, label="Parkinson's", zorder=3)
+# Group means
+ax.plot([-0.2, 0.2], [ms_controls.mean()] * 2,
+        color="#2c3e50", linewidth=2)
+ax.plot([0.8, 1.2], [ms_pd.mean()] * 2,
+        color="#2c3e50", linewidth=2)
+ax.set_xticks([0, 1])
+ax.set_xticklabels(["Controls", "Parkinson's"])
+ax.set_ylabel("Mean regional metastability")
+ax.set_title(f"A. Individual subjects (p = {p_value:.2e})")
+ax.legend(fontsize=9)
+
+# Panel 2: box plot
+ax = axes[1]
+bp = ax.boxplot(
+    [ms_controls, ms_pd],
+    labels=["Controls", "Parkinson's"],
+    patch_artist=True, widths=0.5
+)
+bp["boxes"][0].set_facecolor("#3498db")
+bp["boxes"][1].set_facecolor("#e74c3c")
+for box in bp["boxes"]:
+    box.set_alpha(0.5)
+ax.set_ylabel("Mean regional metastability")
+ax.set_title(f"B. Group comparison (Cohen's d = {cohens_d:.2f})")
+
+# Panel 3: per-channel comparison
+ax = axes[2]
+x = np.arange(n_channels)
+width = 0.35
+mean_c = ms_controls_per_ch.mean(axis=0)
+sem_c = ms_controls_per_ch.std(axis=0) / np.sqrt(n_subjects)
+mean_p = ms_pd_per_ch.mean(axis=0)
+sem_p = ms_pd_per_ch.std(axis=0) / np.sqrt(n_subjects)
+
+ax.bar(x - width/2, mean_c, width, yerr=sem_c,
+       label="Controls", color="#3498db", alpha=0.7, capsize=3)
+ax.bar(x + width/2, mean_p, width, yerr=sem_p,
+       label="Parkinson's", color="#e74c3c", alpha=0.7, capsize=3)
+ax.set_xlabel("Channel")
+ax.set_ylabel("Regional metastability")
+ax.set_title("C. Per-channel metastability")
+ax.set_xticks(x)
+ax.set_xticklabels(channel_names, fontsize=9)
+ax.legend(fontsize=9)
+
+plt.tight_layout()
+plt.show()
+```
+
+You should see a significant p-value (likely well below 0.01), with the control group showing higher metastability than the Parkinson's group. This reflects the simulation design: PD subjects have higher coupling, which means their channels stay locked in a fixed coordination pattern (low metastability), while controls have moderate coupling that allows more flexible coordination (higher metastability).
+
+The per-channel plot (panel C) should show the difference across all channels, since we used a global coupling difference between groups. In a real study with real EEG data, you would expect the effect to be region-specific (some channels showing larger group differences than others), which is why regional metastability is more informative than a single global number.
+
+The Cohen's d value tells you the effect size: how many standard deviations apart the two group means are. With the parameters used here, the effect is deliberately large (to make the exercise clear). In real clinical data, effect sizes tend to be smaller, and you need more subjects and careful statistical controls to detect them.
+
+This exercise mirrors the analysis pipeline that Natalia will run on real EEG data from Parkinson's patients and healthy controls. The key differences with real data are: (a) the data come from actual EEG recordings rather than simulations, (b) preprocessing (filtering, artifact rejection) is needed before the metastability computation, (c) there will be three groups (controls, PD without FoG, PD with FoG) rather than two, and (d) the analysis will use multiple frequency bands and a larger number of channels.
+:::

@@ -1,0 +1,231 @@
+---
+title: "The Hilbert transform and instantaneous phase"
+description: "The analytic signal, how the Hilbert transform works, extracting instantaneous phase and amplitude, phase wrapping, and why phase matters for connectivity analysis."
+date: 2026-03-31
+date-modified: last-modified
+module: 5
+categories: [connectivity, phase, signal-processing]
+---
+
+## Why this topic matters
+
+Phase is how we measure when things happen in an oscillation: is the signal at its peak, its trough, or somewhere in between? If you want to know whether two brain regions are coordinating their activity, you need to compare their phases. Are they peaking at the same time (in phase)? Are they alternating (in anti-phase)? Is the relationship consistent or drifting?
+
+The Hilbert transform is the mathematical tool that extracts instantaneous phase from a signal. It is the foundation for all phase-based connectivity measures: phase-locking value (PLV), the phase alignment matrix, and metastability. Understanding how it works, and where it can go wrong, is critical for Natalia's project on resting-state EEG dynamics in Parkinson's disease.
+
+## The analytic signal
+
+Given a real-valued signal $x(t)$, the Hilbert transform produces a new signal $\hat{x}(t)$ that is the "90-degree shifted" version of $x(t)$. For a pure cosine, the Hilbert transform gives a sine; for a sine, it gives a negative cosine.
+
+The **analytic signal** combines the original signal and its Hilbert transform:
+
+$$z(t) = x(t) + i \, \hat{x}(t)$$
+
+This is a complex-valued signal. You can think of $x(t)$ as the "real part" and $\hat{x}(t)$ as the "imaginary part". The analytic signal has a useful property: its negative-frequency components are zero. This means it contains only forward-rotating phasors, which gives a clean definition of instantaneous phase and amplitude.
+
+In polar form:
+
+$$z(t) = A(t) \, e^{i\phi(t)}$$
+
+where:
+
+- $A(t) = |z(t)| = \sqrt{x(t)^2 + \hat{x}(t)^2}$ is the **instantaneous amplitude** (or envelope). It tells you how large the oscillation is at each moment.
+- $\phi(t) = \arg(z(t)) = \arctan\!\big(\hat{x}(t) / x(t)\big)$ is the **instantaneous phase**. It tells you where in the oscillatory cycle the signal is at each moment.
+
+## How the Hilbert transform works in the frequency domain
+
+The Hilbert transform can be defined in the frequency domain. It multiplies the positive-frequency components of the signal by $-i$ and the negative-frequency components by $+i$. This shifts each frequency component by 90 degrees without changing its amplitude.
+
+In practice, Python computes the Hilbert transform using the FFT:
+
+1. Compute the FFT of $x(t)$.
+2. Set the negative-frequency components to zero.
+3. Double the positive-frequency components.
+4. Take the inverse FFT.
+
+The result is the analytic signal $z(t)$, from which you extract phase and amplitude.
+
+```python
+from scipy.signal import hilbert
+import numpy as np
+
+# The function returns the analytic signal, not the Hilbert transform itself
+analytic = hilbert(x)
+
+# Extract phase and amplitude
+phase = np.angle(analytic)       # radians, range [-pi, pi]
+amplitude = np.abs(analytic)     # instantaneous envelope
+```
+
+Note that `scipy.signal.hilbert` returns the full **analytic signal** $z(t) = x(t) + i\hat{x}(t)$, not just the Hilbert transform $\hat{x}(t)$. The naming is a common source of confusion.
+
+## Phase wrapping
+
+The instantaneous phase returned by `np.angle()` is wrapped to the interval $[-\pi, \pi]$. This means that as the oscillation progresses, the phase increases from $-\pi$ towards $\pi$, then jumps back to $-\pi$ at the start of the next cycle.
+
+These jumps are not a problem for computing phase *differences* (which is what connectivity measures use), because:
+
+$$\cos(\phi_i - \phi_j)$$
+
+and
+
+$$e^{i(\phi_i - \phi_j)}$$
+
+both handle wrapped phases correctly. The cosine and complex exponential are periodic, so jumps cancel out.
+
+However, if you want to compute a **cumulative phase** (e.g., to count the number of oscillatory cycles or to compute instantaneous frequency as $f(t) = \frac{1}{2\pi}\frac{d\phi}{dt}$), you need to **unwrap** the phase first:
+
+```python
+phase_unwrapped = np.unwrap(phase)
+
+# Instantaneous frequency (Hz)
+inst_freq = np.diff(phase_unwrapped) / (2 * np.pi) * sfreq
+```
+
+`np.unwrap()` detects jumps larger than $\pi$ and adds $\pm 2\pi$ to remove them, producing a continuous phase trace.
+
+## Why band-pass filtering comes first
+
+The Hilbert transform gives a meaningful instantaneous phase only for **narrowband signals**, that is, signals whose frequency content is concentrated in a relatively narrow range.
+
+If you apply the Hilbert transform to a broadband EEG signal (containing everything from delta to gamma), the instantaneous phase will fluctuate erratically and will not correspond to any single oscillation. The concept of "the phase of this signal" simply does not make sense when the signal contains many different oscillations superimposed.
+
+The solution is to band-pass filter the signal to the frequency band of interest before applying the Hilbert transform. For example, if you want the phase of alpha oscillations, filter to 8--13 Hz first.
+
+The width of the filter band matters:
+
+- **Too narrow** (e.g., 9.5--10.5 Hz): you lose temporal resolution because the filter output changes slowly. The instantaneous frequency is forced to stay near the centre frequency.
+- **Too wide** (e.g., 2--30 Hz): the signal is not narrowband enough for the phase to be meaningful.
+- **Just right** (e.g., 8--13 Hz for alpha): a band that covers the physiological range of the oscillation you are studying.
+
+## Working example: phase extraction from a sinusoid and from EEG-like data
+
+The code below demonstrates the Hilbert transform in two settings: first with a clean sinusoid (where the result is exactly predictable), and then with a noisy, band-pass-filtered EEG-like signal.
+
+```{python}
+#| fig-cap: "Instantaneous phase extraction using the Hilbert transform. Top row: a clean 10 Hz sinusoid, where the phase increases linearly. Bottom row: a noisy EEG-like signal filtered to the alpha band, where the phase still tracks the oscillatory cycles despite the noise."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert, butter, filtfilt
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 2
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# ═══════════════════════════════════════════════════════════════
+# Part 1: Clean sinusoid
+# ═══════════════════════════════════════════════════════════════
+freq = 10.0  # Hz
+sinusoid = np.sin(2 * np.pi * freq * times)
+
+# Hilbert transform
+analytic_sin = hilbert(sinusoid)
+phase_sin = np.angle(analytic_sin)
+amplitude_sin = np.abs(analytic_sin)
+
+# ═══════════════════════════════════════════════════════════════
+# Part 2: Noisy EEG-like signal
+# ═══════════════════════════════════════════════════════════════
+# Pink noise background
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1
+pink_filter = 1 / np.sqrt(freqs_fft)
+pink_noise = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+
+# Alpha oscillation embedded in noise
+alpha = 2.0 * np.sin(2 * np.pi * 10 * times + 0.3 * np.cumsum(
+    rng.standard_normal(n_samples) / sfreq))
+eeg_signal = pink_noise + alpha
+
+# Band-pass filter to alpha band (8-13 Hz)
+b, a = butter(4, [8, 13], btype="band", fs=sfreq)
+eeg_alpha = filtfilt(b, a, eeg_signal)
+
+# Hilbert transform on the filtered signal
+analytic_eeg = hilbert(eeg_alpha)
+phase_eeg = np.angle(analytic_eeg)
+amplitude_eeg = np.abs(analytic_eeg)
+
+# ═══════════════════════════════════════════════════════════════
+# Visualisation
+# ═══════════════════════════════════════════════════════════════
+fig, axes = plt.subplots(2, 2, figsize=(13, 7))
+
+# ── Top left: sinusoid + envelope ──────────────────────────────
+ax = axes[0, 0]
+ax.plot(times, sinusoid, color="#2c3e50", linewidth=0.8, label="Signal")
+ax.plot(times, amplitude_sin, color="#e74c3c", linewidth=1.2,
+        linestyle="--", label="Envelope (amplitude)")
+ax.plot(times, -amplitude_sin, color="#e74c3c", linewidth=1.2,
+        linestyle="--")
+ax.set_ylabel("Amplitude")
+ax.set_title("Clean sinusoid (10 Hz)")
+ax.legend(fontsize=8)
+ax.set_xlim(0, 1)
+
+# ── Top right: sinusoid phase ─────────────────────────────────
+ax = axes[0, 1]
+ax.plot(times, phase_sin, color="#8e44ad", linewidth=0.8)
+ax.set_ylabel("Phase (radians)")
+ax.set_title("Instantaneous phase (sinusoid)")
+ax.set_ylim(-np.pi - 0.3, np.pi + 0.3)
+ax.axhline(np.pi, color="grey", linestyle=":", linewidth=0.5)
+ax.axhline(-np.pi, color="grey", linestyle=":", linewidth=0.5)
+ax.axhline(0, color="grey", linestyle=":", linewidth=0.5)
+ax.set_yticks([-np.pi, -np.pi/2, 0, np.pi/2, np.pi])
+ax.set_yticklabels([r"$-\pi$", r"$-\pi/2$", "0", r"$\pi/2$", r"$\pi$"])
+ax.set_xlim(0, 1)
+
+# ── Bottom left: EEG signal + filtered + envelope ─────────────
+ax = axes[1, 0]
+# Normalise the raw EEG for display
+eeg_norm = eeg_signal / np.max(np.abs(eeg_signal))
+ax.plot(times, eeg_norm, color="#bdc3c7", linewidth=0.4,
+        label="Raw EEG (normalised)")
+ax.plot(times, eeg_alpha / np.max(np.abs(eeg_alpha)),
+        color="#2c3e50", linewidth=0.8, label="Alpha-filtered")
+env_norm = amplitude_eeg / np.max(np.abs(eeg_alpha))
+ax.plot(times, env_norm, color="#e74c3c", linewidth=1.2,
+        linestyle="--", label="Envelope")
+ax.plot(times, -env_norm, color="#e74c3c", linewidth=1.2, linestyle="--")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Amplitude (normalised)")
+ax.set_title("EEG-like signal filtered to alpha (8\u201313 Hz)")
+ax.legend(fontsize=8)
+ax.set_xlim(0, 2)
+
+# ── Bottom right: EEG phase ──────────────────────────────────
+ax = axes[1, 1]
+ax.plot(times, phase_eeg, color="#8e44ad", linewidth=0.8)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Phase (radians)")
+ax.set_title("Instantaneous phase (alpha-filtered EEG)")
+ax.set_ylim(-np.pi - 0.3, np.pi + 0.3)
+ax.axhline(np.pi, color="grey", linestyle=":", linewidth=0.5)
+ax.axhline(-np.pi, color="grey", linestyle=":", linewidth=0.5)
+ax.axhline(0, color="grey", linestyle=":", linewidth=0.5)
+ax.set_yticks([-np.pi, -np.pi/2, 0, np.pi/2, np.pi])
+ax.set_yticklabels([r"$-\pi$", r"$-\pi/2$", "0", r"$\pi/2$", r"$\pi$"])
+ax.set_xlim(0, 2)
+
+plt.tight_layout()
+plt.show()
+```
+
+In the top row, the clean sinusoid has a constant envelope (the amplitude never changes) and a phase that increases linearly with sawtooth-like wrapping at $\pm\pi$. This is exactly what we expect: a pure sine wave has a constant frequency and constant amplitude, so the phase grows at a steady rate.
+
+In the bottom row, the EEG-like signal is noisier. The raw signal (grey) contains multiple frequency components. After band-pass filtering to the alpha band (blue), the oscillatory structure becomes visible. The envelope (red dashed) now varies over time, reflecting fluctuations in alpha power. The instantaneous phase (purple) still follows the sawtooth pattern, but with slight irregularities from the noise and the natural variability of the oscillation.
+
+## Key takeaways
+
+- The **Hilbert transform** converts a real signal into an analytic signal, from which you can extract the **instantaneous phase** and **instantaneous amplitude** at every time point.
+- In Python, `scipy.signal.hilbert()` returns the analytic signal (not just the Hilbert transform). Use `np.angle()` for phase and `np.abs()` for amplitude.
+- You must **band-pass filter** the signal to a narrow frequency band before applying the Hilbert transform. Broadband signals do not have a meaningful instantaneous phase.
+- Phase values are **wrapped** to $[-\pi, \pi]$. This is fine for computing phase differences and connectivity measures. Use `np.unwrap()` if you need cumulative phase or instantaneous frequency.
+- The instantaneous phase is the input to all phase-based connectivity measures: PLV, phase alignment matrices, and metastability. Getting clean phase estimates (good filtering, adequate signal-to-noise ratio) is the foundation that everything else depends on.

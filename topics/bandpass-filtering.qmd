@@ -1,0 +1,267 @@
+---
+title: "Band-pass filtering"
+description: "What a band-pass filter does, typical EEG cutoff frequencies, FIR filter design in MNE-Python, transition bandwidth, filter order, edge artifacts, and zero-phase filtering."
+date: 2026-03-31
+date-modified: last-modified
+module: 2
+categories: [preprocessing, filtering]
+---
+
+## What does a band-pass filter do?
+
+A band-pass filter keeps frequencies within a specified range and attenuates everything outside it. You define two cutoff frequencies: a high-pass cutoff (the lower edge) that removes slow drifts, and a low-pass cutoff (the upper edge) that removes high-frequency noise. Only the frequencies between these two cutoffs pass through.
+
+In EEG, this is almost always the first preprocessing step after loading the data. The raw signal contains everything from sub-Hertz electrode drifts to high-frequency muscle noise, and you need to narrow the frequency range to the band of interest before doing anything else.
+
+## Typical EEG cutoff frequencies
+
+### High-pass cutoff (lower edge)
+
+The high-pass cutoff removes slow drifts caused by electrode movement, skin potentials, and amplifier drift. The choice of cutoff depends on what you plan to do with the data.
+
+**0.1 Hz**: the most conservative choice. Removes only the slowest drifts while preserving all EEG-relevant activity, including slow cortical potentials. Use this when you need to preserve low-frequency components or when you are studying very slow oscillations.
+
+**0.5 Hz**: a common compromise. Removes most drift while preserving delta activity (1--4 Hz). This is a reasonable default for most ERP and time-frequency analyses.
+
+**1 Hz**: recommended if you plan to run ICA. ICA converges poorly when there are large slow drifts in the data, because the drifts dominate the decomposition. A 1 Hz high-pass removes the drifts without affecting the frequency ranges that most cognitive EEG studies care about (theta and above). Be aware, though, that a 1 Hz high-pass can distort the shape of slow ERPs like the P300 or the CNV (contingent negative variation).
+
+**2 Hz and above**: aggressive. Can distort ERP waveforms and remove real brain signals. Avoid unless you have a specific reason.
+
+### Low-pass cutoff (upper edge)
+
+The low-pass cutoff removes high-frequency activity, which in scalp EEG is usually noise (muscle artifact, electronic interference) rather than brain signal.
+
+**30 Hz**: conservative for many cognitive studies. Preserves alpha and beta activity while removing most muscle artifact. Use this if you are studying ERPs or alpha/beta oscillations and do not need gamma.
+
+**40--45 Hz**: the most common choice. Includes the low gamma range while removing line noise (50/60 Hz) and most EMG artifact.
+
+**100 Hz or higher**: needed if you are studying gamma oscillations (30--100 Hz). Requires careful artifact handling because muscle activity also lives in this range.
+
+## FIR filter design in MNE-Python
+
+MNE-Python uses FIR (finite impulse response) filters by default. FIR filters have two properties that make them well suited for EEG: they have a linear phase response (all frequencies are delayed by the same amount, preserving waveform shape) and they are always stable.
+
+### Basic usage
+
+```{python}
+#| eval: false
+import mne
+
+# Load data
+raw = mne.io.read_raw_edf("recording.edf", preload=True)
+
+# Band-pass filter: keep 0.1 to 40 Hz
+raw.filter(l_freq=0.1, h_freq=40.0)
+```
+
+That is it for the basic case. MNE chooses sensible defaults for the filter design (FIR, Hamming window, automatic filter order and transition bandwidth).
+
+### Applying high-pass and low-pass separately
+
+You can also apply the high-pass and low-pass as separate steps. This is functionally equivalent to a single band-pass call, but some people find it easier to reason about each step independently.
+
+```{python}
+#| eval: false
+# High-pass filter at 1 Hz (for ICA preprocessing)
+raw.filter(l_freq=1.0, h_freq=None)
+
+# Low-pass filter at 40 Hz
+raw.filter(l_freq=None, h_freq=40.0)
+```
+
+### Full parameter control
+
+```{python}
+#| eval: false
+raw.filter(
+    l_freq=0.1,              # high-pass cutoff (Hz)
+    h_freq=40.0,             # low-pass cutoff (Hz)
+    picks="eeg",             # apply only to EEG channels
+    filter_length="auto",    # automatic filter order
+    l_trans_bandwidth="auto",  # automatic transition bandwidth (high-pass)
+    h_trans_bandwidth="auto",  # automatic transition bandwidth (low-pass)
+    method="fir",            # FIR filter (default)
+    fir_window="hamming",    # window function (default)
+    phase="zero",            # zero-phase filtering (default)
+    verbose=True             # print filter parameters
+)
+```
+
+Setting `verbose=True` prints the filter parameters, which is useful for checking what MNE actually did:
+
+```
+Setting up band-pass filter from 0.1 - 40 Hz
+
+FIR filter parameters
+---------------------
+Designing a one-pass, zero-phase, non-causal bandpass filter:
+- Windowed time-domain design (firwin) method
+- Hamming window with 0.0194 passband ripple and 53 dB stopband attenuation
+- Lower passband edge: 0.10
+- Lower transition bandwidth: 0.10 Hz (-6 dB cutoff frequency: 0.05 Hz)
+- Upper passband edge: 40.00 Hz
+- Upper transition bandwidth: 10.00 Hz (-6 dB cutoff frequency: 45.00 Hz)
+- Filter length: 8449 samples (33.004 s)
+```
+
+## Transition bandwidth
+
+The transition bandwidth is the frequency range over which the filter goes from full passband (keeping everything) to full stopband (removing everything). A narrower transition bandwidth gives a sharper cutoff, but requires a higher filter order (more computation and a longer filter).
+
+MNE sets the transition bandwidth automatically based on the cutoff frequency. The rules are approximately:
+
+- **High-pass transition bandwidth**: `min(max(l_freq * 0.25, 2.0), l_freq)`
+- **Low-pass transition bandwidth**: `min(max(h_freq * 0.25, 2.0), sfreq / 2 - h_freq)`
+
+For a 1 Hz high-pass, the transition bandwidth is about 1 Hz (so the filter starts attenuating at 0 Hz and reaches full attenuation by 1 Hz). For a 40 Hz low-pass, the transition bandwidth is about 10 Hz (so the filter starts attenuating at 40 Hz and reaches full attenuation by 50 Hz).
+
+You can override the defaults:
+
+```{python}
+#| eval: false
+# Narrower transition bandwidth for a sharper cutoff
+raw.filter(
+    l_freq=1.0,
+    h_freq=40.0,
+    l_trans_bandwidth=0.5,  # 0.5 Hz transition (sharper than default)
+    h_trans_bandwidth=5.0   # 5 Hz transition (sharper than default)
+)
+```
+
+Be cautious with very narrow transition bandwidths. They produce long filters that can introduce ringing artifacts, especially at the edges of short epochs.
+
+## Filter order
+
+The filter order determines how many samples the filter uses to compute each output sample. A higher order gives a sharper transition but uses more memory and can cause problems with short data segments.
+
+MNE sets the filter order (length) automatically based on the transition bandwidth. The formula is approximately:
+
+```
+filter_length = 3.3 / transition_bandwidth * sfreq
+```
+
+For a 1 Hz high-pass at 256 Hz sampling rate with a 1 Hz transition bandwidth, this gives a filter length of about 845 samples (3.3 seconds of data). The data must be longer than the filter for the filter to work. If your data segments are shorter than the filter length, you will get a warning or an error.
+
+You can set the filter length manually:
+
+```{python}
+#| eval: false
+# Specify filter length directly
+raw.filter(l_freq=1.0, h_freq=40.0, filter_length="10s")  # 10 seconds
+
+# Or in samples
+raw.filter(l_freq=1.0, h_freq=40.0, filter_length=2560)
+```
+
+## Edge artifacts
+
+Filters produce artifacts at the beginning and end of the data. The filter needs to "warm up" (fill its buffer with data) before it produces reliable output. During this warm-up period, the filtered signal can show ringing or amplitude distortions.
+
+The length of the edge artifact is roughly equal to the filter order. For a high-pass filter at 0.1 Hz with a long filter, this can be several seconds.
+
+There are two ways to deal with edge artifacts:
+
+1. **Record extra data**: start recording a few seconds before the task begins and stop a few seconds after it ends. Then crop the edges after filtering.
+2. **Use padding**: MNE automatically pads the data before filtering (reflecting the edges) to reduce edge artifacts. This is controlled by the `pad` parameter.
+
+```{python}
+#| eval: false
+# Crop edge artifacts after filtering
+raw.filter(l_freq=0.1, h_freq=40.0)
+raw.crop(tmin=2.0, tmax=raw.times[-1] - 2.0)  # remove 2 s from each end
+```
+
+## Zero-phase filtering
+
+By default, MNE uses **zero-phase filtering**: the filter is applied forwards and then backwards over the data. This eliminates the phase delay that a single-pass filter would introduce. Without zero-phase filtering, a low-pass filter would shift your ERP peaks in time, which could affect latency measurements.
+
+The trade-off is that zero-phase filtering doubles the effective filter order (since you apply the filter twice), and it requires the entire signal to be available (you cannot do it in real time).
+
+```{python}
+#| eval: false
+# Zero-phase filtering (default)
+raw.filter(l_freq=1.0, h_freq=40.0, phase="zero")
+
+# Minimum-phase filtering (causal, introduces phase delay)
+# Only use this if you have a specific reason (e.g., real-time processing)
+raw.filter(l_freq=1.0, h_freq=40.0, phase="minimum")
+```
+
+For offline EEG analysis, always use zero-phase filtering unless you have a specific reason not to.
+
+## Working example
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# ── Create simulated data ────────────────────────────────────
+rng = np.random.default_rng(42)
+sfreq = 256
+duration = 60  # seconds
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Pink noise background
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1
+pink = np.fft.irfft(np.fft.rfft(white) / np.sqrt(freqs_fft), n=n_samples)
+
+# Add a 10 Hz alpha oscillation and a slow 0.05 Hz drift
+alpha = 3e-6 * np.sin(2 * np.pi * 10 * times)
+drift = 10e-6 * np.sin(2 * np.pi * 0.05 * times)
+signal = pink * 20e-6 / pink.std() + alpha + drift
+
+# Wrap in MNE Raw
+info = mne.create_info(ch_names=["Oz"], sfreq=sfreq, ch_types=["eeg"])
+raw = mne.io.RawArray(signal.reshape(1, -1), info)
+
+# ── Apply band-pass filter ───────────────────────────────────
+raw_filtered = raw.copy().filter(l_freq=1.0, h_freq=40.0, verbose=True)
+
+# ── Compare PSD before and after ─────────────────────────────
+import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+# Before filtering
+psd_before = raw.compute_psd(fmax=60)
+psd_before.plot(axes=axes[0], show=False)
+axes[0].set_title("Before filtering")
+
+# After filtering
+psd_after = raw_filtered.compute_psd(fmax=60)
+psd_after.plot(axes=axes[1], show=False)
+axes[1].set_title("After band-pass (1-40 Hz)")
+
+plt.tight_layout()
+plt.show()
+```
+
+## IIR filters as an alternative
+
+MNE also supports IIR (infinite impulse response) filters, most commonly Butterworth filters. IIR filters achieve sharp cutoffs with fewer coefficients, making them faster than FIR filters. However, they have a nonlinear phase response, which means different frequencies are delayed by different amounts. Zero-phase filtering (applying forward and backward) corrects this.
+
+```{python}
+#| eval: false
+# Butterworth IIR filter
+raw.filter(
+    l_freq=1.0,
+    h_freq=40.0,
+    method="iir",
+    iir_params={"order": 4, "ftype": "butter"}
+)
+```
+
+For most EEG applications, the default FIR filter is the better choice. Use IIR filters when you need speed (e.g., processing large datasets) and are confident that zero-phase filtering is handling the phase distortion.
+
+## Key takeaways
+
+- A band-pass filter keeps frequencies between two cutoffs and removes everything else. In EEG, this removes slow drifts (below the high-pass cutoff) and high-frequency noise (above the low-pass cutoff).
+- Common cutoff choices: 0.1--0.5 Hz high-pass for general analysis, 1 Hz high-pass before ICA, 30--45 Hz low-pass for cognitive studies. Choose cutoffs based on the frequency bands you need to preserve.
+- MNE uses FIR filters by default with automatic transition bandwidth and filter order. These defaults work well for most applications.
+- The transition bandwidth controls how sharply the filter cuts off. Narrower bandwidths give sharper cutoffs but require longer filters, which can cause ringing at epoch edges.
+- Zero-phase filtering (the default in MNE) eliminates phase distortion by applying the filter forwards and backwards. Always use it for offline analysis.
+- Filter before running ICA or computing connectivity. Filtering is usually the first step after loading data and setting channel types.

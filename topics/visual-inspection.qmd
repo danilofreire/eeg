@@ -1,0 +1,223 @@
+---
+title: "Visual inspection of EEG data"
+description: "Why visual inspection matters, using MNE's interactive raw.plot() viewer, identifying common artifacts by eye (blinks, saccades, muscle, movement, electrode pops), and marking bad segments and channels."
+date: 2026-03-31
+date-modified: last-modified
+module: 1
+categories: [getting-started, quality-control]
+---
+
+## Why visual inspection matters
+
+Automated artifact detection is useful, but it is not a substitute for looking at your data. No algorithm catches everything, and some problems (a loose electrode that drifted partway through a recording, a participant who fell asleep during the resting-state block) are obvious to a human eye but invisible to a threshold-based detector.
+
+Visual inspection serves two purposes. First, it gives you a qualitative sense of data quality: is this a clean recording with occasional blinks, or is it dominated by muscle artifact and electrode noise? This affects how aggressively you filter, whether ICA will work, and whether some channels should be excluded entirely. Second, it lets you mark bad segments and bad channels so that they can be excluded or interpolated in later processing steps.
+
+In most EEG labs, visual inspection happens at least twice: once right after loading the raw data (before any preprocessing), and once after filtering and artifact rejection (to check that the cleaning worked).
+
+## Using raw.plot() interactively
+
+MNE's `raw.plot()` method opens an interactive viewer that lets you scroll through the data, zoom in and out, and mark bad segments and channels.
+
+```{python}
+#| eval: false
+import mne
+
+# Load data
+raw = mne.io.read_raw_edf("recording.edf", preload=True)
+
+# Set channel types and montage (good practice before plotting)
+raw.set_montage(mne.channels.make_standard_montage("standard_1020"),
+                on_missing="warn")
+
+# Open the interactive viewer
+raw.plot(
+    duration=10,           # show 10 seconds at a time
+    n_channels=20,         # show 20 channels at a time
+    scalings="auto",       # automatic scaling per channel type
+    block=True             # block execution until the window is closed
+)
+```
+
+### Keyboard and mouse controls
+
+The interactive viewer has several useful controls:
+
+| Action | Key/mouse |
+|:-------|:----------|
+| Scroll forward in time | Right arrow or scroll wheel |
+| Scroll backward in time | Left arrow or scroll wheel |
+| Page forward | Page Down |
+| Page backward | Page Up |
+| Zoom in (time) | + |
+| Zoom out (time) | - |
+| Zoom in (amplitude) | = |
+| Zoom out (amplitude) | - (with shift) |
+| Scroll channels down | Down arrow |
+| Scroll channels up | Up arrow |
+| Mark bad channel | Click on channel name |
+| Mark bad segment | Click and drag on the data |
+| Toggle annotation mode | a |
+| Show/hide event markers | e |
+
+### Adjusting the display
+
+```{python}
+#| eval: false
+# Show more time per screen with fewer channels
+raw.plot(duration=30, n_channels=10)
+
+# Custom scaling (useful if auto-scaling is not right)
+raw.plot(
+    duration=10,
+    n_channels=20,
+    scalings={"eeg": 50e-6, "eog": 150e-6}  # 50 uV for EEG, 150 uV for EOG
+)
+
+# Highpass filter the display only (does not modify the data)
+raw.plot(duration=10, n_channels=20, highpass=1.0)
+
+# Show butterfly plot (all channels overlaid)
+raw.plot(duration=10, n_channels=20, butterfly=True)
+```
+
+## Identifying common artifacts
+
+Learning to recognise artifacts is a skill that improves with practice. Here are the most common ones and what they look like.
+
+### Eye blinks
+
+Blinks produce large, slow, positive deflections lasting 200--400 ms. They are strongest at the frontal electrodes (Fp1, Fp2) and decrease in amplitude toward posterior electrodes. In a multi-channel view, you will see a synchronous upward deflection at the front of the head that is nearly absent at the back.
+
+Blinks are easy to spot because they are large (often 50--100 microvolts at Fp1/Fp2) and have a characteristic rounded shape. They occur every few seconds in most recordings.
+
+**What to do**: blinks are usually removed with ICA rather than by rejecting entire segments, because they are so frequent that rejecting every blink would discard too much data.
+
+### Saccadic eye movements
+
+Saccades (rapid eye movements) produce step-like deflections in the horizontal EOG channels (or in F7/F8 if no dedicated EOG channels are present). The deflection is positive on one side and negative on the other, reflecting the change in the corneo-retinal dipole as the eyes move left or right.
+
+Saccades are shorter than blinks (50--100 ms) and have a more rectangular shape. In vertical eye movements, they look similar to blinks but are smaller and often have a different time course.
+
+**What to do**: like blinks, saccades are best handled with ICA. If your task requires participants to fixate and they are making frequent saccades, that is also worth noting as a data quality concern.
+
+### Muscle artifacts (EMG)
+
+Muscle artifacts come from tension in the scalp, jaw, neck, or forehead muscles. They appear as bursts of high-frequency activity (typically above 20 Hz) that last from a fraction of a second to many seconds. In the time domain, they look like rapid, irregular oscillations superimposed on the EEG.
+
+Muscle artifact is most common at temporal electrodes (T7, T8, F7, F8) because the temporalis muscle (used for chewing) runs directly beneath these electrodes. Jaw clenching produces especially large bursts across most channels.
+
+**What to do**: brief muscle bursts can sometimes be removed with ICA. Sustained muscle tension is harder to handle and may require rejecting entire segments. If a participant has persistent muscle artifact, consider whether the recording conditions can be improved (e.g., asking them to relax their jaw).
+
+### Movement artifacts
+
+Head or body movements produce slow, large-amplitude drifts that affect multiple channels simultaneously. They often look like low-frequency waves (below 1 Hz) and may coincide with EMG bursts if the participant moved their head.
+
+Cable movements produce similar artifacts: a brief, sharp deflection followed by a slow return to baseline, often affecting a single channel.
+
+**What to do**: mark these segments as bad and exclude them from analysis. Movement artifacts are usually too large and too variable for ICA to handle well.
+
+### Electrode pops
+
+An electrode pop occurs when the electrode briefly loses contact with the scalp. It produces a sudden, very large deflection (sometimes hundreds of microvolts) on a single channel, often followed by a slow drift back to baseline. The key distinguishing feature is that it affects only one channel: if you see a massive deflection on one channel but all neighbouring channels look normal, it is likely an electrode pop.
+
+**What to do**: if pops are infrequent, mark the affected segments as bad. If a channel has frequent pops throughout the recording, mark it as a bad channel and interpolate it later.
+
+### Line noise
+
+Power line interference appears as a continuous, regular oscillation at 50 Hz (in Europe, South America, and most of Asia) or 60 Hz (in North America and parts of Asia). It is easier to see in the frequency domain than the time domain, but in the time domain it looks like a fine, regular "fuzz" on the signal.
+
+**What to do**: line noise is removed with a notch filter or with the band-pass filter (if your low-pass cutoff is below the line frequency). It does not usually need to be handled during visual inspection.
+
+## Marking bad segments
+
+When you spot a bad segment during visual inspection, you can mark it as an annotation in MNE. This tells downstream processing steps (epoching, averaging) to exclude that time period.
+
+### In the interactive viewer
+
+Click and drag on the data to highlight a bad segment. This creates a "BAD_" annotation. You can change the annotation label by pressing "a" to toggle annotation mode and typing a new label.
+
+### Programmatically
+
+```{python}
+#| eval: false
+import mne
+
+# Create annotations for known bad segments
+bad_annots = mne.Annotations(
+    onset=[12.5, 45.0, 102.3],        # start times in seconds
+    duration=[2.0, 3.5, 1.0],         # durations in seconds
+    description=["BAD_movement", "BAD_muscle", "BAD_electrode_pop"]
+)
+
+# Add to the raw object (preserving any existing annotations)
+raw.set_annotations(raw.annotations + bad_annots)
+
+# Verify
+print(raw.annotations)
+```
+
+Annotations whose description starts with "BAD" or "bad" are automatically excluded by MNE when you create epochs. Any other prefix is treated as a regular annotation (e.g., an event marker).
+
+## Marking bad channels
+
+If a channel is noisy throughout the entire recording, you should mark it as bad rather than trying to fix it segment by segment.
+
+```{python}
+#| eval: false
+# Mark channels as bad
+raw.info["bads"] = ["F3", "T8"]
+
+# Or add to the existing list
+raw.info["bads"].extend(["P7"])
+
+# Check which channels are marked as bad
+print(f"Bad channels: {raw.info['bads']}")
+```
+
+Bad channels are excluded from most analyses by default (e.g., they are not included in the average reference calculation). Later, you can interpolate them using the montage:
+
+```{python}
+#| eval: false
+# Interpolate bad channels using neighbouring channels
+raw.interpolate_bads(reset_bads=True)
+```
+
+## A practical inspection workflow
+
+Here is a suggested workflow for visual inspection of a new dataset:
+
+```{python}
+#| eval: false
+import mne
+
+# 1. Load and set up the data
+raw = mne.io.read_raw_edf("subject01.edf", preload=True)
+raw.set_montage(mne.channels.make_standard_montage("standard_1020"),
+                on_missing="warn")
+
+# 2. First pass: get an overview
+#    Plot the power spectrum to check for line noise and overall quality
+raw.compute_psd(fmax=80).plot()
+
+# 3. Second pass: scroll through the data
+#    Look at 10-second windows, marking bad segments and channels
+raw.plot(duration=10, n_channels=20, block=True)
+
+# 4. After closing the viewer, check what was marked
+print(f"Bad channels: {raw.info['bads']}")
+print(f"Annotations: {raw.annotations}")
+
+# 5. Save the inspection results
+#    The bad channel and annotation information is preserved when you save
+raw.save("subject01_inspected_raw.fif", overwrite=True)
+```
+
+## Key takeaways
+
+- Visual inspection is not optional. Look at your data before and after preprocessing. Automated methods miss things that are obvious to a human.
+- Use `raw.plot()` to scroll through the data interactively. Learn the keyboard shortcuts; they make the process much faster.
+- Learn the visual signatures of common artifacts: blinks (large, slow, frontal), saccades (step-like, lateral), muscle (high-frequency bursts, temporal), movement (slow drifts, multi-channel), and electrode pops (sudden deflection, single channel).
+- Mark bad segments with annotations starting with "BAD". MNE excludes these automatically during epoching.
+- Mark consistently noisy channels as bad with `raw.info["bads"]` and interpolate them later using `raw.interpolate_bads()`.
+- Save your inspection results by writing the data to a FIF file. This preserves your bad channel and annotation markings for later processing steps.

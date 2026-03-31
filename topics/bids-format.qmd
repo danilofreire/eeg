@@ -1,0 +1,319 @@
+---
+title: "The BIDS format for EEG"
+description: "The Brain Imaging Data Structure (BIDS) for EEG: folder hierarchy, file naming conventions, metadata sidecars, reading BIDS datasets with mne-bids, and converting existing datasets to BIDS."
+date: 2026-03-31
+date-modified: last-modified
+module: 1
+categories: [getting-started, data-management]
+---
+
+## Why BIDS matters
+
+When you collect EEG data, the raw recordings are only part of the story. You also need to know the sampling rate, the channel layout, what events occurred and when, and any participant-level information like age or group assignment. Without a clear system for organising all of this, datasets quickly become a tangle of inconsistently named folders and files that only the person who collected the data can navigate.
+
+The **Brain Imaging Data Structure (BIDS)** solves this problem. BIDS is a community standard that specifies exactly how neuroimaging datasets should be organised: which folders to create, how to name files, and what metadata to include. It was originally developed for MRI data, but since 2019 it officially covers EEG, MEG, and iEEG as well.
+
+Three reasons to adopt BIDS for your EEG work:
+
+- **Reproducibility.** Anyone who downloads a BIDS dataset can immediately understand its structure without reading a separate README or emailing the original researcher.
+- **Data sharing.** Repositories like OpenNeuro require BIDS formatting. If you plan to share your data (and you should), starting in BIDS saves you from painful reformatting later.
+- **Tool compatibility.** Many analysis tools, including MNE-Python, can read BIDS datasets directly. A BIDS-formatted dataset is self-documenting: the tools know where to find the data and its metadata.
+
+## The BIDS folder hierarchy for EEG
+
+A BIDS dataset has a fixed directory structure. At the top level you have a root folder (the dataset name). Inside it, each participant gets a folder named `sub-XX`, where `XX` is a label you choose (often a zero-padded number like `01`, `02`, etc.). Inside each participant folder, data is organised by modality. For EEG, the subfolder is called `eeg/`.
+
+Here is a minimal example with two participants:
+
+```
+my-experiment/
+├── dataset_description.json
+├── participants.tsv
+├── participants.json
+├── sub-01/
+│   └── eeg/
+│       ├── sub-01_task-rest_eeg.edf
+│       ├── sub-01_task-rest_eeg.json
+│       ├── sub-01_task-rest_channels.tsv
+│       └── sub-01_task-rest_events.tsv
+└── sub-02/
+    └── eeg/
+        ├── sub-02_task-rest_eeg.edf
+        ├── sub-02_task-rest_eeg.json
+        ├── sub-02_task-rest_channels.tsv
+        └── sub-02_task-rest_events.tsv
+```
+
+If your experiment has multiple sessions (e.g., baseline and follow-up), you add a `ses-XX` level between the subject folder and the modality folder: `sub-01/ses-01/eeg/`.
+
+The `dataset_description.json` file at the root describes the dataset as a whole (name, BIDS version, license). The `participants.tsv` file lists all participants and can include columns for age, sex, group, or any other relevant variable.
+
+## File naming conventions
+
+BIDS file names follow a strict pattern of key-value pairs separated by underscores. For EEG, a typical file name looks like this:
+
+```
+sub-01_ses-01_task-auditory_run-02_eeg.edf
+```
+
+Each part has a specific meaning:
+
+| Key | Meaning | Required? |
+|:----|:--------|:----------|
+| `sub-XX` | Participant label | Yes |
+| `ses-XX` | Session label | Only if multiple sessions |
+| `task-YY` | Task name (e.g., rest, oddball, motor) | Yes |
+| `run-XX` | Run number within a session | Only if multiple runs |
+| `eeg` | Modality suffix | Yes |
+
+The file extension indicates the format: `.edf`, `.bdf`, `.vhdr` (BrainVision), `.set` (EEGLAB), or `.fif` (MNE native format). BIDS supports all of these.
+
+The naming convention is what makes BIDS machine-readable. A script can parse the file name to extract the subject, task, and run without needing a lookup table or custom code.
+
+## Metadata sidecar files
+
+Each EEG recording has a set of companion files that provide metadata. These sidecars are what make BIDS self-documenting.
+
+### JSON sidecar (`*_eeg.json`)
+
+This file contains recording-level metadata: sampling frequency, power line frequency, reference electrode, and task description. A minimal example:
+
+```json
+{
+    "TaskName": "rest",
+    "TaskDescription": "Five minutes of eyes-closed resting state",
+    "SamplingFrequency": 256,
+    "PowerLineFrequency": 50,
+    "EEGReference": "Cz",
+    "SoftwareFilters": {
+        "HighpassFilter": {"CutoffFrequency": 0.1},
+        "LowpassFilter": {"CutoffFrequency": 100}
+    }
+}
+```
+
+### Channels file (`*_channels.tsv`)
+
+A tab-separated file listing every channel, its type, units, and sampling frequency. This is where you document which channels are EEG, EOG, ECG, or EMG.
+
+```
+name	type	units	sampling_frequency	status
+Fp1	EEG	uV	256	good
+Fp2	EEG	uV	256	good
+EOG1	EOG	uV	256	good
+Cz	EEG	uV	256	bad
+```
+
+The `status` column is useful for marking channels that were noisy during recording.
+
+### Events file (`*_events.tsv`)
+
+This file lists every event (stimulus onset, response, etc.) with its timing and a human-readable description.
+
+```
+onset	duration	trial_type	value
+1.5	0.0	stimulus/face	1
+2.1	0.0	response/correct	2
+4.0	0.0	stimulus/house	3
+```
+
+The `onset` column is in seconds, and `trial_type` gives a meaningful label rather than just a numeric code.
+
+### Participants file (`participants.tsv`)
+
+This file lives at the dataset root and lists all participants with demographic or grouping variables.
+
+```
+participant_id	age	sex	group
+sub-01	25	F	control
+sub-02	30	M	patient
+```
+
+## Using `mne-bids` to work with BIDS datasets
+
+The `mne-bids` package bridges MNE-Python and the BIDS standard. It can read BIDS datasets into MNE objects, write MNE objects into BIDS format, and validate that a dataset follows the specification.
+
+### Installation
+
+```bash
+pip install mne-bids
+```
+
+If you need to read or write BrainVision files, also install `pybv`:
+
+```bash
+pip install pybv
+```
+
+### The `BIDSPath` object
+
+`BIDSPath` is the central object in `mne-bids`. It encodes all the BIDS entities (subject, session, task, run) and the root directory. You use it to point to a specific file in a BIDS dataset.
+
+```{python}
+#| eval: false
+
+import mne_bids
+
+bids_path = mne_bids.BIDSPath(
+    subject="01",
+    task="rest",
+    datatype="eeg",
+    root="/path/to/my-experiment"
+)
+print(bids_path)
+# Output: /path/to/my-experiment/sub-01/eeg/sub-01_task-rest_eeg
+```
+
+### Reading a BIDS dataset
+
+Once you have a `BIDSPath`, reading the data is a single function call. `read_raw_bids()` returns an MNE `Raw` object with the montage, channel types, and event annotations already set from the BIDS metadata.
+
+```{python}
+#| eval: false
+
+raw = mne_bids.read_raw_bids(bids_path)
+print(raw.info)
+print(raw.annotations)  # events from *_events.tsv are loaded as annotations
+```
+
+This is one of the biggest practical benefits of BIDS: you do not need to manually set the montage, fix channel types, or parse event files. The BIDS metadata takes care of all of that.
+
+### Writing data to BIDS format
+
+`write_raw_bids()` takes an MNE `Raw` object and saves it in BIDS format, creating the folder structure and sidecar files automatically.
+
+```{python}
+#| eval: false
+
+import mne
+import mne_bids
+
+# Load your data as usual
+raw = mne.io.read_raw_edf("original_recording.edf", preload=True)
+
+# Set channel types if needed
+raw.set_channel_types({"EOG1": "eog", "EOG2": "eog"})
+
+# Create a BIDSPath for the output
+bids_path = mne_bids.BIDSPath(
+    subject="01",
+    task="rest",
+    datatype="eeg",
+    root="/path/to/bids-dataset"
+)
+
+# Write to BIDS
+mne_bids.write_raw_bids(raw, bids_path, overwrite=True)
+```
+
+After running this, `mne-bids` will create the full directory tree, rename the data file according to BIDS conventions, and generate the JSON sidecar and channels TSV automatically from the information in `raw.info`.
+
+## Converting an existing dataset to BIDS
+
+If you have a collection of EEG files in an ad-hoc folder structure, the conversion process is a loop over participants. The pattern is:
+
+1. Load each participant's raw file with MNE.
+2. Set the correct channel types and montage.
+3. Create a `BIDSPath` with the right subject label and task name.
+4. Call `write_raw_bids()`.
+
+```{python}
+#| eval: false
+
+import mne
+import mne_bids
+from pathlib import Path
+
+# Suppose your original data is in: data/raw/subjectXX.edf
+raw_dir = Path("data/raw")
+bids_root = Path("data/bids")
+
+subjects = {"subject01": "01", "subject02": "02", "subject03": "03"}
+
+for original_name, bids_label in subjects.items():
+    # Load
+    raw = mne.io.read_raw_edf(raw_dir / f"{original_name}.edf", preload=True)
+
+    # Set montage and channel types
+    raw.set_montage(mne.channels.make_standard_montage("standard_1020"))
+    raw.set_channel_types({"EOG1": "eog", "EOG2": "eog"})
+
+    # Define BIDS path
+    bids_path = mne_bids.BIDSPath(
+        subject=bids_label,
+        task="rest",
+        datatype="eeg",
+        root=bids_root
+    )
+
+    # Write
+    mne_bids.write_raw_bids(raw, bids_path, overwrite=True)
+
+print(f"BIDS dataset written to {bids_root}")
+```
+
+After the loop, the `data/bids/` folder will have the standard BIDS structure. You can validate it with the [BIDS Validator](https://bids-standard.github.io/bids-validator/) to check for missing files or naming errors.
+
+## Creating BIDS structure manually with Python
+
+You do not always need `mne-bids`. If you want to understand what BIDS looks like under the hood, or if you need to set up the folder structure before you have any data, you can create it with pure Python.
+
+```{python}
+#| eval: false
+
+import json
+from pathlib import Path
+
+bids_root = Path("my-experiment")
+
+# Create the directory tree
+subjects = ["01", "02", "03"]
+for sub in subjects:
+    eeg_dir = bids_root / f"sub-{sub}" / "eeg"
+    eeg_dir.mkdir(parents=True, exist_ok=True)
+
+# Write dataset_description.json
+description = {
+    "Name": "My EEG Experiment",
+    "BIDSVersion": "1.9.0",
+    "License": "CC-BY-4.0",
+    "Authors": ["Alice Researcher", "Bob Scientist"]
+}
+with open(bids_root / "dataset_description.json", "w") as f:
+    json.dump(description, f, indent=4)
+
+# Write participants.tsv
+participants_header = "participant_id\tage\tsex\tgroup\n"
+participants_rows = [
+    "sub-01\t25\tF\tcontrol\n",
+    "sub-02\t30\tM\tpatient\n",
+    "sub-03\t28\tF\tcontrol\n",
+]
+with open(bids_root / "participants.tsv", "w") as f:
+    f.write(participants_header)
+    f.writelines(participants_rows)
+
+# Write a JSON sidecar template for one subject
+sidecar = {
+    "TaskName": "rest",
+    "SamplingFrequency": 256,
+    "PowerLineFrequency": 50,
+    "EEGReference": "Cz"
+}
+sidecar_path = bids_root / "sub-01" / "eeg" / "sub-01_task-rest_eeg.json"
+with open(sidecar_path, "w") as f:
+    json.dump(sidecar, f, indent=4)
+
+print(f"BIDS skeleton created at {bids_root}")
+```
+
+This gives you the folder structure and metadata files. You would then copy or convert your actual EEG recordings into the appropriate locations, following the naming convention described above.
+
+## Key takeaways
+
+- BIDS is a folder and naming convention that makes EEG datasets self-documenting and machine-readable.
+- The structure is simple: `sub-XX/eeg/` folders with consistently named data files and metadata sidecars.
+- JSON sidecars store recording parameters, TSV files store channel information, events, and participant demographics.
+- The `mne-bids` package automates reading from and writing to BIDS format, including folder creation and sidecar generation.
+- Converting an existing dataset to BIDS is a loop: load each file, set metadata, and call `write_raw_bids()`.
+- Starting your project in BIDS from the beginning is easier than converting later. Even if you never share your data, the consistent structure will save you time when you return to the project months later.

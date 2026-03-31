@@ -1,0 +1,791 @@
+---
+title: "Connectivity and metastability"
+description: "Phase synchronisation, the Hilbert transform, PLV, coherence, the Kuramoto order parameter, the relative phase alignment matrix, dominant eigenvector extraction, and regional metastability. Directly relevant to Natalia's master's project on metastability in Parkinson's disease."
+date: 2026-03-31
+date-modified: last-modified
+---
+
+## Overview
+
+The previous modules treated each EEG channel independently: we filtered it, removed its artifacts, and measured its spectral content. But the brain is a network. Cognitive functions do not arise from isolated regions; they emerge from coordinated activity across distributed populations of neurones. To study this coordination, we need to measure how different brain regions communicate with each other.
+
+This module covers phase-based connectivity and metastability. We start with the basics: what does it mean for two signals to be synchronised, and how do we measure that? Then we build up to the main topic: metastability, which quantifies how flexibly the brain switches between different coordination patterns over time. This concept is central to Natalia's master's project on metastability in Parkinson's disease and Freezing of Gait.
+
+The progression is:
+
+1. Phase synchronisation and the Hilbert transform
+2. Phase-locking value (PLV) and coherence
+3. The Kuramoto order parameter
+4. The relative phase alignment matrix
+5. The dominant eigenvector and regional metastability
+6. Group comparisons and relevance to Parkinson's disease
+
+## Topics
+
+### Phase-based connectivity: what is phase synchronisation?
+
+Two neural oscillations are **phase synchronised** when they maintain a consistent phase relationship over time. Imagine two pendulums swinging at the same frequency. If they always reach their peak at the same instant, they are perfectly in phase. If one consistently leads the other by a quarter-cycle, they have a stable phase lag. In both cases, the phase relationship is consistent, so they are synchronised.
+
+Phase synchronisation does not require the signals to have the same amplitude. It is purely about the timing (phase) of the oscillations. This makes it well suited for EEG, where amplitude differences between channels are often due to physical factors (electrode impedance, distance from the cortex) rather than differences in neural activity.
+
+Why is phase synchronisation interesting? Because it is thought to be a mechanism for neural communication. The "communication through coherence" hypothesis (Fries, 2005) proposes that two brain regions can exchange information effectively only when their oscillations are aligned, so that the output of one region arrives at the other during its receptive (excitable) phase.
+
+See [Phase synchronisation](../topics/phase-synchronisation.qmd) for a deeper treatment of synchronisation types, the communication through coherence hypothesis, and the distinction between functional and effective connectivity.
+
+### The Hilbert transform: extracting instantaneous phase
+
+To measure phase synchronisation, we first need the instantaneous phase of each signal at every time point. The Hilbert transform provides this.
+
+Given a real-valued signal $x(t)$, the Hilbert transform produces its **analytic signal**:
+
+$$z(t) = x(t) + i \, \hat{x}(t)$$
+
+where $\hat{x}(t)$ is the Hilbert transform of $x(t)$. The analytic signal is complex-valued, and you can express it in polar form:
+
+$$z(t) = A(t) \, e^{i\phi(t)}$$
+
+where $A(t) = |z(t)|$ is the **instantaneous amplitude** (envelope) and $\phi(t) = \arg(z(t))$ is the **instantaneous phase**.
+
+In practice, you should always band-pass filter the signal to a narrow frequency band before applying the Hilbert transform. The concept of "instantaneous frequency" is only meaningful for a narrowband signal. If you apply the Hilbert transform to a broadband signal, the instantaneous phase will fluctuate wildly and will not correspond to any single oscillation.
+
+See [The Hilbert transform and instantaneous phase](../topics/hilbert-transform.qmd) for the mathematical details, phase wrapping, and why band-pass filtering must come first.
+
+```python
+from scipy.signal import hilbert, butter, filtfilt
+import numpy as np
+
+# Band-pass filter to the alpha band (8-13 Hz)
+b, a = butter(4, [8, 13], btype="band", fs=256)
+x_alpha = filtfilt(b, a, x)
+
+# Hilbert transform
+analytic = hilbert(x_alpha)
+phase = np.angle(analytic)       # instantaneous phase in radians
+amplitude = np.abs(analytic)     # instantaneous amplitude (envelope)
+```
+
+The phase is a number between $-\pi$ and $\pi$ (or equivalently 0 to $2\pi$) that tells you where the oscillation is in its cycle at each time point: 0 at the peak, $\pi$ at the trough, $\pm\pi/2$ at the zero crossings.
+
+### Phase-locking value (PLV) and coherence
+
+The **phase-locking value** (Lachaux et al., 1999) measures how consistent the phase difference between two signals is over time:
+
+$$\text{PLV}_{ij} = \left| \frac{1}{T} \sum_{t=1}^{T} e^{i(\phi_i(t) - \phi_j(t))} \right|$$
+
+where $\phi_i(t)$ and $\phi_j(t)$ are the instantaneous phases of channels $i$ and $j$.
+
+PLV ranges from 0 (no phase locking; the phase difference is uniformly random) to 1 (perfect phase locking; the phase difference is constant across all time points). A PLV of 0.3--0.5 is common in EEG and usually indicates meaningful synchronisation.
+
+PLV is computed over a time window (e.g., one epoch or one trial). If you compute it over the entire recording, you get a single number summarising the average synchronisation. If you compute it in sliding windows, you can track how synchronisation changes over time.
+
+**Coherence** is a related measure that also takes amplitude into account. It is the normalised cross-spectral density between two signals. Coherence and PLV often give similar results, but PLV is more commonly used in EEG connectivity studies because it isolates the phase relationship from amplitude fluctuations.
+
+See [Phase-locking value (PLV)](../topics/plv.qmd) for the full derivation, PLV vs coherence comparison, volume conduction caveats, and a worked connectivity matrix example.
+
+```python
+# Compute PLV between two channels
+phase_diff = phase_i - phase_j
+plv = np.abs(np.mean(np.exp(1j * phase_diff)))
+```
+
+### The Kuramoto order parameter
+
+The **Kuramoto order parameter** generalises the idea of phase locking from a pair of channels to the entire set of channels. It measures how aligned all the phases are at a given time point:
+
+$$R(t) = \frac{1}{N} \left| \sum_{k=1}^{N} e^{i\phi_k(t)} \right|$$
+
+where $N$ is the number of channels and $\phi_k(t)$ is the instantaneous phase of channel $k$.
+
+$R(t)$ ranges from 0 to 1:
+
+- $R(t) = 1$: all channels have the same phase at time $t$ (perfect global synchrony).
+- $R(t) = 0$: phases are uniformly spread around the circle (no global synchrony).
+- $R(t) \approx 0.3$--$0.6$: partial synchrony, with some clusters of channels oscillating together.
+
+The Kuramoto order parameter comes from the physics of coupled oscillators (Kuramoto, 1984). In that framework, $N$ oscillators interact through their phase differences, and $R(t)$ measures how much the population has "ordered" itself into a coherent state.
+
+See [The Kuramoto order parameter](../topics/kuramoto.qmd) for the coupled oscillator theory and simulation examples.
+
+The time-averaged Kuramoto parameter $\langle R \rangle$ tells you the mean level of global synchrony, but it misses the dynamics. A system with $\langle R \rangle = 0.5$ could be hovering steadily at moderate synchrony, or it could be alternating between high and low synchrony. The variance of $R(t)$ captures this distinction, and this is where metastability comes in.
+
+### Relative phase alignment matrix
+
+The pairwise phase relationship between all channels at a single time point can be captured in a matrix. The **relative phase alignment matrix** (or phase coherence matrix) is defined as:
+
+$$A_{ij}(t) = \cos\!\big(\phi_i(t) - \phi_j(t)\big)$$
+
+This matrix is symmetric, with ones on the diagonal (each channel is perfectly aligned with itself). Off-diagonal values range from $-1$ to $+1$:
+
+- $A_{ij}(t) = 1$: channels $i$ and $j$ are in phase at time $t$.
+- $A_{ij}(t) = -1$: they are in anti-phase (exactly half a cycle apart).
+- $A_{ij}(t) = 0$: they are a quarter-cycle apart.
+
+At each time point, $A(t)$ is an $N \times N$ matrix that captures the full pattern of pairwise phase relationships. The evolution of $A(t)$ over time is what we want to characterise, because it tells us how the brain's coordination patterns change.
+
+See [The phase alignment matrix](../topics/phase-alignment.qmd) for a detailed treatment with visualisations.
+
+### The dominant eigenvector
+
+The phase alignment matrix $A(t)$ at each time point has $N$ eigenvalues and eigenvectors. The **dominant eigenvector** is the eigenvector associated with the largest eigenvalue. It captures the primary pattern of phase alignment across channels at that moment.
+
+Each element $v_k(t)$ of the dominant eigenvector corresponds to one channel (brain region). Its sign and magnitude tell you how that region participates in the dominant coordination pattern:
+
+- Channels with the same sign are phase-aligned with each other.
+- Channels with opposite signs are in anti-phase communities.
+- Channels with large absolute values are strong participants; those near zero are less involved.
+
+Tracking $v(t)$ over time reveals how the brain's coordination pattern reconfigures. If $v(t)$ stays nearly constant, the same pattern persists (the system is "stuck"). If $v(t)$ changes rapidly, the brain is exploring different configurations.
+
+```python
+# Extract the dominant eigenvector at each time point
+eigenvalues, eigenvectors = np.linalg.eigh(A_t)
+dominant = eigenvectors[:, -1]  # last column = largest eigenvalue
+```
+
+A sign convention is needed because eigenvectors can flip sign arbitrarily. The standard fix is to ensure continuity: if the inner product $v(t) \cdot v(t-1) < 0$, flip $v(t)$ by multiplying by $-1$.
+
+See [The dominant eigenvector](../topics/dominant-eigenvector.qmd) for a detailed walkthrough of eigendecomposition, the sign ambiguity fix, and visualisation of eigenvector dynamics.
+
+### Regional metastability
+
+**Metastability** measures how much a system's coordination pattern varies over time. It is defined as the temporal variance of a synchronisation-related quantity.
+
+**Global metastability** is the variance of the Kuramoto order parameter:
+
+$$\text{MS}_{\text{global}} = \text{Var}_t\!\big(R(t)\big)$$
+
+High global metastability means that the overall level of synchrony fluctuates a lot: the system alternates between highly synchronised and desynchronised states.
+
+**Regional metastability** uses the dominant eigenvector instead. For each channel $k$:
+
+$$\text{MS}_k = \text{Var}_t\!\big(v_k(t)\big)$$
+
+This gives one metastability value per channel (brain region). A region with high $\text{MS}_k$ changes its role in the coordination pattern frequently. A region with low $\text{MS}_k$ is "locked in" to a fixed role.
+
+Regional metastability is more informative than global metastability because it tells you *where* in the brain coordination is flexible or rigid. Two groups (e.g., healthy controls and Parkinson's patients) might have similar global metastability but very different regional patterns.
+
+See [Metastability](../topics/metastability.qmd) for the theoretical background linking metastability to criticality and brain dynamics.
+
+### Interpreting metastability: high = flexible, low = rigid
+
+The metastability framework provides an intuitive language for describing brain dynamics:
+
+- **High metastability** indicates a system that transitions fluidly between different coordination states. This is generally associated with healthy brain function, cognitive flexibility, and the ability to adapt to changing demands.
+
+- **Low metastability** indicates a system that is stuck in one coordination pattern. This "rigidity" has been linked to neurological conditions including Parkinson's disease, disorders of consciousness, and certain psychiatric conditions.
+
+- **Very high metastability** (with very large fluctuations) can indicate instability or noise-driven dynamics rather than meaningful flexibility. Context matters.
+
+The analogy is useful: a healthy brain is like a conversation where different speakers take turns fluidly, while a rigid brain is like a conversation dominated by one person who never yields the floor.
+
+In the Kuramoto framework, metastability is highest near the critical point between full synchrony and full desynchrony. This has led to the hypothesis that the healthy brain operates near criticality, a state that maximises computational flexibility and information processing capacity.
+
+See [Interpreting metastability values](../topics/interpreting-metastability.qmd) for practical guidelines on what affects metastability estimates, how to report them, and what different values mean in health and disease.
+
+### Group comparisons: ANOVA, post-hoc with Bonferroni
+
+Once you have computed regional metastability for each participant in each group (e.g., Parkinson's patients on medication, off medication, and healthy controls), you need statistical tests to determine whether the groups differ.
+
+The standard approach involves two levels of correction for multiple comparisons:
+
+1. **One-way ANOVA** (or Kruskal-Wallis if assumptions are violated) for each channel, testing whether there is any difference among groups.
+2. **Correction across channels**: because you are running one ANOVA per channel (e.g., 16 ANOVAs for 16 channels), you must correct for these parallel tests. Bonferroni divides alpha by the number of channels; FDR (Benjamini-Hochberg) is a less conservative alternative.
+3. **Post-hoc pairwise comparisons** for channels that survive the first correction. With 3 groups there are 3 pairwise comparisons per channel, so you apply a second Bonferroni correction (multiply each pairwise p-value by 3, or equivalently divide alpha by 3).
+
+The two levels are separate. The first level controls the false-positive rate across the 16 channels you tested. The second level controls the false-positive rate across the 3 pairwise comparisons within each significant channel. Skipping either level inflates your overall error rate.
+
+```python
+from scipy.stats import f_oneway, ttest_ind
+from statsmodels.stats.multitest import multipletests
+
+# Step 1: ANOVA across three groups for each channel
+n_channels = 16
+p_values_anova = np.zeros(n_channels)
+for ch in range(n_channels):
+    f_stat, p_val = f_oneway(ms_controls[:, ch], ms_on_med[:, ch], ms_off_med[:, ch])
+    p_values_anova[ch] = p_val
+
+# Step 2: Correct for multiple channels (Bonferroni or FDR)
+reject_bonf, p_bonf, _, _ = multipletests(p_values_anova, method="bonferroni")
+reject_fdr, p_fdr, _, _ = multipletests(p_values_anova, method="fdr_bh")
+
+# Step 3: Post-hoc pairwise t-tests for significant channels
+n_pairwise = 3  # three pairwise comparisons per channel
+for ch in np.where(reject_fdr)[0]:
+    for g1, g2, name in [(ms_controls[:, ch], ms_on_med[:, ch], "HC vs PD-on"),
+                          (ms_controls[:, ch], ms_off_med[:, ch], "HC vs PD-off"),
+                          (ms_on_med[:, ch], ms_off_med[:, ch], "PD-on vs PD-off")]:
+        t, p = ttest_ind(g1, g2, equal_var=False)
+        p_corrected = min(p * n_pairwise, 1.0)
+        print(f"  Ch{ch:02d} {name}: t={t:.3f}, p_bonf={p_corrected:.4f}")
+```
+
+If you prefer a cleaner interface, the `pingouin` library handles post-hoc corrections internally:
+
+```python
+import pingouin as pg
+
+# pingouin handles post-hoc with built-in correction
+posthoc = pg.pairwise_tests(data=df, dv="metastability", between="group",
+                            padjust="bonf")
+```
+
+Permutation tests are a non-parametric alternative that avoids assumptions about the distribution of metastability values. They work well with small sample sizes, which are common in clinical EEG studies.
+
+### Relevance to Parkinson's disease and Freezing of Gait
+
+Parkinson's disease (PD) is a neurodegenerative disorder characterised by motor symptoms (tremor, bradykinesia, rigidity) and non-motor symptoms (cognitive decline, mood changes). The underlying pathology is the progressive loss of dopaminergic neurones in the substantia nigra, which disrupts the basal ganglia circuits that normally regulate movement and cognitive flexibility.
+
+From a brain dynamics perspective, PD is associated with **excessive synchronisation** in the beta band (13--30 Hz), particularly in the basal ganglia-thalamocortical circuits. This pathological beta synchrony is thought to "freeze" the motor system, preventing the flexible switching between motor states needed for normal movement. Dopaminergic medication and deep brain stimulation reduce this excessive beta synchrony and improve motor function.
+
+**Freezing of Gait** (FoG) is an episodic inability to generate effective stepping, despite the intention to walk. It is one of the most disabling symptoms of PD and a major cause of falls. FoG episodes are transient (lasting seconds to minutes) and unpredictable, which makes them both clinically challenging and scientifically interesting as a phenomenon of dynamic brain state transitions.
+
+The metastability framework provides a natural lens for studying FoG:
+
+- Healthy gait requires flexible coordination between frontal (planning), motor (execution), and sensory (feedback) regions.
+- Reduced metastability in these circuits could explain why PD patients get "stuck" in a particular state, unable to transition to the motor programme needed for stepping.
+- FoG may correspond to an abnormally stable (low-metastability) state that the brain cannot exit without external cues (visual targets, auditory rhythms).
+
+Natalia's project will test these hypotheses by comparing regional metastability across three groups (healthy controls, PD without FoG, PD with FoG) and examining whether specific regions show reduced flexibility in the FoG group.
+
+See [Parkinson's disease, Freezing of Gait, and EEG](../topics/parkinsons-fog.qmd) for the full clinical background, EEG findings in PD, and study design considerations.
+
+See also [Resting-state EEG](../topics/resting-state-eeg.qmd) for data acquisition and analysis considerations specific to resting-state recordings.
+
+## Working example: metastability from simulated EEG
+
+The code below is a self-contained example that walks through the full pipeline: simulate multi-channel oscillatory data, extract instantaneous phase, build the phase alignment matrix, compute the dominant eigenvector over time, and derive regional metastability. It uses only `numpy`, `scipy`, and `matplotlib` (no MNE required).
+
+We simulate 16 channels of 10 Hz oscillatory activity with varying coupling strengths: some channels are tightly coupled (they stay in phase), while others drift independently. This mimics a brain network where some regions are strongly connected and others are more autonomous.
+
+```{python}
+#| fig-cap: "Regional metastability computed from simulated 16-channel oscillatory data. Weakly coupled channels show higher metastability (more flexible), while strongly coupled channels show lower metastability (more rigid)."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert, butter, filtfilt
+
+# ── 1. Simulation parameters ────────────────────────────────────
+rng = np.random.default_rng(42)
+
+n_channels = 16
+sfreq = 256                     # sampling frequency (Hz)
+duration = 60                   # seconds (longer = more stable estimates)
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+freq_osc = 10.0                 # shared oscillation frequency (Hz)
+
+# Define coupling strengths for each channel.
+# Channels 0-3: strongly coupled to a common reference oscillation
+# Channels 4-7: moderately coupled
+# Channels 8-11: weakly coupled
+# Channels 12-15: very weakly coupled (nearly independent)
+coupling = np.array(
+    [0.95, 0.93, 0.90, 0.92,    # strongly coupled (low metastability)
+     0.70, 0.65, 0.72, 0.68,    # moderately coupled
+     0.40, 0.35, 0.42, 0.38,    # weakly coupled (high metastability)
+     0.15, 0.10, 0.18, 0.12]    # very weakly coupled
+)
+
+channel_names = [f"Ch{i:02d}" for i in range(n_channels)]
+
+# ── 2. Generate coupled oscillatory data ─────────────────────────
+# Common reference oscillation with slow phase drift
+ref_phase = 2 * np.pi * freq_osc * times + 0.3 * np.cumsum(rng.standard_normal(n_samples) / sfreq)
+ref_signal = np.sin(ref_phase)
+
+# Each channel = coupling * reference + (1-coupling) * independent oscillation + noise
+data = np.zeros((n_channels, n_samples))
+for ch in range(n_channels):
+    # Independent oscillation with its own phase drift
+    ind_phase = (2 * np.pi * freq_osc * times
+                 + 2.0 * np.cumsum(rng.standard_normal(n_samples) / sfreq))
+    ind_signal = np.sin(ind_phase)
+
+    # Mix reference and independent signals
+    data[ch] = (coupling[ch] * ref_signal
+                + (1 - coupling[ch]) * ind_signal
+                + 0.3 * rng.standard_normal(n_samples))
+
+print(f"Simulated data shape: {data.shape} "
+      f"({n_channels} channels x {n_samples} samples)")
+
+# ── 3. Band-pass filter and Hilbert transform ───────────────────
+# Filter to a narrow band around the oscillation frequency
+lo, hi = 8.0, 13.0
+b, a = butter(4, [lo, hi], btype="band", fs=sfreq)
+
+phases = np.zeros_like(data)
+for ch in range(n_channels):
+    filtered = filtfilt(b, a, data[ch])
+    analytic = hilbert(filtered)
+    phases[ch] = np.angle(analytic)
+
+print(f"Extracted instantaneous phase for {n_channels} channels")
+
+# ── 4. Build the phase alignment matrix and extract eigenvectors ─
+# Downsample time points for computational efficiency.
+# We compute the alignment matrix every 10 ms (100 Hz)
+step = max(1, sfreq // 100)
+time_indices = np.arange(0, n_samples, step)
+n_timepoints = len(time_indices)
+
+eigenvector_series = np.zeros((n_channels, n_timepoints))
+
+for ti, t in enumerate(time_indices):
+    # Phase alignment matrix: A_ij(t) = cos(phi_i(t) - phi_j(t))
+    phi = phases[:, t]                          # phases at time t
+    phase_diff = phi[:, None] - phi[None, :]    # pairwise differences
+    A = np.cos(phase_diff)                      # alignment matrix
+
+    # Eigendecomposition (eigh returns eigenvalues in ascending order)
+    eigenvalues, eigenvectors = np.linalg.eigh(A)
+    dominant = eigenvectors[:, -1]  # eigenvector for largest eigenvalue
+
+    # Sign continuity: flip if inner product with previous is negative
+    if ti > 0 and np.dot(dominant, eigenvector_series[:, ti - 1]) < 0:
+        dominant = -dominant
+
+    eigenvector_series[:, ti] = dominant
+
+print(f"Computed dominant eigenvector at {n_timepoints} time points")
+
+# ── 5. Compute regional metastability ───────────────────────────
+# Regional metastability = temporal variance of each eigenvector element
+regional_ms = np.var(eigenvector_series, axis=1)
+
+print(f"\nRegional metastability per channel:")
+for ch in range(n_channels):
+    group = ("strong" if ch < 4 else
+             "moderate" if ch < 8 else
+             "weak" if ch < 12 else "very weak")
+    print(f"  {channel_names[ch]} (coupling={coupling[ch]:.2f}, "
+          f"{group}): MS = {regional_ms[ch]:.6f}")
+
+# Also compute global metastability via the Kuramoto order parameter
+R = np.abs(np.mean(np.exp(1j * phases[:, time_indices]), axis=0))
+global_ms = np.var(R)
+print(f"\nGlobal metastability (Var of Kuramoto R): {global_ms:.6f}")
+print(f"Mean Kuramoto R: {np.mean(R):.4f}")
+
+# ── 6. Visualisation ────────────────────────────────────────────
+fig, axes = plt.subplots(2, 2, figsize=(13, 9))
+
+# Panel A: Eigenvector dynamics for selected channels
+ax = axes[0, 0]
+t_plot = time_indices / sfreq
+for ch, colour, label in [(0, "#2c3e50", "Ch00 (strong coupling)"),
+                           (5, "#e67e22", "Ch05 (moderate)"),
+                           (10, "#27ae60", "Ch10 (weak)"),
+                           (14, "#e74c3c", "Ch14 (very weak)")]:
+    ax.plot(t_plot, eigenvector_series[ch], linewidth=0.6,
+            color=colour, alpha=0.8, label=label)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Eigenvector element v_k(t)")
+ax.set_title("A. Dominant eigenvector over time")
+ax.legend(fontsize=8, loc="upper right")
+ax.set_xlim(0, 15)  # show first 15 seconds for clarity
+
+# Panel B: Regional metastability bar chart
+ax = axes[0, 1]
+colours = (["#2c3e50"] * 4 + ["#e67e22"] * 4
+           + ["#27ae60"] * 4 + ["#e74c3c"] * 4)
+bars = ax.bar(range(n_channels), regional_ms, color=colours, edgecolor="white")
+ax.set_xlabel("Channel")
+ax.set_ylabel("Regional metastability (variance)")
+ax.set_title("B. Regional metastability by channel")
+ax.set_xticks(range(n_channels))
+ax.set_xticklabels(channel_names, rotation=45, ha="right", fontsize=8)
+# Add group labels
+for x, label in [(1.5, "Strong"), (5.5, "Moderate"),
+                 (9.5, "Weak"), (13.5, "Very weak")]:
+    ax.text(x, ax.get_ylim()[1] * 0.92, label,
+            ha="center", fontsize=8, fontstyle="italic")
+
+# Panel C: Kuramoto order parameter over time
+ax = axes[1, 0]
+ax.plot(t_plot, R, linewidth=0.5, color="#8e44ad", alpha=0.7)
+ax.axhline(np.mean(R), color="#8e44ad", linestyle="--",
+           linewidth=1.2, label=f"Mean R = {np.mean(R):.3f}")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Kuramoto R(t)")
+ax.set_title("C. Global synchrony (Kuramoto order parameter)")
+ax.set_ylim(0, 1)
+ax.legend(fontsize=9)
+
+# Panel D: Metastability vs coupling strength (scatter plot)
+ax = axes[1, 1]
+ax.scatter(coupling, regional_ms, c=colours, s=80,
+           edgecolors="white", linewidths=0.8, zorder=3)
+# Add channel labels
+for ch in range(n_channels):
+    ax.annotate(channel_names[ch], (coupling[ch], regional_ms[ch]),
+                fontsize=7, ha="left", va="bottom",
+                xytext=(4, 2), textcoords="offset points")
+# Trend line
+z = np.polyfit(coupling, regional_ms, 1)
+p = np.poly1d(z)
+x_fit = np.linspace(0, 1, 100)
+ax.plot(x_fit, p(x_fit), "--", color="grey", linewidth=1,
+        label=f"Linear fit (slope = {z[0]:.4f})")
+ax.set_xlabel("Coupling strength")
+ax.set_ylabel("Regional metastability")
+ax.set_title("D. Metastability vs coupling")
+ax.legend(fontsize=9)
+
+plt.tight_layout()
+plt.show()
+```
+
+### Reading the output
+
+The four panels show different views of the same underlying phenomenon:
+
+**Panel A** shows how the dominant eigenvector element $v_k(t)$ evolves for four representative channels. The strongly coupled channel (Ch00, dark blue) traces a relatively stable line: it participates in the dominant coordination pattern consistently. The very weakly coupled channel (Ch14, red) fluctuates much more, because its phase relationship to the group keeps changing.
+
+**Panel B** is the main result: regional metastability for each channel. The pattern is clear. Weakly coupled channels have higher metastability (their role in the coordination pattern changes more) while strongly coupled channels have lower metastability (they are "locked in"). In a clinical study, this is where you would compare patient groups.
+
+**Panel C** shows the Kuramoto order parameter $R(t)$ over time. It fluctuates between moderate and high synchrony, reflecting the mix of strongly and weakly coupled channels. The variance of this curve is the global metastability.
+
+**Panel D** confirms the relationship between coupling and metastability with a scatter plot. The negative slope tells us that weaker coupling produces higher metastability. This makes intuitive sense: a loosely connected region is free to change its coordination role, while a tightly connected region is constrained by its neighbours.
+
+### Why this matters for Natalia's project
+
+In the simulation above, we controlled the coupling strengths and could verify that the metastability pipeline recovers a sensible result. With real EEG data from Parkinson's patients, the coupling strengths are unknown and the question is reversed: does the metastability analysis reveal differences between groups that tell us something about the disease?
+
+The hypothesis is that PD patients, especially those with Freezing of Gait, will show reduced regional metastability in specific brain regions (frontal, motor, parietal), reflecting the "rigidity" of their neural dynamics. The analytical pipeline is exactly what we implemented above:
+
+1. Record resting-state EEG from three groups (healthy controls, PD without FoG, PD with FoG).
+2. Band-pass filter to the frequency band of interest (often alpha or beta).
+3. Apply the Hilbert transform to extract instantaneous phase.
+4. At each time point, build the phase alignment matrix $A(t)$.
+5. Extract the dominant eigenvector $v(t)$.
+6. Compute regional metastability $\text{MS}_k = \text{Var}_t(v_k(t))$ for each channel.
+7. Compare $\text{MS}_k$ across groups using ANOVA with post-hoc tests.
+
+The key decision points with real data are:
+
+- **Frequency band**: beta (13--30 Hz) is the most theoretically motivated choice for PD, given the known pathological beta synchrony. Alpha (8--13 Hz) is also worth examining.
+- **Epoch selection**: resting-state data is typically segmented into clean epochs after artifact rejection. Metastability should be computed over long enough windows (at least 30--60 seconds of clean data) for stable variance estimates.
+- **Number of channels**: the choice between a full 64-channel montage and a reduced set of regions of interest affects both the alignment matrix and the interpretation.
+- **Statistical power**: with three groups and multiple channels, you are running many tests. Pre-registration and a clear analysis plan help avoid inflated false-positive rates.
+
+## Working example: PLV connectivity matrix
+
+The previous example focused on metastability. This example shows a different but complementary analysis: computing a PLV connectivity matrix from multi-channel data, which can reveal which brain regions are synchronised in a given frequency band.
+
+We simulate 16 channels arranged in two clusters. Channels 0--7 share one common oscillation, while channels 8--15 share a different one. Channels within the same cluster should show high PLV (consistent phase differences), while channels in different clusters should show low PLV (random phase relationships).
+
+```{python}
+#| fig-cap: "PLV connectivity matrix from simulated 16-channel data with two clusters. Within-cluster pairs show high PLV; between-cluster pairs show low PLV."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert, butter, filtfilt
+
+# ── 1. Simulation parameters ────────────────────────────────────
+rng = np.random.default_rng(99)
+
+n_channels = 16
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+freq_alpha = 10.0  # Hz
+
+# ── 2. Generate two-cluster data ────────────────────────────────
+# Cluster A reference (channels 0-7)
+ref_A_phase = 2 * np.pi * freq_alpha * times + 0.2 * np.cumsum(rng.standard_normal(n_samples) / sfreq)
+ref_A = np.sin(ref_A_phase)
+
+# Cluster B reference (channels 8-15), independent phase
+ref_B_phase = 2 * np.pi * freq_alpha * times + 0.2 * np.cumsum(rng.standard_normal(n_samples) / sfreq)
+ref_B = np.sin(ref_B_phase)
+
+data = np.zeros((n_channels, n_samples))
+coupling_strength = 0.85  # how tightly each channel follows its cluster reference
+
+for ch in range(n_channels):
+    ref = ref_A if ch < 8 else ref_B
+    # Independent oscillation for this channel
+    ind_phase = (2 * np.pi * freq_alpha * times
+                 + 1.5 * np.cumsum(rng.standard_normal(n_samples) / sfreq))
+    ind_signal = np.sin(ind_phase)
+    data[ch] = (coupling_strength * ref
+                + (1 - coupling_strength) * ind_signal
+                + 0.3 * rng.standard_normal(n_samples))
+
+channel_names = [f"Ch{i:02d}" for i in range(n_channels)]
+print(f"Simulated {n_channels} channels, {duration}s at {sfreq} Hz")
+print(f"Cluster A: Ch00-Ch07 | Cluster B: Ch08-Ch15")
+
+# ── 3. Band-pass filter and extract phase ────────────────────────
+lo, hi = 8.0, 13.0
+b, a = butter(4, [lo, hi], btype="band", fs=sfreq)
+
+phases = np.zeros_like(data)
+for ch in range(n_channels):
+    filtered = filtfilt(b, a, data[ch])
+    analytic = hilbert(filtered)
+    phases[ch] = np.angle(analytic)
+
+# ── 4. Compute the full PLV matrix ──────────────────────────────
+plv_matrix = np.zeros((n_channels, n_channels))
+for i in range(n_channels):
+    for j in range(i, n_channels):
+        phase_diff = phases[i] - phases[j]
+        plv = np.abs(np.mean(np.exp(1j * phase_diff)))
+        plv_matrix[i, j] = plv
+        plv_matrix[j, i] = plv
+
+# ── 5. Separate within-cluster and between-cluster PLV values ───
+within_cluster = []
+between_cluster = []
+for i in range(n_channels):
+    for j in range(i + 1, n_channels):
+        same_cluster = (i < 8 and j < 8) or (i >= 8 and j >= 8)
+        if same_cluster:
+            within_cluster.append(plv_matrix[i, j])
+        else:
+            between_cluster.append(plv_matrix[i, j])
+
+within_cluster = np.array(within_cluster)
+between_cluster = np.array(between_cluster)
+
+print(f"\nMean PLV (within cluster):  {within_cluster.mean():.4f} "
+      f"(SD = {within_cluster.std():.4f})")
+print(f"Mean PLV (between cluster): {between_cluster.mean():.4f} "
+      f"(SD = {between_cluster.std():.4f})")
+
+# ── 6. Visualisation ────────────────────────────────────────────
+fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+
+# Panel A: PLV heatmap
+ax = axes[0]
+im = ax.imshow(plv_matrix, cmap="viridis", vmin=0, vmax=1, aspect="equal")
+ax.set_xticks(range(n_channels))
+ax.set_yticks(range(n_channels))
+ax.set_xticklabels(channel_names, rotation=45, ha="right", fontsize=7)
+ax.set_yticklabels(channel_names, fontsize=7)
+ax.set_title("A. PLV connectivity matrix")
+fig.colorbar(im, ax=ax, label="PLV", shrink=0.8)
+# Draw cluster boundaries
+ax.axhline(7.5, color="white", linewidth=1.5, linestyle="--")
+ax.axvline(7.5, color="white", linewidth=1.5, linestyle="--")
+ax.text(3.5, -1.2, "Cluster A", ha="center", fontsize=9, fontstyle="italic")
+ax.text(11.5, -1.2, "Cluster B", ha="center", fontsize=9, fontstyle="italic")
+
+# Panel B: Histogram of within vs between PLV
+ax = axes[1]
+ax.hist(within_cluster, bins=15, alpha=0.7, color="#2c3e50",
+        label=f"Within cluster (mean={within_cluster.mean():.3f})", edgecolor="white")
+ax.hist(between_cluster, bins=15, alpha=0.7, color="#e74c3c",
+        label=f"Between cluster (mean={between_cluster.mean():.3f})", edgecolor="white")
+ax.set_xlabel("PLV")
+ax.set_ylabel("Count (channel pairs)")
+ax.set_title("B. Within- vs between-cluster PLV")
+ax.legend(fontsize=9)
+
+plt.tight_layout()
+plt.show()
+```
+
+### Reading the PLV output
+
+The heatmap (Panel A) shows two clear blocks of high PLV along the diagonal, corresponding to the two clusters. Within each cluster, channels maintain consistent phase relationships with each other (PLV around 0.7--0.9). Between clusters, PLV drops to low values (typically 0.1--0.3), because the two reference oscillations drift independently.
+
+The histogram (Panel B) makes the separation visible as two distinct distributions. In real EEG data, the separation is rarely this clean, but the same analysis can still reveal which channel pairs are more synchronised than expected by chance.
+
+This type of connectivity matrix is the starting point for network analyses. You could threshold the PLV matrix (e.g., keep only pairs with PLV > 0.5) and treat it as an adjacency matrix for graph-theoretic measures such as clustering coefficient, path length, or modularity.
+
+## Working example: comparing metastability across groups
+
+This example simulates the kind of group comparison that Natalia will run with real data. We generate metastability values for three groups (healthy controls, PD without FoG, PD with FoG) across 8 channels, then test for group differences with proper multiple-comparison corrections.
+
+The simulation is set up so that healthy controls have the highest metastability (most flexible dynamics), PD without FoG has moderate metastability, and PD with FoG has the lowest (most rigid). The effect size varies by channel: some channels show large group differences and others show little difference, which is realistic for EEG data.
+
+```{python}
+#| fig-cap: "Group comparison of regional metastability across 8 channels for three groups: healthy controls (HC), Parkinson's disease without Freezing of Gait (PD-noFoG), and PD with Freezing of Gait (PD-FoG). Asterisks mark channels where ANOVA was significant after FDR correction."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import f_oneway, ttest_ind
+from statsmodels.stats.multitest import multipletests
+
+# ── 1. Simulate metastability data for three groups ──────────────
+rng = np.random.default_rng(2026)
+
+n_per_group = 20
+n_channels = 8
+channel_names = ["Fp1", "Fp2", "C3", "C4", "P3", "P4", "O1", "O2"]
+
+# Base metastability and group offsets per channel.
+# Channels with larger offsets will show stronger group differences.
+base_ms = np.array([0.035, 0.038, 0.042, 0.040, 0.033, 0.036, 0.030, 0.032])
+
+# Effect sizes (difference between HC and PD-FoG, in units of SD)
+# Some channels show large effects, others show little
+effect_hc = np.array([0.012, 0.010, 0.020, 0.018, 0.015, 0.014, 0.005, 0.004])
+effect_pd = np.array([0.005, 0.004, 0.010, 0.008, 0.006, 0.005, 0.002, 0.001])
+noise_sd = 0.010
+
+# Generate data: HC > PD-noFoG > PD-FoG
+ms_hc = base_ms + effect_hc + noise_sd * rng.standard_normal((n_per_group, n_channels))
+ms_pd_nofog = base_ms + effect_pd + noise_sd * rng.standard_normal((n_per_group, n_channels))
+ms_pd_fog = base_ms + noise_sd * rng.standard_normal((n_per_group, n_channels))
+
+print("Group means per channel:")
+print(f"  {'Channel':<8} {'HC':>8} {'PD-noFoG':>10} {'PD-FoG':>10}")
+for ch in range(n_channels):
+    print(f"  {channel_names[ch]:<8} {ms_hc[:, ch].mean():>8.5f} "
+          f"{ms_pd_nofog[:, ch].mean():>10.5f} {ms_pd_fog[:, ch].mean():>10.5f}")
+
+# ── 2. One-way ANOVA per channel ────────────────────────────────
+p_values_anova = np.zeros(n_channels)
+f_values = np.zeros(n_channels)
+for ch in range(n_channels):
+    f_stat, p_val = f_oneway(ms_hc[:, ch], ms_pd_nofog[:, ch], ms_pd_fog[:, ch])
+    f_values[ch] = f_stat
+    p_values_anova[ch] = p_val
+
+print(f"\n{'='*60}")
+print("Step 1: ANOVA results (uncorrected)")
+print(f"{'Channel':<8} {'F':>8} {'p':>10}")
+for ch in range(n_channels):
+    sig = "*" if p_values_anova[ch] < 0.05 else ""
+    print(f"  {channel_names[ch]:<8} {f_values[ch]:>8.3f} {p_values_anova[ch]:>10.6f} {sig}")
+
+# ── 3. Correct across channels ──────────────────────────────────
+# Bonferroni correction for n_channels tests
+reject_bonf, p_bonf, _, _ = multipletests(p_values_anova, method="bonferroni")
+# FDR (Benjamini-Hochberg) correction
+reject_fdr, p_fdr, _, _ = multipletests(p_values_anova, method="fdr_bh")
+
+print(f"\n{'='*60}")
+print("Step 2: Correction across channels")
+print(f"  Bonferroni threshold: alpha / {n_channels} = {0.05/n_channels:.6f}")
+print(f"  FDR uses adaptive threshold (Benjamini-Hochberg)")
+print(f"\n{'Channel':<8} {'p_bonf':>10} {'reject':>8} {'p_fdr':>10} {'reject':>8}")
+for ch in range(n_channels):
+    print(f"  {channel_names[ch]:<8} {p_bonf[ch]:>10.6f} {'Yes' if reject_bonf[ch] else 'No':>8}"
+          f" {p_fdr[ch]:>10.6f} {'Yes' if reject_fdr[ch] else 'No':>8}")
+
+# ── 4. Post-hoc pairwise t-tests for significant channels ───────
+n_pairwise = 3
+pairs = [("HC", "PD-noFoG", ms_hc, ms_pd_nofog),
+         ("HC", "PD-FoG", ms_hc, ms_pd_fog),
+         ("PD-noFoG", "PD-FoG", ms_pd_nofog, ms_pd_fog)]
+
+print(f"\n{'='*60}")
+print("Step 3: Post-hoc pairwise t-tests (FDR-significant channels)")
+print(f"  Bonferroni correction for {n_pairwise} pairwise comparisons per channel")
+
+# Compute Cohen's d
+def cohens_d(x, y):
+    nx, ny = len(x), len(y)
+    pooled_sd = np.sqrt(((nx - 1) * x.std(ddof=1)**2 + (ny - 1) * y.std(ddof=1)**2)
+                        / (nx + ny - 2))
+    return (x.mean() - y.mean()) / pooled_sd
+
+posthoc_results = []
+for ch in np.where(reject_fdr)[0]:
+    print(f"\n  {channel_names[ch]}:")
+    for name1, name2, data1, data2 in pairs:
+        t, p = ttest_ind(data1[:, ch], data2[:, ch], equal_var=False)
+        p_corrected = min(p * n_pairwise, 1.0)
+        d = cohens_d(data1[:, ch], data2[:, ch])
+        sig = "*" if p_corrected < 0.05 else ""
+        print(f"    {name1} vs {name2}: t={t:>7.3f}, "
+              f"p_corr={p_corrected:.4f}, d={d:>6.3f} {sig}")
+        posthoc_results.append({
+            "channel": channel_names[ch], "comparison": f"{name1} vs {name2}",
+            "t": t, "p_corrected": p_corrected, "cohens_d": d
+        })
+
+# ── 5. Summary table ────────────────────────────────────────────
+print(f"\n{'='*60}")
+print("Summary of significant pairwise comparisons (p_corrected < 0.05):")
+print(f"  {'Channel':<8} {'Comparison':<20} {'t':>7} {'p_corr':>8} {'Cohen d':>8}")
+for r in posthoc_results:
+    if r["p_corrected"] < 0.05:
+        print(f"  {r['channel']:<8} {r['comparison']:<20} "
+              f"{r['t']:>7.3f} {r['p_corrected']:>8.4f} {r['cohens_d']:>8.3f}")
+
+# ── 6. Visualisation ────────────────────────────────────────────
+fig, ax = plt.subplots(figsize=(12, 6))
+
+x = np.arange(n_channels)
+width = 0.25
+
+# Bar chart: mean metastability per group per channel
+bars_hc = ax.bar(x - width, ms_hc.mean(axis=0), width,
+                 yerr=ms_hc.std(axis=0) / np.sqrt(n_per_group),
+                 label="HC", color="#2c3e50", edgecolor="white",
+                 capsize=3, error_kw={"linewidth": 1})
+bars_pd = ax.bar(x, ms_pd_nofog.mean(axis=0), width,
+                 yerr=ms_pd_nofog.std(axis=0) / np.sqrt(n_per_group),
+                 label="PD-noFoG", color="#e67e22", edgecolor="white",
+                 capsize=3, error_kw={"linewidth": 1})
+bars_fog = ax.bar(x + width, ms_pd_fog.mean(axis=0), width,
+                  yerr=ms_pd_fog.std(axis=0) / np.sqrt(n_per_group),
+                  label="PD-FoG", color="#e74c3c", edgecolor="white",
+                  capsize=3, error_kw={"linewidth": 1})
+
+# Add significance markers for FDR-significant channels
+y_max = max(ms_hc.mean(axis=0).max(), ms_pd_nofog.mean(axis=0).max(),
+            ms_pd_fog.mean(axis=0).max()) + 0.008
+for ch in np.where(reject_fdr)[0]:
+    ax.text(ch, y_max, "*", ha="center", va="bottom", fontsize=16,
+            fontweight="bold", color="#c0392b")
+
+ax.set_xlabel("Channel")
+ax.set_ylabel("Regional metastability (mean +/- SEM)")
+ax.set_title("Metastability by group and channel")
+ax.set_xticks(x)
+ax.set_xticklabels(channel_names)
+ax.legend(fontsize=10, loc="upper right")
+
+plt.tight_layout()
+plt.show()
+```
+
+### Reading the group comparison output
+
+The printed output walks through the three steps of the analysis:
+
+1. **ANOVA per channel**: some channels show large F-statistics (indicating group differences) while others do not. Channels with small or absent effects (like O1 and O2 in this simulation) have high p-values.
+
+2. **Correction across channels**: Bonferroni is conservative (it may miss channels with moderate effects), while FDR is more permissive. In practice, both methods are acceptable; FDR is often preferred in EEG research because it controls the expected proportion of false positives rather than the probability of any false positive.
+
+3. **Post-hoc pairwise t-tests**: for each significant channel, we test all three pairs. The Bonferroni correction for 3 comparisons (multiplying each p-value by 3) is applied separately from the channel-level correction. Cohen's d gives the effect size: values around 0.2 are small, 0.5 medium, and 0.8 large.
+
+The bar chart shows the group means with standard error bars. Channels marked with an asterisk survived the FDR correction. The pattern we expect (HC > PD-noFoG > PD-FoG) is visible in channels with large simulated effects (C3, C4, P3, P4) but not in channels where the effect was small (O1, O2).
+
+In Natalia's real data, this analysis would use actual metastability values computed from the eigenvector pipeline in the first working example, with the channel names corresponding to the EEG montage used in the study.
+
+## Summary of key formulas
+
+| Quantity | Formula | Interpretation |
+|:---------|:--------|:---------------|
+| Instantaneous phase | $\phi_k(t) = \arg\!\big(\text{Hilbert}(x_k(t))\big)$ | Where channel $k$ is in its oscillatory cycle |
+| Phase alignment matrix | $A_{ij}(t) = \cos(\phi_i(t) - \phi_j(t))$ | Pairwise phase similarity at time $t$ |
+| Kuramoto order parameter | $R(t) = \frac{1}{N} \lvert \sum_k e^{i\phi_k(t)} \rvert$ | Global synchrony at time $t$ |
+| Dominant eigenvector | $v(t) = \text{eigvec}_{max}(A(t))$ | Primary coordination pattern at time $t$ |
+| Regional metastability | $\text{MS}_k = \text{Var}_t(v_k(t))$ | How flexibly region $k$ changes its role |
+| Global metastability | $\text{MS}_{\text{global}} = \text{Var}_t(R(t))$ | How much overall synchrony fluctuates |
+
+## What comes next
+
+This module introduced the theoretical and computational framework for measuring phase connectivity and metastability. The next steps are:
+
+- Apply this pipeline to real EEG data using MNE-Python for the preprocessing stages (filtering, artifact rejection, epoching) and the `numpy`/`scipy` code above for the metastability computation.
+- Explore different frequency bands (alpha, beta, theta) and compare the metastability patterns they reveal.
+- Run the group comparison analysis with proper statistical controls.
+- Consider additional connectivity measures (weighted PLV, imaginary coherence) as complementary analyses.
+
+The exercises section will include practice problems where you modify the simulation parameters (number of channels, coupling strengths, noise levels) and observe how metastability changes.

@@ -1,0 +1,352 @@
+---
+title: "Preprocessing: exercises"
+description: "Practice filtering, notch removal, bad channel interpolation, re-referencing, and downsampling on simulated EEG data."
+module: 2
+date: 2026-03-31
+date-modified: last-modified
+categories: [preprocessing, filtering]
+---
+
+These exercises go with [Module 2: Preprocessing](../modules/02-preprocessing.qmd). They walk you through the core preprocessing steps: removing line noise, applying band-pass filters, handling bad channels, re-referencing, and downsampling. Each exercise uses simulated data so you can see exactly what the processing does to a signal you control.
+
+## Exercise 1: Remove 50 Hz line noise with a notch filter
+
+Create a simulated signal that contains a 10 Hz alpha oscillation mixed with 50 Hz line noise. Apply a notch filter at 50 Hz and plot the power spectral density (PSD) before and after to confirm the line noise is gone while the alpha peak survives.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Build the signal by adding two sine waves: `np.sin(2 * np.pi * 10 * t)` for alpha and `np.sin(2 * np.pi * 50 * t)` for the line noise (make the line noise smaller, say half the alpha amplitude). Use `raw.notch_filter(50)` to remove the noise. Plot PSDs with `raw.compute_psd().plot()` (or `raw.plot_psd()` in older MNE versions).
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 30
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+# Create a signal with 10 Hz alpha + 50 Hz line noise + background noise
+ch_names = ["Oz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)      # 10 µV alpha
+line_noise = 5e-6 * np.sin(2 * np.pi * 50 * times)   # 5 µV line noise
+noise = np.random.randn(n_samples) * 2e-6             # 2 µV random noise
+signal = (alpha + line_noise + noise).reshape(1, -1)
+
+raw = mne.io.RawArray(signal, info)
+
+# Plot PSD before filtering
+fig_before = raw.compute_psd(fmax=80).plot(show=False)
+fig_before.suptitle("PSD before notch filter")
+
+# Apply notch filter at 50 Hz
+raw_filtered = raw.copy().notch_filter(50)
+
+# Plot PSD after filtering
+fig_after = raw_filtered.compute_psd(fmax=80).plot(show=False)
+fig_after.suptitle("PSD after notch filter")
+```
+
+You should see two peaks in the "before" plot (at 10 Hz and 50 Hz). After the notch filter, the 50 Hz peak disappears while the 10 Hz alpha peak remains.
+:::
+
+
+## Exercise 2: Apply a band-pass filter (1--40 Hz)
+
+Create simulated EEG data with multiple channels. Apply a band-pass filter between 1 and 40 Hz. Compare the PSD before and after to see which frequencies were kept and which were removed.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `raw.filter(l_freq=1, h_freq=40)` for band-pass filtering. This combines a high-pass filter at 1 Hz (removes slow drifts) with a low-pass filter at 40 Hz (removes high-frequency noise). Plot the PSDs side by side to see the effect.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 60
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+# Create 8 channels with broadband noise plus a slow drift and
+# a 10 Hz oscillation
+ch_names = ["Fp1", "Fp2", "C3", "C4", "P3", "P4", "O1", "O2"]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+data = np.random.randn(n_channels, n_samples) * 5e-6
+
+# Add a slow drift (0.1 Hz) to all channels
+drift = 15e-6 * np.sin(2 * np.pi * 0.1 * times)
+data += drift
+
+# Add a 10 Hz alpha oscillation to occipital channels
+alpha = 8e-6 * np.sin(2 * np.pi * 10 * times)
+data[6] += alpha  # O1
+data[7] += alpha  # O2
+
+raw = mne.io.RawArray(data, info)
+
+# Plot PSD before filtering
+fig_before = raw.compute_psd(fmax=100).plot(show=False)
+fig_before.suptitle("PSD before band-pass filter")
+
+# Apply band-pass filter
+raw_filtered = raw.copy().filter(l_freq=1, h_freq=40)
+
+# Plot PSD after filtering
+fig_after = raw_filtered.compute_psd(fmax=100).plot(show=False)
+fig_after.suptitle("PSD after band-pass filter (1-40 Hz)")
+
+# Compare a single channel in the time domain
+import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
+t_plot = slice(0, int(5 * sfreq))  # first 5 seconds
+
+axes[0].plot(times[:int(5 * sfreq)], raw.get_data(picks="O1")[0, t_plot] * 1e6)
+axes[0].set_title("O1 before filtering")
+axes[0].set_ylabel("Amplitude (µV)")
+
+axes[1].plot(times[:int(5 * sfreq)], raw_filtered.get_data(picks="O1")[0, t_plot] * 1e6)
+axes[1].set_title("O1 after band-pass filter (1-40 Hz)")
+axes[1].set_ylabel("Amplitude (µV)")
+axes[1].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+```
+
+In the PSD plots, you should see that frequencies below 1 Hz and above 40 Hz are strongly attenuated after filtering. In the time-domain plots of O1, the slow drift visible in the unfiltered signal should be gone.
+:::
+
+
+## Exercise 3: Mark a bad channel and interpolate it
+
+Create multi-channel simulated data with a standard montage. Deliberately corrupt channel `"Fp1"` by making it much noisier than the others. Mark it as bad, interpolate it, and compare the signal before and after interpolation.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Set `raw.info["bads"] = ["Fp1"]` to mark the channel. Then call `raw.interpolate_bads()` to replace it with a weighted average of its neighbours. You need a montage set (so MNE knows which channels are neighbours); use `mne.channels.make_standard_montage("standard_1020")`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 20
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+# Use enough channels that interpolation has good neighbours
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "C3", "C4",
+    "P3", "P4", "O1", "O2", "F7", "F8",
+    "T7", "T8", "P7", "P8", "Fz", "Cz", "Pz", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Generate clean data with a 10 Hz oscillation
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 8e-6 * np.sin(2 * np.pi * 10 * times)
+for i in range(n_channels):
+    data[i] += alpha
+
+# Corrupt Fp1 (index 0): add large noise
+fp1_idx = ch_names.index("Fp1")
+data[fp1_idx] += np.random.randn(n_samples) * 100e-6  # very noisy
+
+raw = mne.io.RawArray(data, info)
+
+# Set montage (needed for interpolation)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+
+# Store the noisy Fp1 for comparison
+fp1_before = raw.get_data(picks="Fp1")[0].copy()
+
+# Mark Fp1 as bad and interpolate
+raw.info["bads"] = ["Fp1"]
+print(f"Bad channels: {raw.info['bads']}")
+
+raw.interpolate_bads()
+
+fp1_after = raw.get_data(picks="Fp1")[0]
+
+# Compare before and after
+fig, axes = plt.subplots(2, 1, figsize=(12, 5), sharex=True)
+t_slice = slice(0, int(2 * sfreq))  # first 2 seconds
+
+axes[0].plot(times[:int(2 * sfreq)], fp1_before[t_slice] * 1e6)
+axes[0].set_title("Fp1 before interpolation (corrupted)")
+axes[0].set_ylabel("Amplitude (µV)")
+
+axes[1].plot(times[:int(2 * sfreq)], fp1_after[t_slice] * 1e6)
+axes[1].set_title("Fp1 after interpolation")
+axes[1].set_ylabel("Amplitude (µV)")
+axes[1].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+
+print(f"Fp1 std before: {np.std(fp1_before) * 1e6:.1f} µV")
+print(f"Fp1 std after:  {np.std(fp1_after) * 1e6:.1f} µV")
+```
+
+The interpolated Fp1 should have a much smaller amplitude range because it is now reconstructed from its (clean) neighbours. The standard deviation should drop from around 100 µV down to something close to the other channels (around 5--10 µV).
+:::
+
+
+## Exercise 4: Re-reference to average reference
+
+Create simulated data and re-reference it to the average of all channels. Compare a frontal channel (`"Fp1"`) and an occipital channel (`"Oz"`) before and after re-referencing. Notice how the signals change.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `raw.set_eeg_reference("average")` to apply the average reference. This subtracts the mean across all channels at each time point from every channel. The effect is usually more visible on channels that were far from the original reference.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 10
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "C3", "C4",
+    "P3", "P4", "O1", "O2", "Fz", "Cz", "Pz", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create data: alpha oscillation mainly in occipital channels,
+# frontal channels get a different pattern (slow wave)
+data = np.random.randn(n_channels, n_samples) * 3e-6
+
+# Add alpha to occipital channels
+alpha = 12e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Add a slow wave to frontal channels
+slow = 8e-6 * np.sin(2 * np.pi * 1.5 * times)
+for name in ["Fp1", "Fp2"]:
+    data[ch_names.index(name)] += slow
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+
+# Store pre-reref data
+fp1_before = raw.get_data(picks="Fp1")[0].copy()
+oz_before = raw.get_data(picks="Oz")[0].copy()
+
+# Re-reference to average
+raw.set_eeg_reference("average", projection=False)
+
+fp1_after = raw.get_data(picks="Fp1")[0]
+oz_after = raw.get_data(picks="Oz")[0]
+
+# Plot comparison
+fig, axes = plt.subplots(2, 2, figsize=(14, 6), sharex=True)
+t_slice = slice(0, int(3 * sfreq))
+t_sec = times[:int(3 * sfreq)]
+
+axes[0, 0].plot(t_sec, fp1_before[t_slice] * 1e6)
+axes[0, 0].set_title("Fp1 before re-referencing")
+axes[0, 0].set_ylabel("µV")
+
+axes[0, 1].plot(t_sec, oz_before[t_slice] * 1e6)
+axes[0, 1].set_title("Oz before re-referencing")
+
+axes[1, 0].plot(t_sec, fp1_after[t_slice] * 1e6)
+axes[1, 0].set_title("Fp1 after average reference")
+axes[1, 0].set_ylabel("µV")
+axes[1, 0].set_xlabel("Time (s)")
+
+axes[1, 1].plot(t_sec, oz_after[t_slice] * 1e6)
+axes[1, 1].set_title("Oz after average reference")
+axes[1, 1].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+```
+
+After average re-referencing, each channel's signal is shifted by the mean of all channels at each time point. Because the occipital alpha is strong, it will "leak" slightly (inverted) into the frontal channels, and the frontal slow wave will leak into occipital channels. This is normal; the average reference does not remove real brain signals, it redistributes them.
+:::
+
+
+## Exercise 5: Downsample with anti-aliasing
+
+Create simulated data at 1000 Hz. Apply an appropriate anti-aliasing low-pass filter, then downsample to 250 Hz. Compare the PSD of the original and the downsampled data to confirm that no aliased frequencies appear.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Before downsampling, you must low-pass filter below the new Nyquist frequency (250 / 2 = 125 Hz) to prevent aliasing. MNE's `raw.resample()` applies an anti-aliasing filter automatically, but for this exercise, do it manually with `raw.filter()` first so you can see the effect. Then use `raw.resample(250)` to change the sampling rate.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 1000
+duration = 30
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["C3", "C4", "Cz", "Pz", "Oz"]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create data with content at multiple frequencies
+data = np.random.randn(n_channels, n_samples) * 3e-6
+
+# Add a 10 Hz oscillation (should survive downsampling)
+data += 8e-6 * np.sin(2 * np.pi * 10 * times)
+
+# Add a 200 Hz oscillation (above new Nyquist, should be removed)
+data += 4e-6 * np.sin(2 * np.pi * 200 * times)
+
+raw = mne.io.RawArray(data, info)
+
+# Plot PSD of the original (1000 Hz) data
+fig_original = raw.compute_psd(fmax=400).plot(show=False)
+fig_original.suptitle("PSD at original sampling rate (1000 Hz)")
+
+# Step 1: Manual anti-aliasing filter (low-pass below new Nyquist)
+raw_filtered = raw.copy().filter(l_freq=None, h_freq=120)
+
+# Step 2: Downsample to 250 Hz
+# (raw.resample also applies its own anti-aliasing filter internally,
+# but we already filtered above to demonstrate the concept)
+raw_downsampled = raw_filtered.copy().resample(250)
+
+# Plot PSD of the downsampled data
+fig_down = raw_downsampled.compute_psd(fmax=120).plot(show=False)
+fig_down.suptitle("PSD after downsampling to 250 Hz")
+
+print(f"Original sampling rate: {raw.info['sfreq']} Hz")
+print(f"Original n_samples: {raw.n_times}")
+print(f"Downsampled sampling rate: {raw_downsampled.info['sfreq']} Hz")
+print(f"Downsampled n_samples: {raw_downsampled.n_times}")
+```
+
+In the original PSD, you should see peaks at 10 Hz and 200 Hz. After filtering and downsampling, the 200 Hz peak is gone (it was above the new Nyquist frequency of 125 Hz and was removed by the anti-aliasing filter). The 10 Hz peak remains intact because it is well within the passband.
+:::

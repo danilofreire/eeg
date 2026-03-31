@@ -1,0 +1,51 @@
+project:
+  type: website
+  output-dir: _site
+  resources:
+    - robots.txt
+
+website:
+  title: "EEG with Python"
+  description: "EEG analysis in Python with MNE -- from raw signal to metastability"
+  navbar:
+    background: "#1a3a4a"
+    foreground: "#e8f4f8"
+    left:
+      - href: index.qmd
+        text: Home
+      - text: "Modules"
+        menu:
+          - href: modules/01-getting-started.qmd
+            text: "1. Getting started"
+          - href: modules/02-preprocessing.qmd
+            text: "2. Preprocessing"
+          - href: modules/03-artifacts.qmd
+            text: "3. Artifact rejection"
+          - href: modules/04-spectral-analysis.qmd
+            text: "4. Spectral analysis"
+          - href: modules/05-metastability.qmd
+            text: "5. Connectivity and metastability"
+      - href: topics/index.qmd
+        text: Topics
+      - href: exercises/index.qmd
+        text: Exercises
+  page-footer:
+    left: |
+      Built with [Quarto](https://quarto.org) and [MNE-Python](https://mne.tools)
+
+format:
+  html:
+    theme:
+      - default
+      - custom.scss
+    lang: en-GB
+    toc: true
+    toc-depth: 3
+    mainfont: "'Charter', 'Georgia', serif"
+    monofont: "'JetBrains Mono', monospace"
+    include-in-header:
+      - text: |
+          <meta name="robots" content="noindex, nofollow">
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">

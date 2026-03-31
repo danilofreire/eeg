@@ -1,0 +1,184 @@
+---
+title: "Filtering EEG signals"
+description: "FIR and IIR filters, band-pass design, cutoff frequencies for EEG bands, notch filters for line noise, filter order, transition bandwidth, and zero-phase filtering."
+date: 2026-03-31
+date-modified: last-modified
+module: 2
+categories: [preprocessing, signal-processing]
+---
+
+## Why filtering matters
+
+Every EEG recording contains signals you care about mixed with signals you do not. The brain activity you want to study (say, the 10 Hz alpha rhythm) sits alongside slow electrode drifts below 0.1 Hz, muscle artifact above 30 Hz, and a sharp spike from the power line at 50 or 60 Hz. Filtering is how you separate the signal of interest from the rest.
+
+Getting filtering right is one of the most consequential decisions in an EEG analysis pipeline. Filter too aggressively and you distort the waveforms you are trying to measure. Filter too little and noise swamps the signal. This page covers the types of filters available, how to choose their parameters, and how to avoid common mistakes.
+
+## FIR vs IIR filters
+
+There are two broad families of digital filters used in EEG analysis.
+
+### FIR (finite impulse response)
+
+A FIR filter computes each output sample as a weighted average of a finite number of input samples. The weights are called the filter coefficients, and the number of coefficients is the **filter order**.
+
+FIR filters have two properties that make them the default choice in MNE-Python:
+
+- **Linear phase**: all frequencies are delayed by the same amount, so the shape of the waveform is preserved. This matters if you are measuring event-related potentials (ERPs), where the precise timing and shape of peaks carry information.
+- **Stability**: a FIR filter cannot become unstable or "blow up", regardless of the input signal.
+
+The trade-off is that FIR filters need a high order (many coefficients) to achieve sharp frequency cutoffs, which makes them slower to compute.
+
+### IIR (infinite impulse response)
+
+An IIR filter uses feedback: each output sample depends on previous output samples as well as input samples. This feedback allows IIR filters to achieve sharp cutoffs with far fewer coefficients, making them faster.
+
+The most common IIR filter design for EEG is the **Butterworth filter**, which has a maximally flat passband (no ripples in the frequencies you keep). Other designs, such as Chebyshev and elliptic filters, offer even sharper cutoffs but introduce passband or stopband ripples.
+
+The main drawback of IIR filters is **phase distortion**: different frequencies are delayed by different amounts, which can shift and distort waveform peaks. This is solved by using **zero-phase filtering** (see below), but that is not always possible in real-time applications.
+
+## Band-pass filter design
+
+A band-pass filter keeps frequencies within a specified range and attenuates everything outside it. You define two cutoff frequencies:
+
+- **High-pass cutoff** (low edge): removes slow drifts. A common choice is 0.1 Hz for general analysis, or 1 Hz if you plan to run ICA (slow drifts can interfere with ICA convergence).
+- **Low-pass cutoff** (high edge): removes high-frequency noise. 40 Hz is typical if you are interested in alpha and beta rhythms. 100 Hz or higher if you need gamma activity.
+
+### Standard EEG frequency bands
+
+| Band | Frequency range | Associated with |
+|:-----|:----------------|:----------------|
+| Delta | 0.5--4 Hz | Deep sleep, brain injury |
+| Theta | 4--8 Hz | Memory, drowsiness, meditation |
+| Alpha | 8--13 Hz | Relaxed wakefulness, eyes closed |
+| Beta | 13--30 Hz | Active thinking, motor planning |
+| Gamma | 30--100 Hz | Perception, attention, binding |
+
+Your cutoff frequencies should be chosen to include the bands you need while excluding as much noise as possible. If you are studying alpha oscillations, a 1--30 Hz band-pass is a reasonable starting point: it gives you room around the alpha band and includes neighbouring frequencies for context, while removing slow drifts and most muscle artifact.
+
+## Filter order and transition bandwidth
+
+The **filter order** determines how sharply the filter transitions from the passband (frequencies kept) to the stopband (frequencies removed). A higher order gives a sharper transition but can introduce ringing artifacts, especially near the edges of epochs.
+
+The **transition bandwidth** is the frequency range over which the filter transitions from full passband to full stopband. MNE-Python sets this automatically based on the cutoff frequency:
+
+- For the high-pass: transition bandwidth = min(max(cutoff * 0.25, 2), cutoff)
+- For the low-pass: transition bandwidth = min(max(cutoff * 0.25, 2), sfreq / 2 - cutoff)
+
+A narrow transition bandwidth requires a higher filter order, which means more computation and a longer filter delay. For most EEG applications, the MNE defaults work well.
+
+## Zero-phase filtering
+
+When you filter data offline (after recording), you can apply the filter **forwards and then backwards** over the data. This is called zero-phase filtering, and it eliminates the phase delay that would otherwise shift your waveforms in time.
+
+In Python, `scipy.signal.filtfilt` implements zero-phase filtering for IIR filters. MNE's `raw.filter()` uses zero-phase FIR filtering by default.
+
+The catch is that zero-phase filtering cannot be used in real-time applications, because you need the entire signal (including future time points) to run the backwards pass.
+
+## Notch filters for line noise
+
+Power lines introduce a sharp spectral peak at either 50 Hz (most of Europe, South America, Asia, Africa) or 60 Hz (North America, parts of Asia). This interference also produces **harmonics**: peaks at 100, 150, 200 Hz (for 50 Hz mains) or 120, 180, 240 Hz (for 60 Hz mains).
+
+A notch filter removes a narrow band of frequencies centred on the line noise frequency. MNE's `raw.notch_filter()` targets the fundamental and any harmonics you specify.
+
+If your low-pass cutoff is already below the line noise frequency (e.g., 40 Hz), the band-pass filter will handle most of the line noise. But if your cutoff is close to 50 Hz, a separate notch filter is safer because the band-pass transition region may not attenuate it fully.
+
+## Working example
+
+The code below creates a simulated EEG signal containing alpha activity (10 Hz) and 50 Hz line noise, filters it, and compares the power spectral density before and after filtering.
+
+```{python}
+#| fig-cap: "Power spectral density before and after band-pass and notch filtering. The 50 Hz line noise peak and broadband noise are removed, while the 10 Hz alpha peak is preserved."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import butter, filtfilt, welch
+
+rng = np.random.default_rng(42)
+
+# ── Simulation parameters ──────────────────────────────────────
+sfreq = 512          # sampling frequency (Hz)
+duration = 10        # seconds
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# ── Build a realistic-looking EEG signal ───────────────────────
+# 1. Pink noise background (1/f spectrum)
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1  # avoid division by zero
+pink_filter = 1 / np.sqrt(freqs_fft)
+pink_noise = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+
+# 2. Alpha rhythm at 10 Hz
+alpha = 3.0 * np.sin(2 * np.pi * 10 * times)
+
+# 3. Line noise at 50 Hz
+line_noise = 1.5 * np.sin(2 * np.pi * 50 * times)
+
+# 4. Combine
+signal = pink_noise + alpha + line_noise
+
+# Scale to microvolts
+signal *= 20e-6 / signal.std()
+
+# ── Compute PSD before filtering ──────────────────────────────
+freqs_before, psd_before = welch(signal, fs=sfreq, nperseg=1024)
+
+# ── Apply band-pass filter (1-40 Hz, 4th-order Butterworth) ──
+b_bp, a_bp = butter(4, [1, 40], btype="band", fs=sfreq)
+signal_bp = filtfilt(b_bp, a_bp, signal)
+
+# ── Apply notch filter at 50 Hz ──────────────────────────────
+# Even though the band-pass already attenuates 50 Hz, we demonstrate
+# the notch filter for completeness. The notch targets a narrow band
+# around 50 Hz (here, 49-51 Hz).
+b_notch, a_notch = butter(4, [49, 51], btype="bandstop", fs=sfreq)
+signal_clean = filtfilt(b_notch, a_notch, signal_bp)
+
+# ── Compute PSD after filtering ──────────────────────────────
+freqs_after, psd_after = welch(signal_clean, fs=sfreq, nperseg=1024)
+
+# ── Plot ─────────────────────────────────────────────────────
+fig, axes = plt.subplots(1, 2, figsize=(13, 4.5))
+
+# Before filtering
+ax = axes[0]
+ax.semilogy(freqs_before, psd_before, color="#2c3e50", linewidth=0.8)
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("Power spectral density")
+ax.set_title("Before filtering")
+ax.set_xlim(0, 80)
+ax.axvline(10, color="#e74c3c", linestyle="--", linewidth=0.8,
+           alpha=0.6, label="10 Hz (alpha)")
+ax.axvline(50, color="#e67e22", linestyle="--", linewidth=0.8,
+           alpha=0.6, label="50 Hz (line noise)")
+ax.legend(fontsize=9)
+
+# After filtering
+ax = axes[1]
+ax.semilogy(freqs_after, psd_after, color="#27ae60", linewidth=0.8)
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("Power spectral density")
+ax.set_title("After band-pass (1\u201340 Hz) + notch (50 Hz)")
+ax.set_xlim(0, 80)
+ax.axvline(10, color="#e74c3c", linestyle="--", linewidth=0.8,
+           alpha=0.6, label="10 Hz (alpha)")
+ax.axvline(50, color="#e67e22", linestyle="--", linewidth=0.8,
+           alpha=0.6, label="50 Hz (line noise)")
+ax.legend(fontsize=9)
+
+plt.tight_layout()
+plt.show()
+```
+
+In the "before" plot, you can see three features: the 1/f slope of the pink noise background, the sharp alpha peak at 10 Hz, and the tall 50 Hz line noise spike. After filtering, the spectrum is confined to the 1--40 Hz range, the 50 Hz peak is gone, and the 10 Hz alpha peak remains clearly visible. The 1/f slope is preserved within the passband.
+
+## Key takeaways
+
+- **FIR filters** are the default for offline EEG analysis because they have a linear phase response. **IIR filters** (Butterworth) are faster and useful when speed matters.
+- The **band-pass cutoffs** should match the frequency bands you need. Common choices are 0.1--40 Hz for general analysis, or 1--40 Hz if you plan to run ICA.
+- **Filter order** controls the sharpness of the transition from passband to stopband. Higher order means sharper transitions but more computation and more risk of ringing.
+- **Zero-phase filtering** (applying the filter forwards and backwards) removes phase distortion and is the default in MNE-Python. It cannot be used for real-time processing.
+- **Notch filters** target specific frequencies, typically 50 or 60 Hz power line noise and their harmonics. They are most useful when the line noise frequency falls within your band-pass range.
+- Always filter before applying ICA or computing connectivity measures. The order of preprocessing steps matters, and filtering is almost always the first step after loading data.

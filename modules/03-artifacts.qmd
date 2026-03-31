@@ -1,0 +1,267 @@
+---
+title: "Artifact rejection"
+description: "Identifying and removing artifacts from EEG data: visual inspection, amplitude-based rejection, Independent Component Analysis (ICA), and automated labelling."
+date: 2026-03-31
+date-modified: last-modified
+---
+
+## Overview
+
+Even after filtering, EEG data still contains signals that come from sources other than the brain. Eye blinks produce large, slow deflections in frontal channels. Eye movements create step-like shifts. Muscle tension from clenching the jaw or furrowing the brow adds high-frequency bursts. The heartbeat generates a rhythmic artifact, especially in recordings with a small number of channels.
+
+These non-brain signals are called **artifacts**. Removing them is one of the most important steps in any EEG analysis pipeline, because if artifacts remain in the data, they will contaminate your results. This module covers the main strategies for artifact rejection, from simple visual inspection to Independent Component Analysis (ICA).
+
+## Topics
+
+### Types of artifacts
+
+Artifacts fall into a few broad categories based on their source:
+
+| Type | Source | What it looks like | Affected channels |
+|:-----|:-------|:-------------------|:------------------|
+| Ocular (blink) | Eyelid movement | Large, slow positive deflection (100--300 uV) | Fp1, Fp2, AF3, AF4 |
+| Ocular (saccade) | Eye movement | Step-like lateral shift | F7/F8 (horizontal), Fp1/Fp2 (vertical) |
+| Muscular (EMG) | Jaw, neck, forehead muscles | High-frequency burst (> 20 Hz) | Temporal and frontal channels |
+| Cardiac (ECG) | Heartbeat | Rhythmic sharp peaks (~1 Hz) | Can appear anywhere, often left temporal |
+| Movement | Head or body movement | Slow, large-amplitude drift | All channels |
+
+See [Types of EEG artifacts](../topics/artifact-types.qmd) for example traces and topographies of each type.
+
+### Visual inspection and manual rejection
+
+The simplest approach to artifact removal is to look at the data and mark bad segments or bad epochs by hand. MNE's interactive plotting tools let you click on time segments in continuous data (`raw.plot()`) or on individual epochs (`epochs.plot()`) to mark them for exclusion.
+
+Manual rejection is time-consuming for large datasets, but it is a useful skill to develop early on. It trains your eye to recognise what clean EEG looks like and what different artifacts look like, which helps you evaluate whether automated methods are working correctly later.
+
+See [Visual inspection and manual rejection](../topics/manual-rejection.qmd) for a guided walkthrough.
+
+```python
+# Interactive epoch browser -- click on bad epochs to mark them
+epochs.plot(n_epochs=10, n_channels=30, scalings={"eeg": 100e-6})
+
+# After marking, drop the bad epochs
+epochs.drop_bad()
+```
+
+### Amplitude-based epoch rejection
+
+A quick way to remove the worst artifacts is to reject any epoch where the peak-to-peak amplitude exceeds a threshold. This catches blinks (which can reach 200--300 uV) and large muscle bursts without requiring you to inspect every epoch individually.
+
+You set the threshold when creating the `Epochs` object or afterwards with `epochs.drop_bad()`. A common starting point for EEG is 150 uV peak-to-peak, but the right value depends on your data, your participants, and your channels.
+
+See [Amplitude-based epoch rejection](../topics/amplitude-rejection.qmd) for guidance on choosing thresholds.
+
+```python
+# Reject epochs where any EEG channel exceeds 150 uV peak-to-peak
+reject = {"eeg": 150e-6}
+epochs = mne.Epochs(raw, events, event_id=1, tmin=-0.2, tmax=0.5,
+                    reject=reject, preload=True)
+print(f"Kept {len(epochs)} of {len(events)} epochs")
+```
+
+### Independent Component Analysis (ICA)
+
+Amplitude-based rejection throws away entire epochs. If a participant blinks frequently, you might lose a large fraction of your data. ICA offers a better approach: it separates the mixed signal at each channel into statistically independent **components**, some of which correspond to brain activity and some to artifacts. You can then remove the artifact components and reconstruct the data without them.
+
+The key idea is that the signal at each electrode is a weighted mixture of several underlying sources. ICA finds those sources. A blink component will have a frontal topography and a characteristic time course (sharp peaks coinciding with blinks). A brain component will have a more distributed topography and a time course that looks like neural oscillations.
+
+ICA works best on data that has already been high-pass filtered (at least 1 Hz) and from which the worst segments have been removed. If the data is too noisy, ICA has trouble separating the components cleanly.
+
+See [ICA: theory and practice](../topics/ica-theory.qmd) for the mathematical background and [ICA in MNE-Python](../topics/ica-mne.qmd) for the practical implementation.
+
+```python
+# Fit ICA with 20 components
+ica = mne.preprocessing.ICA(n_components=20, random_state=42)
+ica.fit(raw)
+
+# Plot the components
+ica.plot_components()
+ica.plot_sources(raw)
+```
+
+### Identifying ICA components
+
+After fitting ICA, you need to decide which components are artifacts and which are brain activity. MNE provides several tools for this:
+
+- **Visual inspection**: look at the component topography and time course. Blink components have a frontal topography; muscle components have a temporal topography with high-frequency content.
+- **Correlation with EOG/ECG channels**: if you recorded the electrooculogram (EOG) or electrocardiogram (ECG), MNE can correlate each component with those channels to find matches automatically.
+
+See [Identifying ICA components](../topics/identifying-ica-components.qmd) for detailed examples with annotated plots.
+
+```python
+# Automatic detection using EOG channel
+eog_indices, eog_scores = ica.find_bads_eog(raw, ch_name="Fp1")
+ica.exclude = eog_indices
+
+# Apply ICA to remove the identified components
+ica.apply(raw)
+```
+
+### Automated ICA labelling with ICLabel
+
+Manually labelling ICA components is subjective and time-consuming. The **ICLabel** algorithm, originally developed for EEGLAB, classifies each component into one of seven categories: brain, muscle, eye, heart, line noise, channel noise, or other. The `mne-icalabel` package brings this to Python.
+
+ICLabel uses a neural network trained on a large labelled dataset. It is not perfect, but it provides a good starting point. You can use its predictions as suggestions and override them when you disagree.
+
+See [Automated ICA labelling with ICLabel](../topics/icalabel.qmd) for installation and usage examples.
+
+```python
+from mne_icalabel import label_components
+
+# Label all ICA components
+labels = label_components(raw, ica, method="iclabel")
+
+# Exclude components classified as non-brain
+ica.exclude = [
+    i for i, label in enumerate(labels["labels"])
+    if label not in ("brain", "other")
+]
+ica.apply(raw)
+```
+
+### The autoreject approach
+
+The `autoreject` package takes a different approach to artifact handling. Instead of using ICA, it works at the epoch level: it learns channel-specific rejection thresholds from the data, interpolates bad channels within individual epochs (so different epochs can have different bad channels), and rejects epochs that are too noisy to repair.
+
+Autoreject can be used on its own or in combination with ICA. A common workflow is to run ICA first (to remove eye and heart artifacts), then run autoreject on the epoched data (to catch remaining bad epochs and channels).
+
+See [Automated artifact rejection with autoreject](../topics/autoreject.qmd) for a worked example.
+
+```python
+from autoreject import AutoReject
+
+ar = AutoReject(n_interpolate=[1, 2, 4], random_state=42, n_jobs=-1)
+epochs_clean, reject_log = ar.fit_transform(epochs, return_log=True)
+reject_log.plot("horizontal")
+```
+
+## Working example: ICA on simulated data with blink artifact
+
+The code below creates simulated EEG data, adds a synthetic blink artifact to the frontal channels, runs ICA, and identifies the blink component. This lets you see the full ICA workflow from start to finish on data where you know exactly what the artifact looks like.
+
+```{python}
+#| fig-cap: "ICA decomposition showing the blink component."
+#| code-fold: false
+
+import numpy as np
+import mne
+
+rng = np.random.default_rng(42)
+
+# --- Create 32-channel simulated EEG ---
+montage = mne.channels.make_standard_montage("biosemi32")
+ch_names = montage.ch_names[:32]
+sfreq = 256
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+n_samples = int(30 * sfreq)  # 30 seconds for enough blinks
+times = np.arange(n_samples) / sfreq
+
+# Pink noise base
+white = rng.standard_normal((len(ch_names), n_samples))
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1
+pink_filter = 1 / np.sqrt(freqs_fft)
+data = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+data *= 20e-6 / data.std()
+
+# --- Add synthetic blink artifacts ---
+# Blinks are modelled as Gaussian bumps, occurring every 3-5 seconds,
+# strongest at Fp1 and Fp2, decreasing toward posterior channels.
+blink_times = np.arange(2, 28, 3.5)  # blink at these times (seconds)
+blink_duration = 0.25  # seconds (half-width of the Gaussian)
+blink_amplitude = 100e-6  # 100 uV (realistic blink amplitude)
+
+# Weight by distance from frontal pole: Fp channels get full weight,
+# posterior channels get almost none
+frontal_channels = ["Fp1", "Fp2", "AF3", "AF4", "F3", "Fz", "F4"]
+channel_weights = np.zeros(len(ch_names))
+for i, ch in enumerate(ch_names):
+    if ch in ("Fp1", "Fp2"):
+        channel_weights[i] = 1.0
+    elif ch in ("AF3", "AF4"):
+        channel_weights[i] = 0.7
+    elif ch in ("F3", "Fz", "F4", "F7", "F8"):
+        channel_weights[i] = 0.4
+    elif ch.startswith("FC") or ch.startswith("C"):
+        channel_weights[i] = 0.15
+    else:
+        channel_weights[i] = 0.05
+
+for bt in blink_times:
+    blink_signal = blink_amplitude * np.exp(
+        -0.5 * ((times - bt) / blink_duration) ** 2
+    )
+    data += np.outer(channel_weights, blink_signal)
+
+# --- Build Raw and preprocess ---
+raw = mne.io.RawArray(data, info)
+raw.set_montage(montage)
+
+# High-pass filter at 1 Hz (ICA works better with high-pass >= 1 Hz)
+raw.filter(l_freq=1.0, h_freq=40.0)
+
+# --- Fit ICA ---
+n_components = 15
+ica = mne.preprocessing.ICA(
+    n_components=n_components,
+    method="fastica",
+    random_state=42,
+    max_iter="auto",
+)
+ica.fit(raw)
+
+# --- Identify the blink component ---
+# Use Fp1 as a proxy EOG channel (since we added blinks there)
+eog_indices, eog_scores = ica.find_bads_eog(
+    raw, ch_name="Fp1", threshold=2.0
+)
+print(f"Blink component(s) identified: {eog_indices}")
+print(f"Correlation scores: {eog_scores[eog_indices]}")
+
+# Plot component topographies
+fig_components = ica.plot_components(
+    picks=range(min(n_components, 15)),
+    title="ICA components",
+)
+
+# Plot the scores to show which component correlates with Fp1
+fig_scores = ica.plot_scores(
+    eog_scores,
+    title="ICA component correlation with Fp1 (blink proxy)",
+    labels="eog",
+)
+```
+
+In the component topography plot, look for a component with strong frontal loading (high weights at Fp1 and Fp2, decreasing toward the back of the head). That is the blink component. The bar plot of scores confirms which component has the highest correlation with the Fp1 channel, which we used as a proxy for the EOG.
+
+To actually remove the blink component from the data, you would run:
+
+```python
+ica.exclude = eog_indices
+raw_clean = ica.apply(raw.copy())
+```
+
+The `.copy()` call is important: `ica.apply()` modifies the data in place, so if you want to keep the original for comparison, work on a copy.
+
+## Choosing between rejection strategies
+
+Different strategies work best in different situations:
+
+| Strategy | Best for | Limitations |
+|:---------|:---------|:------------|
+| Manual rejection | Small datasets, learning | Subjective, slow |
+| Amplitude threshold | Quick cleaning, removing extreme artifacts | Loses entire epochs, threshold is arbitrary |
+| ICA | Blinks, eye movements, heartbeat | Needs enough data (~60+ seconds), can overfit with few channels |
+| ICLabel | Large datasets, reproducibility | Not perfect; still needs human review |
+| Autoreject | Channel-level noise, automated pipelines | Does not handle continuous artifacts like blinks |
+
+In practice, many researchers combine these approaches. A typical workflow is:
+
+1. Remove the worst segments by visual inspection.
+2. Run ICA to identify and remove blink, eye movement, and heart components.
+3. Epoch the data.
+4. Use amplitude-based rejection or autoreject to clean the remaining epochs.
+
+## What comes next
+
+With clean, artifact-free epochs, you are ready for analysis. Move on to [Module 4: Spectral and time-frequency analysis](04-spectral-analysis.qmd) to compute power spectra, time-frequency decompositions, and event-related potentials.

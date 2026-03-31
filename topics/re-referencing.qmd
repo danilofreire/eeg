@@ -1,0 +1,160 @@
+---
+title: "Re-referencing EEG data"
+description: "Why re-referencing matters, common reference schemes (average, linked mastoids, Cz, REST), how to re-reference in MNE-Python, and the difference between the projection approach and the data approach."
+date: 2026-03-31
+date-modified: last-modified
+module: 2
+categories: [preprocessing, reference]
+---
+
+## Why re-referencing matters
+
+Every EEG channel measures a voltage difference between two points on the scalp: the electrode of interest and a reference electrode. The reference electrode is chosen during recording (often Cz, the nose, or one mastoid), and its activity is subtracted from every other channel. This means that the waveform you see at any channel is not the "true" brain activity at that location. It is the difference between that location and the reference.
+
+This matters because the reference electrode picks up its own brain activity, and that activity contaminates every channel. If the reference is at Cz, then any brain signal near Cz is partially subtracted from all other channels. If you are studying central brain activity, this is a problem.
+
+Re-referencing changes the reference point after recording. You cannot undo the physics (you always need a reference), but you can choose a reference scheme that minimises bias for your analysis.
+
+## Common reference schemes
+
+### Average reference
+
+The average reference subtracts the mean of all EEG channels from each channel. The idea is that if you have enough electrodes spread evenly across the scalp, the average signal approximates zero (because positive and negative voltages across the head roughly cancel out).
+
+**When to use it**: this is the most common choice for studies with dense electrode arrays (32 or more channels). It reduces the influence of any single reference location and works well for topographic mapping.
+
+**Limitations**: the average reference assumes that the electrodes cover the entire head evenly. With a sparse array (e.g., 16 channels) or an array that covers only part of the scalp, the average can be biased. It also reduces the data rank by one (because the average is now zero by definition), which matters for ICA and some statistical methods.
+
+### Linked mastoids
+
+Linked mastoids use the average of the two mastoid electrodes (the bony prominences behind the ears, typically labelled M1 and M2, or TP9 and TP10) as the reference. You compute this by averaging the two mastoid channels and subtracting the result from all EEG channels.
+
+**When to use it**: this is a traditional choice in ERP research, especially for auditory and language studies. It places the reference at a relatively neutral location that is away from most cortical sources.
+
+**Limitations**: the mastoids are not electrically neutral. They pick up temporal lobe activity and can introduce an asymmetry if one mastoid is noisier than the other.
+
+### Cz reference
+
+Some recordings use Cz (the vertex) as the online reference. Cz is a common recording reference because it is easy to locate and produces stable impedances.
+
+**When to use it**: you typically do not re-reference to Cz, because it is already the recording reference. But if your data was recorded with a different reference and you want to compare with older studies that used Cz, you can re-reference to it.
+
+**Limitations**: Cz sits directly over the motor and somatosensory cortex. Any brain activity near Cz is subtracted from all channels, which can distort motor-related potentials and central alpha rhythms.
+
+### REST (Reference Electrode Standardisation Technique)
+
+REST is a mathematical technique that estimates what the EEG would look like with a reference at infinity (i.e., no reference influence at all). It uses a head model to compute the transformation from the current reference to the theoretical infinity reference.
+
+**When to use it**: REST is useful when you need a reference-free representation of the data, particularly for source-level analyses or when comparing data recorded with different reference schemes.
+
+**Limitations**: REST requires a head model and accurate electrode locations. The result depends on the quality of these inputs. It is also computationally more involved than a simple re-referencing.
+
+## Re-referencing in MNE-Python
+
+MNE provides the `set_eeg_reference()` method on Raw, Epochs, and Evoked objects. There are two ways it can handle re-referencing: the **projection approach** and the **data approach**.
+
+### The data approach (recommended for most uses)
+
+The data approach modifies the data in place. The new reference is subtracted from every EEG channel immediately.
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+# ── Create simulated data ──────────────────────────────────────
+ch_names = ["Fp1", "Fp2", "F3", "F4", "C3", "C4",
+            "P3", "P4", "O1", "O2", "M1", "M2"]
+info = mne.create_info(ch_names=ch_names, sfreq=256, ch_types="eeg")
+
+rng = np.random.default_rng(42)
+data = rng.standard_normal((12, 256 * 10)) * 1e-6
+raw = mne.io.RawArray(data, info)
+
+# ── Average reference ──────────────────────────────────────────
+# Setting projection=False applies it directly to the data
+raw_avg = raw.copy().set_eeg_reference("average", projection=False)
+print("After average reference:")
+print(raw_avg.info["custom_ref_applied"])
+```
+
+```{python}
+#| eval: false
+# ── Linked mastoids reference ──────────────────────────────────
+# Re-reference to the average of M1 and M2
+raw_mastoids = raw.copy().set_eeg_reference(["M1", "M2"], projection=False)
+print("After linked mastoids reference:")
+print(raw_mastoids.info["custom_ref_applied"])
+```
+
+```{python}
+#| eval: false
+# ── Single channel reference (e.g., Cz) ───────────────────────
+# If Cz were in the data, you would do:
+# raw_cz = raw.copy().set_eeg_reference(["Cz"], projection=False)
+```
+
+### The projection approach
+
+The projection approach does not modify the data immediately. Instead, it adds a **projector** to the data that is applied on the fly whenever you access the data (e.g., for plotting or computing). The raw data stored in memory remains unchanged.
+
+```{python}
+#| eval: false
+# Average reference as a projection
+raw_proj = raw.copy().set_eeg_reference("average", projection=True)
+
+# The projector is stored but not yet applied
+print(f"Projectors: {raw_proj.info['projs']}")
+
+# Data is modified only when you access it:
+# data_with_proj = raw_proj.get_data()  # projector applied here
+```
+
+The projection approach is useful when you want to:
+
+- Delay the decision about when to apply the reference
+- Combine the reference projector with other projectors (e.g., SSP for artifact removal)
+- Preserve the original data for comparison
+
+For most analyses, the data approach (`projection=False`) is simpler and more transparent. You see exactly what the data looks like after re-referencing, with no hidden transformations.
+
+### REST in MNE-Python
+
+MNE supports REST re-referencing through the same `set_eeg_reference()` method. You need a forward model, which MNE can compute if you have electrode locations and a head model:
+
+```{python}
+#| eval: false
+# REST re-referencing (requires electrode locations and a forward model)
+# This is a simplified example; in practice you would compute the
+# forward model from a BEM (boundary element model) or sphere model
+
+# raw_rest = raw.copy().set_eeg_reference("REST", projection=False)
+# Note: REST requires that the Raw object has a valid montage set
+# and that a forward solution is available or can be computed
+```
+
+REST is less commonly used in routine preprocessing, but it is valuable in studies that compare data across different recording setups.
+
+## A practical note on reference and ICA
+
+If you plan to run ICA, re-reference to average **before** fitting ICA. The average reference reduces the data rank by one, so set the number of ICA components to `n_channels - 1` to avoid numerical issues. If you re-reference after ICA, the ICA solution may not be valid because the spatial patterns were learned under a different reference.
+
+```{python}
+#| eval: false
+import mne
+
+# Re-reference to average before ICA
+raw.set_eeg_reference("average", projection=False)
+
+# Set number of ICA components to account for the rank reduction
+n_components = len(raw.ch_names) - 1  # one less than the number of channels
+```
+
+## Key takeaways
+
+- Every EEG channel measures a voltage difference relative to a reference. The choice of reference affects the shape and amplitude of your data.
+- **Average reference** is the most common choice for studies with dense arrays (32+ channels). It minimises the influence of any single reference location but reduces the data rank by one.
+- **Linked mastoids** are a traditional choice for ERP studies. They provide a relatively neutral reference for many cortical sources but are not truly inactive.
+- **REST** estimates the data as if recorded with a reference at infinity. It is useful for source-level analyses but requires electrode locations and a head model.
+- In MNE, use `set_eeg_reference()` with `projection=False` to modify the data directly (the data approach), or `projection=True` to add a projector that is applied on the fly (the projection approach). The data approach is simpler for most workflows.
+- Re-reference before running ICA. If you use the average reference, set the number of ICA components to `n_channels - 1` to account for the rank reduction.

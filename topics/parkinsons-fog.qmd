@@ -1,0 +1,332 @@
+---
+title: "Parkinson's disease, Freezing of Gait, and EEG"
+description: "EEG findings in Parkinson's disease, the role of pathological beta synchrony, what Freezing of Gait is, EEG biomarkers of FoG, and how metastability analysis connects to the study of PD motor symptoms."
+date: 2026-03-31
+date-modified: last-modified
+module: 5
+categories: [connectivity, metastability, clinical]
+---
+
+## Why this topic matters
+
+Natalia's master's project sits at the intersection of clinical neuroscience and computational EEG analysis. To make sense of metastability results, you need to understand what Parkinson's disease does to the brain, what Freezing of Gait is, and what EEG can tell us about both. This page provides that clinical and neuroscientific context.
+
+This is a conceptual page. The code blocks show the analysis pipeline but are not intended to be executed directly; they use placeholder data paths and serve as a reference for the workflow.
+
+## Brief overview of Parkinson's disease
+
+**Parkinson's disease** (PD) is a progressive neurodegenerative disorder. Its primary pathology is the loss of dopamine-producing neurones in the substantia nigra, a small structure in the midbrain. These neurones are part of the basal ganglia circuitry, which plays a central role in movement initiation, planning, and execution.
+
+### Motor symptoms
+
+The cardinal motor symptoms of PD are:
+
+- **Bradykinesia**: slowness of movement. This is the hallmark symptom and is required for diagnosis.
+- **Resting tremor**: a rhythmic, involuntary shaking that occurs when the limb is at rest. The "pill-rolling" tremor of the hand is the most recognisable form.
+- **Rigidity**: increased resistance to passive movement of the limbs. This is distinct from spasticity (which depends on the speed of movement).
+- **Postural instability**: impaired balance, which develops in later stages and is a major cause of falls.
+
+These symptoms typically begin on one side of the body (asymmetric onset) and gradually progress to affect both sides. The severity is measured using the Unified Parkinson's Disease Rating Scale (UPDRS), particularly Part III (motor examination).
+
+### Non-motor symptoms
+
+PD is not just a movement disorder. Non-motor symptoms are common and can be just as disabling:
+
+- Cognitive decline, ranging from mild executive dysfunction to dementia
+- Depression and anxiety
+- Sleep disturbances (REM sleep behaviour disorder, insomnia)
+- Autonomic dysfunction (constipation, orthostatic hypotension)
+- Hyposmia (reduced sense of smell), often present years before motor symptoms
+
+### Treatment
+
+Dopaminergic medication (primarily levodopa and dopamine agonists) is the mainstay of treatment. It replaces the missing dopamine and alleviates motor symptoms, but it does not stop disease progression. Over time, the response to medication fluctuates (the "wearing off" phenomenon), and patients may develop dyskinesias (involuntary, excessive movements).
+
+Deep brain stimulation (DBS) of the subthalamic nucleus or globus pallidus is used in advanced PD when medication alone is insufficient. DBS delivers continuous electrical pulses that modulate the pathological activity in basal ganglia circuits.
+
+## EEG findings in Parkinson's disease
+
+EEG provides a window into the cortical consequences of PD pathology. Several consistent findings have emerged from decades of research.
+
+### Slowing of background activity
+
+Compared to age-matched healthy controls, PD patients show a shift in the EEG power spectrum towards slower frequencies. Specifically:
+
+- **Increased theta (4-8 Hz) and delta (1-4 Hz) power**, particularly over frontal and temporal regions.
+- **Decreased alpha (8-13 Hz) power**, which normally dominates the resting-state EEG.
+- **Decreased beta (13-30 Hz) power** over the scalp, despite the well-known excessive beta synchrony in subcortical structures.
+
+The apparent contradiction about beta is resolved by considering the level of analysis. Scalp EEG measures cortical activity, and cortical beta power may be reduced in PD because of disrupted thalamocortical communication. The pathological beta synchrony is most prominent in basal ganglia circuits (detected by local field potentials from DBS electrodes), though it can sometimes be detected at the scalp level using connectivity measures.
+
+### Excessive beta synchrony in basal ganglia-cortical circuits
+
+The most important EEG/electrophysiology finding in PD, for our purposes, is the excessive synchronisation in the beta band (13-30 Hz) between the basal ganglia and the motor cortex. This has been demonstrated by:
+
+- Local field potential (LFP) recordings from DBS electrodes in the subthalamic nucleus
+- Cortico-subcortical coherence studies combining scalp EEG with LFP
+- Magnetoencephalography (MEG) studies showing increased beta connectivity
+
+This pathological beta synchrony is thought to "lock" the motor system in an inhibitory state, preventing the flexible switching between motor programmes that normal movement requires. Levodopa medication and DBS both reduce beta synchrony and improve motor function, supporting a causal link.
+
+### Cortical connectivity changes
+
+Beyond power spectral changes, PD alters the connectivity between cortical regions:
+
+- Reduced long-range connectivity (frontal-parietal, frontal-occipital)
+- Altered interhemispheric connectivity
+- Disrupted connectivity patterns in the default mode network
+- Changes in graph-theoretical properties (reduced small-world characteristics)
+
+These connectivity changes are relevant for metastability analysis because they suggest that PD does not just alter activity in individual brain regions; it disrupts the coordination between them.
+
+## What Freezing of Gait is
+
+**Freezing of Gait** (FoG) is one of the most disabling symptoms of Parkinson's disease. It is defined as a brief, episodic absence or marked reduction of forward progression of the feet despite the intention to walk.
+
+### Clinical presentation
+
+During a FoG episode, the patient's feet appear to be "glued to the floor". The legs may tremble or shuffle in place, but the person cannot take a full step forward. Episodes typically last from a few seconds to about 30 seconds, though longer episodes occur.
+
+FoG is often described by patients as feeling that their feet are stuck, that the floor is pulling them down, or that they have "forgotten how to walk". It is both frightening and dangerous: sudden freezing during walking is a major cause of falls in PD.
+
+### Triggers
+
+FoG does not occur randomly. It is triggered by specific situations:
+
+- **Narrow spaces**: doorways, corridors, crowded environments
+- **Turning**: especially tight turns (180 degrees or sharper)
+- **Gait initiation**: the first step from standing still
+- **Dual-tasking**: walking while talking, carrying objects, or performing mental calculations
+- **Emotional stress**: anxiety, time pressure, unfamiliar environments
+- **Approaching a destination**: the final steps before reaching a target
+
+The sensitivity to these triggers suggests that FoG involves a breakdown in the brain's ability to process competing demands or navigate complex motor plans.
+
+### Prevalence and impact
+
+FoG affects roughly 30-60% of PD patients, with prevalence increasing as the disease progresses. It is more common in patients with longer disease duration, higher UPDRS motor scores, and a history of falls.
+
+The clinical impact is severe:
+
+- Increased risk of falls and fall-related injuries
+- Reduced mobility and independence
+- Social withdrawal and reduced quality of life
+- Caregiver burden
+
+FoG responds partially to dopaminergic medication (it is worse during "off" states and better during "on" states), but some patients experience FoG even when their medication is working well for other symptoms. This medication-resistant FoG is particularly challenging to treat.
+
+### Cueing strategies
+
+A remarkable feature of FoG is that it can often be overcome with external cues:
+
+- **Visual cues**: laser pointers projecting a line on the floor, strips of tape on the ground
+- **Auditory cues**: rhythmic music, metronome beats
+- **Tactile cues**: vibrating devices on the wrist or ankle
+
+These cues are thought to bypass the dysfunctional basal ganglia circuits and engage alternative motor pathways (particularly cerebellar and premotor circuits). The effectiveness of cueing supports the idea that the motor programmes for walking are intact in FoG; the problem is in initiating or maintaining them.
+
+## EEG biomarkers of Freezing of Gait
+
+Studying FoG with EEG is challenging because episodes are unpredictable and brief, and walking introduces motion artefacts. Despite these difficulties, several EEG findings have been associated with FoG.
+
+### Frontal theta changes
+
+Several studies have reported altered theta (4-8 Hz) activity over frontal regions during or just before FoG episodes. The interpretation is that frontal theta reflects cognitive control and conflict monitoring, and that FoG involves a failure of frontal executive circuits to resolve competing motor demands.
+
+Some studies find increased frontal theta during freezing (suggesting heightened but ineffective cognitive effort), while others find decreased frontal theta (suggesting a failure to engage cognitive control). The discrepancy may relate to differences in task design, medication state, or how FoG episodes were identified.
+
+### Beta desynchronisation failure
+
+Normal voluntary movement is preceded by a desynchronisation (decrease in power) of beta oscillations over the motor cortex. This "beta ERD" (event-related desynchronisation) is thought to release the motor system from its resting inhibitory state, allowing movement to proceed.
+
+In FoG, this beta desynchronisation may fail. The motor cortex remains excessively synchronised in beta, preventing the transition to the motor programme for stepping. This is consistent with the broader PD picture of pathological beta synchrony.
+
+### Altered connectivity
+
+FoG has been associated with altered connectivity patterns in EEG:
+
+- Reduced frontal-parietal connectivity during walking
+- Altered beta coherence between motor regions
+- Changes in network properties (reduced modularity, altered hub structure)
+
+These connectivity changes are exactly what metastability analysis is designed to capture. If FoG involves an inability to transition between coordination states, regional metastability should be reduced in the relevant brain regions.
+
+## The metastability hypothesis for Freezing of Gait
+
+Combining the clinical features of FoG with the metastability framework leads to a specific hypothesis:
+
+FoG occurs when the brain's motor network becomes "stuck" in a pathologically stable coordination state with low metastability. The network cannot transition to the coordination pattern needed for stepping, so the patient freezes.
+
+The reasoning is as follows:
+
+1. Normal gait requires continuous transitions between coordination states: planning the next step, initiating the step, executing the swing phase, landing the foot, shifting weight, and repeating.
+2. Each transition requires the brain to reconfigure its coordination pattern, meaning the dominant eigenvector must change.
+3. In FoG, excessive beta synchrony locks the motor network into a rigid pattern, reducing metastability.
+4. The network cannot make the transition from "standing" to "stepping", and the patient freezes.
+5. External cues (visual, auditory) work because they engage alternative pathways that can trigger the transition from outside the locked circuit.
+
+This hypothesis makes testable predictions:
+
+- PD-FoG patients should show lower regional metastability than PD-noFoG patients, particularly in frontal and motor regions.
+- The metastability difference should be most pronounced in the beta band.
+- Metastability might correlate with the severity or frequency of FoG episodes.
+
+## Natalia's project
+
+Natalia's master's project tests these predictions using resting-state EEG data from three groups:
+
+- **Healthy controls (HC)**: age-matched, no neurological conditions
+- **PD without FoG (PD-noFoG)**: Parkinson's patients who do not experience Freezing of Gait
+- **PD with FoG (PD-FoG)**: Parkinson's patients who experience Freezing of Gait
+
+The analysis pipeline, at a high level:
+
+```python
+#| eval: false
+
+# Step 1: Load BIDS-formatted EEG data
+import mne_bids
+
+bids_path = mne_bids.BIDSPath(
+    subject="01", task="rest", datatype="eeg",
+    root="/path/to/bids/dataset"
+)
+raw = mne_bids.read_raw_bids(bids_path)
+```
+
+```python
+#| eval: false
+
+# Step 2: Preprocessing
+# - Set montage
+raw.set_montage("standard_1020")
+
+# - Filter to frequency band of interest (e.g., beta)
+raw_beta = raw.copy().filter(l_freq=13, h_freq=30, method="fir")
+
+# - Epoch the data (e.g., 2-second non-overlapping epochs)
+events = mne.make_fixed_length_events(raw_beta, duration=2.0)
+epochs = mne.Epochs(raw_beta, events, tmin=0, tmax=2.0,
+                    baseline=None, preload=True)
+
+# - Reject bad epochs (amplitude threshold or autoreject)
+epochs.drop_bad(reject=dict(eeg=150e-6))
+```
+
+```python
+#| eval: false
+
+# Step 3: Extract instantaneous phase using the Hilbert transform
+from scipy.signal import hilbert
+import numpy as np
+
+data = epochs.get_data()  # shape: (n_epochs, n_channels, n_times)
+analytic = hilbert(data, axis=-1)
+phases = np.angle(analytic)
+```
+
+```python
+#| eval: false
+
+# Step 4: Compute phase alignment matrix and dominant eigenvector
+n_epochs, n_channels, n_times = phases.shape
+all_v_dominant = []
+
+for ep in range(n_epochs):
+    v_epoch = np.zeros((n_times, n_channels))
+    for tp in range(n_times):
+        phi = phases[ep, :, tp]
+        phase_diff = phi[:, None] - phi[None, :]
+        A = np.cos(phase_diff)
+        eigenvalues, eigenvectors = np.linalg.eigh(A)
+        v_epoch[tp] = eigenvectors[:, -1]
+
+    # Sign continuity fix
+    if v_epoch[0, np.argmax(np.abs(v_epoch[0]))] < 0:
+        v_epoch[0] *= -1
+    for tp in range(1, n_times):
+        if np.dot(v_epoch[tp], v_epoch[tp - 1]) < 0:
+            v_epoch[tp] *= -1
+
+    all_v_dominant.append(v_epoch)
+```
+
+```python
+#| eval: false
+
+# Step 5: Compute regional metastability per participant
+# Concatenate eigenvectors across epochs for this participant
+v_all = np.concatenate(all_v_dominant, axis=0)  # (total_timepoints, n_channels)
+regional_ms = np.var(v_all, axis=0)  # one value per channel
+
+# Repeat for all participants, then compare groups
+```
+
+```python
+#| eval: false
+
+# Step 6: Group statistics
+from scipy.stats import f_oneway, kruskal
+from statsmodels.stats.multitest import multipletests
+
+# ms_hc, ms_pd_nofog, ms_pd_fog are arrays of shape (n_subjects, n_channels)
+p_values = np.zeros(n_channels)
+for ch in range(n_channels):
+    _, p_values[ch] = f_oneway(
+        ms_hc[:, ch], ms_pd_nofog[:, ch], ms_pd_fog[:, ch]
+    )
+
+# Correct for multiple comparisons across channels
+reject, p_corrected, _, _ = multipletests(p_values, method="fdr_bh")
+```
+
+## Study design considerations
+
+### Sample size
+
+Clinical EEG studies typically have small sample sizes (10-30 per group). This limits statistical power and makes it important to:
+
+- Use non-parametric tests (permutation tests, Kruskal-Wallis) when possible
+- Report effect sizes, not just p-values
+- Be cautious about claims from individual channels that barely survive correction
+- Consider whether a region-of-interest approach (averaging channels within predefined regions) is more appropriate than testing every channel individually
+
+### Medication state
+
+PD patients are typically tested in two conditions:
+
+- **ON medication**: after taking their regular dopaminergic medication. Motor symptoms are better controlled but dyskinesias may be present.
+- **OFF medication**: after overnight withdrawal of medication (typically 12 hours). Motor symptoms are more pronounced.
+
+The medication state affects EEG and metastability. If you test patients ON medication, you are measuring the brain dynamics of a treated (partially normalised) system. If you test OFF medication, you are measuring the pathological dynamics more directly, but the patients are more symptomatic and the recording may be more challenging (more tremor artefact, less cooperation).
+
+Natalia's study tests patients in the practically defined OFF state (after overnight medication withdrawal). This is standard practice for studies investigating the pathophysiology of PD.
+
+### Recording protocol
+
+Resting-state EEG recordings for PD studies should consider:
+
+- **Eyes open vs eyes closed**: Most studies use eyes-closed rest because it produces a cleaner, more stable EEG. Some use alternating blocks of eyes-open and eyes-closed rest.
+- **Duration**: At least 3-5 minutes of clean data per condition. Longer is better for metastability estimates.
+- **Tremor**: Resting tremor produces artefact in the 4-6 Hz range and its harmonics. If the patient has prominent tremor, you may need to address this in preprocessing (e.g., ICA component removal).
+- **Alertness**: Patients should be monitored for drowsiness, which shifts the EEG towards slower frequencies and can confound group comparisons.
+
+### FoG classification
+
+Classifying patients as FoG+ or FoG- is not always simple. Common approaches include:
+
+- The **New Freezing of Gait Questionnaire** (NFOG-Q): a self-report measure that identifies FoG patients and quantifies severity.
+- **Clinical observation**: observing patients during standardised gait tasks (walking, turning, dual-tasking) and noting FoG episodes.
+- **Video analysis**: recording gait tasks and having blinded raters identify FoG episodes.
+
+The NFOG-Q is the most widely used screening tool, but it relies on patient self-report and may miss FoG in patients who are not aware of their episodes. Clinical observation is more reliable but requires a standardised protocol.
+
+## Key takeaways
+
+1. **Parkinson's disease** is caused by the loss of dopaminergic neurones. Its motor symptoms (bradykinesia, tremor, rigidity) result from disrupted basal ganglia-cortical circuits.
+2. The key EEG finding in PD is **excessive beta synchrony** between basal ganglia and cortex, which locks the motor system in an inhibitory state.
+3. Scalp EEG in PD also shows **slowing of background activity** (more theta/delta, less alpha) and altered cortical connectivity.
+4. **Freezing of Gait** is an episodic inability to step, triggered by narrow spaces, turning, and dual-tasking. It affects 30-60% of PD patients and is a major cause of falls.
+5. The **metastability hypothesis** for FoG proposes that rigid neural dynamics (low metastability) prevent the flexible transitions between coordination states needed for gait.
+6. Natalia's project compares regional metastability across HC, PD-noFoG, and PD-FoG groups, with the prediction that FoG patients show the lowest metastability in frontal and motor regions.
+7. Study design must address **medication state**, **recording protocol**, and **FoG classification** to produce interpretable results.

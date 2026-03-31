@@ -1,0 +1,22 @@
+---
+title: "Topics"
+description: "Reference pages covering individual EEG analysis techniques, tools, and concepts."
+date: 2026-03-31
+date-modified: last-modified
+listing:
+  id: topics-listing
+  contents: "*.qmd"
+  type: table
+  fields: [title, description, categories]
+  field-display-names:
+    title: "Title"
+    description: "Description"
+    categories: "Categories"
+  sort: "title asc"
+  filter-ui: true
+---
+
+Each topic page covers one technique or concept in detail, with code examples and explanations. Topics are referenced from the main [modules](../modules/01-getting-started.qmd), but you can also browse them here.
+
+::: {#topics-listing}
+:::

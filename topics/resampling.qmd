@@ -1,0 +1,189 @@
+---
+title: "Resampling EEG data"
+description: "Why and how to resample EEG data, the Nyquist theorem, anti-aliasing, using MNE's raw.resample(), common target sampling rates, and where resampling fits in the preprocessing pipeline."
+date: 2026-03-31
+date-modified: last-modified
+module: 2
+categories: [preprocessing, sampling]
+---
+
+## Why resample?
+
+EEG amplifiers often record at high sampling rates: 1000, 2048, or even 5000 Hz. These rates are useful during recording because they capture the full bandwidth of the signal and allow you to detect very short-lived events. But for most analyses, you do not need that much temporal resolution.
+
+If you are studying alpha oscillations (8--13 Hz), you do not need 5000 samples per second. A sampling rate of 256 Hz gives you more than enough resolution for frequencies up to 128 Hz (well above alpha). And working with lower sampling rates has real practical benefits:
+
+- **Smaller file sizes**: a 64-channel recording at 1000 Hz produces about 500 MB per hour. At 256 Hz, the same recording is about 125 MB. With large datasets, this difference matters.
+- **Faster processing**: filtering, ICA, and time-frequency analyses all run faster with fewer samples. ICA in particular can take much longer at high sampling rates because the number of time points directly affects computation time.
+- **Reduced memory usage**: if you are processing data in memory (as MNE does by default), lower sampling rates mean your arrays are smaller.
+
+The trade-off is that resampling to a lower rate discards information above the new Nyquist frequency. If you resample to 256 Hz, you cannot analyse frequencies above 128 Hz. Make sure your target rate is high enough for the frequencies you care about.
+
+## The Nyquist theorem
+
+The Nyquist theorem states that to faithfully represent a signal at frequency f, you need to sample at a rate of at least 2f. This minimum rate, 2f, is called the Nyquist rate. The maximum frequency that can be represented at a given sampling rate is called the Nyquist frequency, and it equals half the sampling rate.
+
+For example:
+
+| Sampling rate | Nyquist frequency | Can represent up to |
+|:--------------|:------------------|:--------------------|
+| 256 Hz | 128 Hz | 128 Hz |
+| 512 Hz | 256 Hz | 256 Hz |
+| 1000 Hz | 500 Hz | 500 Hz |
+| 2048 Hz | 1024 Hz | 1024 Hz |
+
+In practice, you want some margin above the highest frequency of interest. If you need to analyse gamma activity up to 100 Hz, a sampling rate of 256 Hz (Nyquist at 128 Hz) gives you a 28 Hz margin, which is enough for most filter designs to work well.
+
+## Anti-aliasing
+
+If you simply throw away every other sample to halve the sampling rate (a process called decimation), any frequency above the new Nyquist frequency gets "folded back" into the lower frequency range. This phenomenon is called **aliasing**, and it creates false signals at frequencies where no real signal exists.
+
+To prevent aliasing, you must apply a low-pass filter before reducing the sampling rate. This anti-aliasing filter removes all frequencies above the new Nyquist frequency so that there is nothing left to fold back. MNE's `resample()` method does this automatically, so you do not need to apply a separate low-pass filter before resampling.
+
+Here is a concrete example. Suppose your data is at 1000 Hz and you want to resample to 250 Hz. The new Nyquist frequency is 125 Hz. Before decimation, MNE applies a low-pass filter that removes everything above 125 Hz. Then it reduces the sampling rate. The result is a clean 250 Hz signal with no aliasing artifacts.
+
+## Using raw.resample() in MNE
+
+### Basic usage
+
+```{python}
+#| eval: false
+import mne
+
+# Load data (recorded at 1000 Hz, for example)
+raw = mne.io.read_raw_edf("recording.edf", preload=True)
+print(f"Original sampling rate: {raw.info['sfreq']} Hz")
+print(f"Original number of samples: {raw.n_times}")
+
+# Resample to 256 Hz
+raw.resample(sfreq=256)
+print(f"New sampling rate: {raw.info['sfreq']} Hz")
+print(f"New number of samples: {raw.n_times}")
+```
+
+### With event handling
+
+If your data has event markers (annotations or stim channels), resampling can shift event times slightly because the new time points may not align exactly with the old ones. MNE handles annotations automatically (it adjusts their onset times), but if you are working with events arrays, you should extract them before resampling and pass them to the `events` parameter:
+
+```{python}
+#| eval: false
+# Extract events before resampling
+events = mne.find_events(raw, stim_channel="Status")
+
+# Resample data and events together
+raw_resampled, events_resampled = raw.resample(
+    sfreq=256,
+    events=events
+)
+```
+
+This ensures that event sample indices are adjusted to match the new sampling rate.
+
+### Full parameter control
+
+```{python}
+#| eval: false
+raw.resample(
+    sfreq=256,             # target sampling rate
+    npad="auto",           # padding to reduce edge artifacts
+    window="boxcar",       # window function for anti-aliasing
+    events=None,           # events array to adjust (optional)
+    pad="reflect_limited", # padding method
+    verbose=True
+)
+```
+
+## Common target sampling rates
+
+The choice of target sampling rate depends on what frequencies you need and what processing you plan to do. Here are the most common choices:
+
+| Target rate | Nyquist | Good for | Notes |
+|:------------|:--------|:---------|:------|
+| 250 Hz | 125 Hz | Most ERP and oscillation studies | Common in BCI and clinical EEG |
+| 256 Hz | 128 Hz | Same as 250 Hz | Power of 2, slightly faster FFT computation |
+| 500 Hz | 250 Hz | Gamma studies, high temporal precision | Good compromise between speed and bandwidth |
+| 512 Hz | 256 Hz | Same as 500 Hz | Power of 2 |
+| 1000 Hz | 500 Hz | Very high-frequency analysis | Rarely needed for scalp EEG |
+
+**Powers of 2** (256, 512, 1024) are slightly more efficient for FFT-based analyses because the FFT algorithm is fastest when the number of samples is a power of 2. In practice, the difference is small, and you should not choose a sampling rate solely for this reason.
+
+**250 vs 256 Hz**: both are common, and the choice rarely matters. Some labs prefer 256 because of the FFT advantage; others use 250 because it divides evenly into seconds (250 samples per second). Either is fine.
+
+## When to resample in the pipeline
+
+Resampling interacts with other preprocessing steps, so the order matters. Here is the recommended sequence:
+
+1. **Load data**
+2. **Set channel types and montage**
+3. **Filter** (band-pass and/or notch): filter before resampling, not after. Filtering at the higher original sampling rate gives you better control over the filter design. If you filter after resampling, the lower Nyquist frequency constrains your filter options.
+4. **Resample**: now that high-frequency content has been removed by the band-pass filter, you can safely reduce the sampling rate.
+5. **Run ICA, epoch, average, etc.**
+
+Some guides suggest resampling before filtering because it is faster (less data to filter). This can work if the anti-aliasing filter in `resample()` is sufficient for your needs, but the safer approach is to filter first so you have full control over the filter parameters.
+
+### Resampling after epoching
+
+You can also resample epoched data. This is useful if you want to keep the full sampling rate for the continuous data (e.g., for accurate event detection) but reduce it for the epoched data (to speed up time-frequency analysis):
+
+```{python}
+#| eval: false
+# Resample epochs
+epochs = mne.Epochs(raw, events, event_id=1, tmin=-0.2, tmax=0.8)
+epochs.resample(sfreq=256)
+```
+
+## Working example
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+# ── Create simulated data at 1000 Hz ────────────────────────
+rng = np.random.default_rng(42)
+sfreq = 1000
+duration = 10
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Pink noise + 10 Hz alpha
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1
+pink = np.fft.irfft(np.fft.rfft(white) / np.sqrt(freqs_fft), n=n_samples)
+signal = pink * 20e-6 / pink.std()
+signal += 5e-6 * np.sin(2 * np.pi * 10 * times)
+
+# Wrap in MNE Raw
+info = mne.create_info(ch_names=["Oz"], sfreq=sfreq, ch_types=["eeg"])
+raw = mne.io.RawArray(signal.reshape(1, -1), info)
+
+# ── Compare original and resampled data ──────────────────────
+raw_256 = raw.copy().resample(sfreq=256)
+
+print(f"Original: {raw.info['sfreq']} Hz, {raw.n_times} samples")
+print(f"Resampled: {raw_256.info['sfreq']} Hz, {raw_256.n_times} samples")
+print(f"Size reduction: {1 - raw_256.n_times / raw.n_times:.1%}")
+
+# ── Compare PSDs ─────────────────────────────────────────────
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+raw.compute_psd(fmax=200).plot(axes=axes[0], show=False)
+axes[0].set_title(f"Original ({int(raw.info['sfreq'])} Hz)")
+
+raw_256.compute_psd(fmax=120).plot(axes=axes[1], show=False)
+axes[1].set_title(f"Resampled ({int(raw_256.info['sfreq'])} Hz)")
+
+plt.tight_layout()
+plt.show()
+```
+
+## Key takeaways
+
+- Resample to reduce file size, speed up processing, and save memory. The most common target rates for EEG are 250 or 256 Hz (for studies up to ~100 Hz) and 500 or 512 Hz (for gamma studies).
+- The Nyquist theorem says you need at least 2 samples per cycle. Your sampling rate must be at least twice the highest frequency you want to analyse.
+- MNE's `resample()` applies an anti-aliasing filter automatically, so frequencies above the new Nyquist frequency are removed before the sampling rate is reduced. You do not need to low-pass filter separately.
+- Filter before resampling in your pipeline. This gives you full control over filter design at the higher original sampling rate.
+- If your data has events, pass them to `resample(events=events)` so that event sample indices are adjusted to the new sampling rate.
+- Avoid resampling to a rate that is too low for your analysis. If you need gamma activity up to 80 Hz, do not resample below 200 Hz.

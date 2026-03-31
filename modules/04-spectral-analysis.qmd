@@ -1,0 +1,225 @@
+---
+title: "Spectral and time-frequency analysis"
+description: "Power spectral density with Welch's method, EEG frequency bands, topographic maps, time-frequency decomposition with Morlet wavelets and multitaper, ERSP, and band power extraction."
+date: 2026-03-31
+date-modified: last-modified
+---
+
+## Overview
+
+So far we have cleaned the EEG signal and removed artifacts. Now we can ask a quantitative question: what frequencies are present in the recording, and how does their power change over time?
+
+Spectral analysis decomposes the EEG into its constituent oscillations. A resting-state recording with eyes closed will show a prominent peak around 10 Hz (alpha), while a person performing mental arithmetic will show stronger beta activity (13--30 Hz) and reduced alpha. These patterns are the backbone of EEG research, and measuring them precisely requires the right tools.
+
+This module covers two complementary approaches. First, power spectral density (PSD) tells you the average frequency content of a recording. Second, time-frequency decomposition reveals how that content evolves over time, which is what you need when you want to link oscillatory changes to specific events or cognitive states.
+
+## Topics
+
+### Power spectral density with Welch's method
+
+PSD estimates how much power (signal energy) is present at each frequency. Welch's method is the standard approach: it splits the signal into overlapping windows, computes the Fourier transform of each window, and averages the resulting spectra. The averaging reduces noise and gives a smoother estimate than a single FFT of the entire recording.
+
+The key parameters are:
+
+- **Window length** (`n_fft`): longer windows give better frequency resolution but worse time resolution. A 2-second window gives 0.5 Hz resolution (1/2 seconds).
+- **Overlap**: typically 50%. More overlap means more windows and a smoother estimate, at the cost of computation time.
+- **Window function**: a Hamming window is the default in MNE. It tapers the edges of each segment to reduce spectral leakage (artificial spreading of peaks into neighbouring frequencies).
+
+In MNE, `raw.compute_psd(method="welch")` handles all of this. You can also use `scipy.signal.welch()` directly if you want more control. See [Power spectral density (PSD)](../topics/psd.qmd) for the full treatment, including units, parameter choices, and comparisons between conditions.
+
+```python
+# Compute PSD with Welch's method in MNE
+psd = raw.compute_psd(method="welch", fmin=1, fmax=45, n_fft=512)
+psd.plot()
+```
+
+### EEG frequency bands
+
+EEG oscillations are grouped into named bands. The exact boundaries vary across publications, but the most common convention is shown below. See [EEG frequency bands](../topics/frequency-bands.qmd) for a deeper discussion of each band, including its neural generators and how to measure band power reliably.
+
+| Band | Frequency range | Typical association |
+|:-----|:---------------|:-------------------|
+| Delta | 0.5--4 Hz | Deep sleep, pathology |
+| Theta | 4--8 Hz | Drowsiness, memory encoding |
+| Alpha | 8--13 Hz | Relaxed wakefulness, eyes closed |
+| Beta | 13--30 Hz | Active thinking, motor planning |
+| Gamma | 30--100 Hz | Perception, binding, attention |
+
+Alpha is usually the most prominent rhythm in healthy adults during rest. It is strongest over posterior (occipital and parietal) regions and attenuates when the person opens their eyes or starts a cognitive task. This suppression is called **alpha desynchronisation** and is one of the most reliable findings in EEG research.
+
+Beta activity is associated with active cortical processing. It is prominent over motor cortex during motor planning and attenuates just before and during movement (beta desynchronisation), then rebounds after movement ends (beta rebound).
+
+Gamma oscillations are faster and lower in amplitude. They are harder to measure with scalp EEG because high-frequency signals are attenuated by the skull, and muscle artifact overlaps with the gamma range. Many gamma findings from scalp EEG have been questioned for this reason.
+
+### Topographic maps by band
+
+A topographic map shows how power is distributed across the scalp at a given frequency or band. MNE can plot band-power topographies directly from a PSD object. See [Topographic maps](../topics/topographic-maps.qmd) for a deeper discussion of interpolation, normalisation, colour maps, and common pitfalls.
+
+```python
+# Plot topographic maps for each band
+psd.plot_topomap(bands={"Delta": (0.5, 4), "Theta": (4, 8),
+                        "Alpha": (8, 13), "Beta": (13, 30)},
+                 normalize=True)
+```
+
+These maps let you see spatial patterns at a glance. For instance, alpha power concentrated over occipital regions confirms that the posterior alpha rhythm is present. Asymmetric patterns (more power on one side) can indicate lateralised cortical processing or, in clinical settings, focal abnormalities.
+
+When comparing topographies across conditions or groups, normalising the power values (dividing by total power) is important. Otherwise, differences in overall signal amplitude (due to electrode impedance, skull thickness, etc.) can mask the actual spatial pattern.
+
+### Time-frequency decomposition
+
+PSD gives you the average spectrum over a time window, but many interesting phenomena in EEG are transient. An event-related desynchronisation might last only a few hundred milliseconds. To capture this, you need time-frequency decomposition: a method that estimates power at each frequency at each time point. See [Time-frequency decomposition](../topics/time-frequency.qmd) for a detailed comparison of wavelet and multitaper approaches, including guidance on choosing parameters.
+
+**Morlet wavelets** are the most common approach in EEG. A Morlet wavelet is a short sinusoid tapered by a Gaussian envelope. You convolve the signal with wavelets of different frequencies, and the amplitude of the result at each time-frequency point tells you how much power is present there.
+
+The number of cycles in the wavelet controls the trade-off between time and frequency resolution. Fewer cycles (e.g., 3) give better time resolution but smear across frequencies. More cycles (e.g., 7) give sharp frequency peaks but blur short-lived events. A common compromise is to scale the number of cycles linearly with frequency: for example, `n_cycles = freqs / 2`.
+
+```python
+# Time-frequency decomposition with Morlet wavelets in MNE
+freqs = np.arange(4, 40, 1)
+power = mne.time_frequency.tfr_morlet(
+    epochs, freqs=freqs, n_cycles=freqs / 2,
+    return_itc=False, average=True
+)
+power.plot([0])  # plot for the first channel
+```
+
+**Multitaper** methods offer an alternative. Instead of a single taper (window), multitaper applies several orthogonal tapers (Slepian sequences) to each time window and averages the results. This gives a smoother spectral estimate with better control over frequency resolution. The `bandwidth` parameter controls how many tapers are used: wider bandwidth means more tapers and smoother estimates, at the cost of frequency resolution.
+
+```python
+# Multitaper time-frequency decomposition
+power_mt = mne.time_frequency.tfr_multitaper(
+    epochs, freqs=freqs, n_cycles=freqs / 2,
+    time_bandwidth=4.0, return_itc=False, average=True
+)
+```
+
+### Event-related spectral perturbation (ERSP)
+
+ERSP measures how oscillatory power changes relative to a baseline period. It is the time-frequency equivalent of an event-related potential (ERP): instead of looking at the average voltage waveform, you look at the average power change across trials. See [Event-related spectral perturbation (ERSP)](../topics/ersp.qmd) for the full treatment of baseline correction modes, ERD/ERS interpretation, and statistical testing.
+
+The standard procedure is:
+
+1. Compute the time-frequency representation for each epoch.
+2. Average the power across epochs.
+3. Convert to a baseline-relative measure (typically percent change or decibels relative to a pre-stimulus interval).
+
+In MNE, you can apply baseline correction to the `AverageTFR` object:
+
+```python
+power.apply_baseline(baseline=(-0.5, 0), mode="percent")
+power.plot([0], title="ERSP: percent change from baseline")
+```
+
+Positive values indicate an increase in power relative to baseline (event-related synchronisation, ERS), and negative values indicate a decrease (event-related desynchronisation, ERD). A typical motor task shows beta ERD during movement preparation and beta ERS (rebound) after movement ends.
+
+### Band power extraction for statistical comparison
+
+For group-level statistics, you often need a single number per participant per condition, not an entire time-frequency map. The common approach is to extract average band power in a specific time-frequency window of interest. See [Group-level statistics for EEG](../topics/group-statistics.qmd) for a full walkthrough of statistical testing, multiple comparisons correction, and cluster-based permutation tests.
+
+Steps:
+
+1. Define the frequency band (e.g., alpha: 8--13 Hz).
+2. Define the time window (e.g., 0.2--0.5 seconds post-stimulus).
+3. Average power across frequencies and time points within that window.
+4. Do this for each epoch (or each participant's average) and each condition.
+5. Feed the resulting values into a statistical test (t-test, ANOVA, mixed-effects model).
+
+```python
+# Extract alpha power (8-13 Hz) in a time window (0.2-0.5 s)
+alpha_power = power.copy().crop(tmin=0.2, tmax=0.5)
+alpha_data = alpha_power.data[:, 4:9, :]  # channels x freq indices x time
+alpha_mean = alpha_data.mean(axis=(1, 2))  # one value per channel
+```
+
+Choosing the time-frequency window is a critical step. If you select the window based on the data (e.g., picking the time and frequency with the strongest effect), you inflate your false-positive rate. The window should ideally be defined a priori, based on previous literature or a separate pilot dataset.
+
+### Event-related potentials (ERPs)
+
+While spectral analysis focuses on oscillatory power, another way to analyse EEG is to look at the average voltage waveform time-locked to an event. This is the event-related potential, or ERP. You epoch the continuous recording around each event (stimulus onset, response, etc.), then average across trials. Because noise is random and the brain response is consistent, the averaging cancels out the noise and reveals the underlying signal.
+
+ERPs are one of the oldest and most widely used tools in cognitive neuroscience. Classic components include the P300 (a positive deflection around 300 ms after a rare or surprising stimulus), the N400 (a negative deflection related to semantic processing), and the N170 (associated with face perception).
+
+In MNE, computing an ERP is simple once you have epochs:
+
+```python
+# Average across epochs to get the ERP
+evoked = epochs["stimulus"].average()
+evoked.plot()
+
+# Plot topographic maps at specific time points
+evoked.plot_topomap(times=[0.1, 0.2, 0.3])
+```
+
+You can also compare ERPs between conditions by computing a difference wave: subtract the evoked response in one condition from another. This isolates the part of the brain response that differs between conditions.
+
+See [Event-related potentials (ERPs)](../topics/erp.qmd) for the full treatment, including the signal-to-noise logic behind averaging, classic ERP components, difference waves, and grand averages across participants.
+
+## Working example: PSD of simulated data with alpha and beta oscillations
+
+The code below creates a simulated EEG signal containing two known oscillations: a 10 Hz alpha rhythm and a 20 Hz beta rhythm, on top of pink noise. It then computes the PSD using Welch's method and plots it. You should see two clear peaks at 10 and 20 Hz.
+
+```{python}
+#| fig-cap: "Power spectral density of simulated EEG with alpha (10 Hz) and beta (20 Hz) oscillations."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+# Set up parameters
+rng = np.random.default_rng(42)
+sfreq = 256          # sampling frequency in Hz
+duration = 30        # seconds (longer recording gives smoother PSD)
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Generate pink noise (1/f background)
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1  # avoid division by zero
+pink_filter = 1 / np.sqrt(freqs_fft)
+pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+pink = pink / pink.std()  # normalise
+
+# Add oscillations
+alpha = 1.5 * np.sin(2 * np.pi * 10 * times)   # 10 Hz alpha
+beta = 0.8 * np.sin(2 * np.pi * 20 * times)    # 20 Hz beta (weaker)
+eeg = pink + alpha + beta
+
+# Compute PSD with Welch's method
+freqs_psd, psd = signal.welch(eeg, fs=sfreq, nperseg=512, noverlap=256)
+
+# Plot
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+# Left panel: time-domain signal (first 2 seconds)
+ax = axes[0]
+mask = times < 2
+ax.plot(times[mask], eeg[mask], linewidth=0.5, color="#2c3e50")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Amplitude (a.u.)")
+ax.set_title("Simulated EEG signal (first 2 seconds)")
+
+# Right panel: PSD
+ax = axes[1]
+ax.semilogy(freqs_psd, psd, linewidth=1.2, color="#2c3e50")
+ax.axvline(10, color="#e74c3c", linestyle="--", alpha=0.7, label="Alpha (10 Hz)")
+ax.axvline(20, color="#3498db", linestyle="--", alpha=0.7, label="Beta (20 Hz)")
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("Power spectral density")
+ax.set_title("PSD (Welch's method)")
+ax.set_xlim(0, 45)
+ax.legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+The left panel shows the raw time-domain signal. You can see the oscillatory structure, but it is hard to tell the exact frequencies just by looking. The right panel makes the frequency content explicit: the 1/f background slopes downward, and the two injected oscillations appear as clear peaks at 10 and 20 Hz. The alpha peak is taller because we gave it a larger amplitude.
+
+This is the basic logic of spectral analysis: decompose a complex signal into its frequency components, then quantify how much power each component carries.
+
+## What comes next
+
+With the ability to measure oscillatory power in hand, the next module moves to connectivity and metastability. Instead of asking "how much alpha is present in this channel?", we will ask "are the alpha oscillations in different channels synchronised with each other?" That question leads to phase-based connectivity measures and, ultimately, to the concept of metastability. See [Module 5: Connectivity and metastability](05-metastability.qmd).

@@ -1,0 +1,424 @@
+---
+title: "Artifact rejection: exercises"
+description: "Practice peak-to-peak epoch rejection, ICA decomposition, blink artifact removal, PSD comparison, and threshold-based artifact detection."
+module: 3
+date: 2026-03-31
+date-modified: last-modified
+categories: [artifacts, ica]
+---
+
+These exercises go with [Module 3: Artifact rejection](../modules/03-artifacts.qmd). They cover the two main strategies for dealing with artifacts: rejecting contaminated segments outright, and using ICA to separate artifacts from brain signals. All exercises use simulated data so you can verify that the cleaning actually works (you know the ground truth).
+
+## Exercise 1: Reject epochs by peak-to-peak amplitude
+
+Create epoched data where some epochs contain large-amplitude bursts (simulating muscle artifacts). Reject any epoch where the peak-to-peak amplitude exceeds 100 µV. Report how many epochs were rejected and how many survived.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create a `Raw` object, add events with `mne.make_fixed_length_events()`, and build `Epochs` from them. To inject artifacts into some epochs, pick a few event times and add a large spike to the data at those times before epoching. Use the `reject` parameter in `mne.Epochs()`: pass `reject=dict(eeg=100e-6)` to reject epochs where any EEG channel exceeds 100 µV peak-to-peak. After creating the Epochs object, call `epochs.drop_log` to see which epochs were dropped.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 60
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Fp1", "Fp2", "C3", "C4", "P3", "P4", "O1", "O2"]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create clean EEG-like data
+data = np.random.randn(n_channels, n_samples) * 10e-6
+
+# Inject large artifacts at known times (simulating muscle bursts)
+# Add a 200 µV spike lasting 100 ms at these times:
+artifact_times = [5.0, 12.3, 25.7, 33.1, 41.5, 52.8]
+for t_art in artifact_times:
+    start = int(t_art * sfreq)
+    end = start + int(0.1 * sfreq)  # 100 ms burst
+    if end < n_samples:
+        data[:, start:end] += 200e-6 * np.random.randn(n_channels, end - start)
+
+raw = mne.io.RawArray(data, info)
+
+# Create 2-second epochs
+events = mne.make_fixed_length_events(raw, duration=2.0)
+
+# Build epochs with peak-to-peak rejection at 100 µV
+epochs = mne.Epochs(
+    raw, events,
+    tmin=0, tmax=2.0,
+    baseline=None,
+    reject=dict(eeg=100e-6),
+    preload=True
+)
+
+# Report the results
+n_total = len(events)
+n_kept = len(epochs)
+n_rejected = n_total - n_kept
+
+print(f"Total epochs: {n_total}")
+print(f"Kept: {n_kept}")
+print(f"Rejected: {n_rejected}")
+
+# Show the drop log (which epochs were dropped and why)
+epochs.plot_drop_log()
+```
+
+The exact number of rejected epochs depends on where the artifacts fall relative to the epoch boundaries, but you should see roughly 6 epochs rejected (one per artifact burst). Epochs that did not overlap with any artifact time should survive.
+:::
+
+
+## Exercise 2: Run ICA and plot component topographies
+
+Run ICA with 15 components on simulated multi-channel data. Plot the component topographies to see how ICA decomposes the data.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create a `Raw` object with at least 20 channels and set a standard montage (ICA topography plots need channel positions). Use `mne.preprocessing.ICA(n_components=15, random_state=42)` and call `ica.fit(raw)`. Then `ica.plot_components()` shows the scalp maps.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+
+sfreq = 500
+duration = 120  # ICA works better with more data
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+# Use 20 channels so we have enough for 15 ICA components
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Simulate data: mix of oscillations at different frequencies per region
+data = np.random.randn(n_channels, n_samples) * 5e-6
+
+# Add alpha to occipital channels
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Add beta to central channels
+beta = 6e-6 * np.sin(2 * np.pi * 20 * times)
+for name in ["C3", "C4", "Cz"]:
+    data[ch_names.index(name)] += beta
+
+raw = mne.io.RawArray(data, info)
+
+# Set montage (required for topography plots)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+
+# Band-pass filter before ICA (1 Hz high-pass helps ICA converge)
+raw.filter(l_freq=1, h_freq=40)
+
+# Fit ICA
+ica = ICA(n_components=15, random_state=42)
+ica.fit(raw)
+
+print(ica)
+
+# Plot component topographies
+ica.plot_components(title="ICA components")
+```
+
+Each component map shows a spatial pattern. With simulated data like this, you may see components that capture the occipital alpha pattern, the central beta pattern, and several noise components. With real data, you would look for components that match the spatial signature of known artifacts (blinks in frontal channels, lateral eye movements, etc.).
+:::
+
+
+## Exercise 3: Simulate and remove a blink artifact with ICA
+
+Create data with a simulated blink artifact: a large, brief deflection on frontal channels (`"Fp1"`, `"Fp2"`) that repeats every 3 seconds. Run ICA, identify the blink component, exclude it, and apply the cleaning. Compare the frontal signal before and after.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create the blink as a Gaussian pulse (use `scipy.signal.windows.gaussian()` or just `np.exp(-0.5 * ((t - t_blink) / width)**2)`) with a large amplitude (say 80 µV) added mainly to Fp1 and Fp2 and with smaller contributions to nearby channels. After fitting ICA, use `ica.find_blinks()` or inspect the components manually with `ica.plot_sources(raw)`. Exclude the blink component with `ica.exclude = [component_index]` and then `ica.apply(raw)`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Clean EEG: alpha oscillation plus noise
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz", "P3", "P4", "Pz"]:
+    data[ch_names.index(name)] += alpha
+
+# Store a copy of clean data for comparison
+data_clean = data.copy()
+
+# Add blink artifacts every 3 seconds on frontal channels
+blink_width = 0.15  # seconds (width of the Gaussian pulse)
+blink_times = np.arange(1.5, duration - 1, 3.0)  # every 3 seconds
+
+for t_blink in blink_times:
+    # Gaussian pulse centred at t_blink
+    pulse = np.exp(-0.5 * ((times - t_blink) / blink_width) ** 2)
+
+    # Blink is strongest at Fp1/Fp2, weaker at F3/F4/Fz/F7/F8
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 80e-6 * pulse
+    for name in ["F3", "F4", "Fz"]:
+        data[ch_names.index(name)] += 30e-6 * pulse
+    for name in ["F7", "F8"]:
+        data[ch_names.index(name)] += 15e-6 * pulse
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+
+# Filter before ICA
+raw.filter(l_freq=1, h_freq=40)
+
+# Store Fp1 before ICA cleaning
+fp1_before = raw.get_data(picks="Fp1")[0].copy()
+
+# Fit ICA
+ica = ICA(n_components=15, random_state=42)
+ica.fit(raw)
+
+# Find the blink component automatically using EOG-like detection on Fp1
+# (Fp1 acts as a proxy for an EOG channel here)
+blink_indices, blink_scores = ica.find_bads_eog(
+    raw, ch_name="Fp1", threshold=2.0
+)
+print(f"Blink component(s) found: {blink_indices}")
+
+# Exclude the blink component(s) and apply
+ica.exclude = blink_indices
+ica.apply(raw)
+
+fp1_after = raw.get_data(picks="Fp1")[0]
+
+# Compare before and after
+fig, axes = plt.subplots(2, 1, figsize=(14, 6), sharex=True)
+t_plot = slice(0, int(10 * sfreq))  # first 10 seconds
+t_sec = times[:int(10 * sfreq)]
+
+axes[0].plot(t_sec, fp1_before[t_plot] * 1e6)
+axes[0].set_title("Fp1 before ICA blink removal")
+axes[0].set_ylabel("Amplitude (µV)")
+
+axes[1].plot(t_sec, fp1_after[t_plot] * 1e6)
+axes[1].set_title("Fp1 after ICA blink removal")
+axes[1].set_ylabel("Amplitude (µV)")
+axes[1].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+```
+
+The "before" plot should show clear blink-shaped bumps every 3 seconds on the Fp1 channel. After ICA cleaning, those bumps should be gone (or greatly reduced) while the background EEG signal is preserved.
+:::
+
+
+## Exercise 4: Compare PSD before and after ICA cleaning
+
+Using the blink-removal pipeline from Exercise 3, plot the PSD of the data before and after ICA cleaning. Pay attention to the low-frequency range (below 5 Hz), where blink artifacts contribute most of their power.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Make a copy of the `Raw` object before applying `ica.apply()`. Then compute and plot the PSD for both copies using `raw.compute_psd().plot()`. Focus on the 0--40 Hz range. Blink artifacts are mostly low-frequency (below 3--4 Hz), so you should see a reduction in power in that range after cleaning.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+from mne.preprocessing import ICA
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8", "Fz",
+    "C3", "C4", "Cz",
+    "T7", "T8",
+    "P3", "P4", "P7", "P8", "Pz",
+    "O1", "O2", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create data with alpha + blink artifacts
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for name in ["O1", "O2", "Oz"]:
+    data[ch_names.index(name)] += alpha
+
+# Add blinks every 3 seconds
+blink_width = 0.15
+for t_blink in np.arange(1.5, duration - 1, 3.0):
+    pulse = np.exp(-0.5 * ((times - t_blink) / blink_width) ** 2)
+    data[ch_names.index("Fp1")] += 80e-6 * pulse
+    data[ch_names.index("Fp2")] += 80e-6 * pulse
+    for name in ["F3", "F4", "Fz"]:
+        data[ch_names.index(name)] += 30e-6 * pulse
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+raw.filter(l_freq=1, h_freq=40)
+
+# Save a copy before ICA
+raw_before = raw.copy()
+
+# Fit ICA and remove blink components
+ica = ICA(n_components=15, random_state=42)
+ica.fit(raw)
+blink_indices, _ = ica.find_bads_eog(raw, ch_name="Fp1", threshold=2.0)
+ica.exclude = blink_indices
+ica.apply(raw)
+
+# Plot PSDs side by side
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+# Before ICA
+psd_before = raw_before.compute_psd(fmax=40, picks="Fp1")
+psd_before.plot(axes=axes[0], show=False)
+axes[0].set_title("Fp1 PSD before ICA cleaning")
+
+# After ICA
+psd_after = raw.compute_psd(fmax=40, picks="Fp1")
+psd_after.plot(axes=axes[1], show=False)
+axes[1].set_title("Fp1 PSD after ICA cleaning")
+
+plt.tight_layout()
+plt.show()
+```
+
+The PSD of Fp1 before ICA cleaning should show elevated power in the low-frequency range (roughly 1--4 Hz) due to the blink artifacts. After cleaning, that low-frequency hump should be reduced. The alpha peak at 10 Hz (if visible on Fp1 at all) should remain unchanged because ICA separates the blink from the brain signal rather than filtering frequencies indiscriminately.
+:::
+
+
+## Exercise 5: Threshold-based artifact detector
+
+Write a function that scans a `Raw` object in fixed-length windows and flags any window where any channel exceeds a threshold of plus or minus 75 µV. Return a list of `(start_time, end_time)` tuples for the bad segments. Test it on simulated data with known artifacts.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `raw.get_data()` to get the data matrix and work in NumPy. Divide the data into windows of, say, 1 second (i.e., `sfreq` samples). For each window, check whether `np.max(np.abs(window))` exceeds `75e-6`. If it does, record the start and end times. You can convert sample indices to times by dividing by `sfreq`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+
+def detect_artifacts(raw, threshold_uv=75, window_sec=1.0):
+    """Find segments where any channel exceeds the amplitude threshold.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw data to scan.
+    threshold_uv : float
+        Threshold in microvolts. Any window where a channel exceeds
+        this value (positive or negative) is flagged.
+    window_sec : float
+        Length of each scanning window in seconds.
+
+    Returns
+    -------
+    bad_segments : list of tuple
+        Each tuple is (start_time, end_time) in seconds.
+    """
+    sfreq = raw.info["sfreq"]
+    data = raw.get_data()  # shape: (n_channels, n_samples)
+    threshold_v = threshold_uv * 1e-6  # convert µV to V
+
+    window_samples = int(window_sec * sfreq)
+    n_samples = data.shape[1]
+    bad_segments = []
+
+    for start in range(0, n_samples, window_samples):
+        end = min(start + window_samples, n_samples)
+        window = data[:, start:end]
+
+        if np.max(np.abs(window)) > threshold_v:
+            t_start = start / sfreq
+            t_end = end / sfreq
+            bad_segments.append((t_start, t_end))
+
+    return bad_segments
+
+
+# Test on simulated data
+sfreq = 500
+duration = 30
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Fp1", "Fp2", "C3", "C4", "O1", "O2"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+data = np.random.randn(len(ch_names), n_samples) * 10e-6  # ~10 µV noise
+
+# Inject artifacts at known times
+artifact_info = [
+    (3.2, "Fp1"),   # blink at 3.2 s
+    (10.5, "C3"),   # muscle artifact at 10.5 s
+    (22.0, "O1"),   # movement at 22 s
+]
+
+for t_art, ch in artifact_info:
+    ch_idx = ch_names.index(ch)
+    sample = int(t_art * sfreq)
+    # Add a 150 µV spike lasting 50 ms
+    spike_len = int(0.05 * sfreq)
+    data[ch_idx, sample:sample + spike_len] += 150e-6
+
+raw = mne.io.RawArray(data, info)
+
+# Run the detector
+bad_segs = detect_artifacts(raw, threshold_uv=75, window_sec=1.0)
+
+print(f"Found {len(bad_segs)} bad segments:")
+for start, end in bad_segs:
+    print(f"  {start:.1f} - {end:.1f} s")
+
+# Verify: we expect 3 bad segments (one per injected artifact)
+# The exact window boundaries depend on where the artifact falls,
+# but each artifact should flag exactly one 1-second window.
+```
+
+You should see three bad segments, one for each injected artifact. The start and end times will be rounded to 1-second window boundaries (e.g., the artifact at 3.2 seconds falls in the 3.0--4.0 second window). If you want finer resolution, reduce `window_sec` to 0.5 or 0.25 seconds.
+:::

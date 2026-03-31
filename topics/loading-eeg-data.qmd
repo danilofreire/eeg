@@ -1,0 +1,284 @@
+---
+title: "Loading EEG data"
+description: "How to load EEG data from common file formats in MNE-Python: EDF, BrainVision, EEGLAB .set, and FIF. Function signatures, format differences, and common pitfalls."
+date: 2026-03-31
+date-modified: last-modified
+module: 1
+categories: [getting-started, data-import]
+---
+
+## Why loading data correctly matters
+
+Getting data into MNE-Python is the first step in any analysis, and it is surprisingly easy to get wrong. EEG systems from different manufacturers use different file formats, each with its own conventions for storing channel names, types, units, and events. If the import step goes wrong (wrong channel types, missing reference information, units misinterpreted), every downstream analysis inherits those errors.
+
+This page covers the four most common EEG file formats and how to load each one in MNE-Python. It also covers the pitfalls that trip people up most often.
+
+## EDF and EDF+ (European Data Format)
+
+EDF is one of the most widely used formats for sharing EEG data. It is a simple, open format that many recording systems can export to. EDF+ is an extension that supports annotations (event markers) and discontinuous recordings.
+
+### Loading an EDF file
+
+```{python}
+#| eval: false
+import mne
+
+# Load an EDF file
+raw = mne.io.read_raw_edf(
+    "recording.edf",
+    preload=True       # load data into memory immediately
+)
+
+print(raw)
+print(raw.info)
+```
+
+### Key parameters
+
+```{python}
+#| eval: false
+# The full function signature (most-used parameters)
+raw = mne.io.read_raw_edf(
+    input_fname,        # path to the .edf file
+    eog=None,           # channel names or indices to set as EOG
+    misc=None,          # channel names or indices to set as misc
+    stim_channel=None,  # channel name or index for trigger/stimulus channel
+    exclude=(),         # channels to exclude from loading
+    preload=False,      # if True, load all data into memory
+    verbose=None        # logging level
+)
+```
+
+### Things to watch for
+
+- **Channel types**: EDF files often store all channels as "EEG", even if some are EOG, EMG, or ECG. You will need to set the correct types after loading (see below).
+- **Units**: EDF stores data in physical units specified in the file header. Most EEG systems write values in microvolts, but some use volts or millivolts. MNE expects volts internally, so it converts automatically, but if the header is wrong, your amplitudes will be off.
+- **Annotations**: EDF+ files can contain annotations (text-based event markers). MNE reads these automatically and stores them in `raw.annotations`.
+
+## BrainVision format
+
+BrainVision is the format used by Brain Products recording systems (BrainVision Recorder, BrainVision Analyzer). A BrainVision dataset consists of three files:
+
+- `.vhdr` (header): metadata, channel names, sampling rate
+- `.vmrk` (marker): event markers with timestamps
+- `.eeg` (data): the actual EEG time series
+
+All three files must be in the same directory and have the same base name.
+
+### Loading a BrainVision file
+
+```{python}
+#| eval: false
+import mne
+
+# Point to the .vhdr header file (MNE finds the .vmrk and .eeg automatically)
+raw = mne.io.read_raw_brainvision(
+    "recording.vhdr",
+    preload=True
+)
+
+print(raw)
+print(raw.info)
+```
+
+### Key parameters
+
+```{python}
+#| eval: false
+raw = mne.io.read_raw_brainvision(
+    vhdr_fname,         # path to the .vhdr header file
+    eog=("HEOG", "VEOG"),  # channel names to set as EOG
+    misc=None,          # channel names to set as misc
+    scale=1.0,          # scaling factor applied to data
+    preload=False,      # if True, load all data into memory
+    verbose=None        # logging level
+)
+```
+
+### Things to watch for
+
+- **File triplet**: if any of the three files (.vhdr, .vmrk, .eeg) is missing or renamed, loading will fail. Keep the file names consistent.
+- **EOG channels**: BrainVision systems often record EOG as separate channels with names like "HEOG" and "VEOG". Pass these to the `eog` parameter so MNE sets their type correctly.
+- **Events**: MNE reads the .vmrk file automatically and stores events. You can extract them with `mne.events_from_annotations(raw)`.
+
+## EEGLAB .set format
+
+EEGLAB is a popular MATLAB toolbox for EEG analysis. It stores data in `.set` files (which are MATLAB `.mat` files with a specific structure). The associated `.fdt` file contains the actual data if it was saved separately.
+
+### Loading an EEGLAB file
+
+```{python}
+#| eval: false
+import mne
+
+# Load an EEGLAB .set file
+raw = mne.io.read_raw_eeglab(
+    "recording.set",
+    preload=True
+)
+
+print(raw)
+print(raw.info)
+```
+
+### Key parameters
+
+```{python}
+#| eval: false
+raw = mne.io.read_raw_eeglab(
+    input_fname,        # path to the .set file
+    eog=None,           # channel names or indices to set as EOG
+    preload=False,      # if True, load all data into memory
+    verbose=None        # logging level
+)
+
+# You can also load EEGLAB epochs directly
+epochs = mne.io.read_epochs_eeglab(
+    input_fname,        # path to the .set file with epoched data
+    verbose=None
+)
+```
+
+### Things to watch for
+
+- **MATLAB version**: EEGLAB .set files saved in older MATLAB formats (v5 or v7) work fine. Files saved in MATLAB v7.3 format (HDF5-based) require the `h5py` package. Install it with `pip install h5py` if you get import errors.
+- **Channel locations**: EEGLAB files often contain channel locations in a non-standard coordinate system. MNE will read them, but you may want to set a standard montage afterwards (e.g., `raw.set_montage("standard_1020")`).
+- **Already-epoched data**: EEGLAB files can contain either continuous or epoched data. Use `read_raw_eeglab()` for continuous data and `read_epochs_eeglab()` for epoched data.
+
+## FIF format (MNE native)
+
+FIF (Functional Image Format) is MNE's native format, originally developed for the Neuromag MEG system. It stores data efficiently and preserves all MNE metadata perfectly.
+
+If you receive data that is already in FIF format (e.g., from a collaborator who uses MNE), loading it is trivial:
+
+### Loading a FIF file
+
+```{python}
+#| eval: false
+import mne
+
+# Load a FIF file
+raw = mne.io.read_raw_fif(
+    "recording_raw.fif",
+    preload=True
+)
+
+print(raw)
+print(raw.info)
+```
+
+### Key parameters
+
+```{python}
+#| eval: false
+raw = mne.io.read_raw_fif(
+    fname,              # path to the .fif file
+    allow_maxshield=False,  # allow loading MaxShield-processed data
+    preload=False,      # if True, load all data into memory
+    on_split_missing="raise",  # what to do if split files are missing
+    verbose=None        # logging level
+)
+```
+
+### Saving to FIF
+
+Once you have loaded and preprocessed data from any format, you can save it in FIF for efficient reloading later:
+
+```{python}
+#| eval: false
+# Save preprocessed data in FIF format
+raw.save("preprocessed_raw.fif", overwrite=True)
+
+# Epochs and Evoked objects have their own save methods
+# epochs.save("task-epo.fif", overwrite=True)
+# mne.write_evokeds("task-ave.fif", evoked_list)
+```
+
+FIF files use a naming convention: `*_raw.fif` for continuous data, `*-epo.fif` for epochs, `*-ave.fif` for evoked data. This is not enforced, but following it makes your files easier to identify.
+
+## Setting channel types after loading
+
+Regardless of the file format, you will often need to correct channel types. Most formats label all channels as EEG, even if some are EOG (eye), ECG (heart), EMG (muscle), or trigger channels.
+
+```{python}
+#| eval: false
+import mne
+
+# Suppose you loaded a file where everything is labelled as EEG
+# but channels "HEOG" and "VEOG" are actually EOG channels,
+# and "ECG" is a cardiac channel
+
+raw.set_channel_types({
+    "HEOG": "eog",
+    "VEOG": "eog",
+    "ECG": "ecg"
+})
+
+# Verify the change
+for ch in ["HEOG", "VEOG", "ECG"]:
+    print(f"{ch}: {raw.get_channel_types([ch])}")
+```
+
+This step is important because MNE uses channel types to decide which channels to include in operations like re-referencing (only EEG channels), ICA (only EEG channels by default), and plotting (different scales for different types).
+
+## Setting the montage
+
+A montage tells MNE where each electrode is located on the scalp. This information is needed for topographic plots, interpolation of bad channels, and source localisation.
+
+```{python}
+#| eval: false
+import mne
+
+# Set a standard 10-20 montage
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage, on_missing="warn")
+
+# "on_missing='warn'" means MNE will warn you (rather than error)
+# if some channel names in your data don't match the montage.
+# This is common when your data has non-standard channel names.
+
+# Print the montage
+print(montage)
+```
+
+## Complete loading workflow
+
+Here is a typical workflow for loading and preparing data from an EDF file:
+
+```{python}
+#| eval: false
+import mne
+
+# 1. Load the file
+raw = mne.io.read_raw_edf("subject01.edf", preload=True)
+
+# 2. Check what we have
+print(raw.info)
+print(f"Channels: {raw.ch_names}")
+print(f"Duration: {raw.times[-1]:.1f} seconds")
+
+# 3. Set channel types
+raw.set_channel_types({
+    "HEOG": "eog",
+    "VEOG": "eog",
+    "Status": "stim"
+})
+
+# 4. Drop channels we don't need
+raw.drop_channels(["Status"])
+
+# 5. Set the montage
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage, on_missing="warn")
+
+# 6. Verify
+print(raw.info)
+```
+
+## Key takeaways
+
+- MNE-Python supports all common EEG file formats. Use `read_raw_edf()` for EDF/EDF+, `read_raw_brainvision()` for BrainVision (.vhdr), `read_raw_eeglab()` for EEGLAB (.set), and `read_raw_fif()` for FIF files.
+- Set `preload=True` when you plan to modify the data (filtering, re-referencing). Without preloading, the data stays on disk and some operations will fail.
+- After loading, always check and correct channel types. Most formats label everything as EEG, but EOG, ECG, and trigger channels need to be set correctly for downstream processing to work.
+- Set a montage (electrode locations) if your file does not include one. This is needed for topographic plots and bad-channel interpolation.
+- Once you have preprocessed your data, save it in FIF format for efficient reloading. FIF preserves all MNE metadata perfectly.

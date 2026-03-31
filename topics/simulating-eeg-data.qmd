@@ -1,0 +1,299 @@
+---
+title: "Simulating EEG data"
+description: "Why simulate EEG data, how to build synthetic signals with numpy (pink noise, oscillations, artifacts), using MNE's simulation functions, and creating realistic multi-channel data with spatial structure."
+date: 2026-03-31
+date-modified: last-modified
+module: 1
+categories: [getting-started, simulation]
+---
+
+## Why simulate EEG data?
+
+Before you touch real data, there is a lot to gain from working with simulated signals. When you simulate, you know the ground truth: you put in a 10 Hz oscillation, so you can check that your analysis pipeline recovers it. You added a blink artifact at second 3, so you can verify that your artifact rejection catches it. This kind of controlled testing is impossible with real recordings, where the "right answer" is never fully known.
+
+Simulation is useful in three situations. First, for **testing pipelines**: you can check that your filtering, epoching, and averaging code does what you expect before running it on hours of real data. Second, for **teaching**: simulated signals let you demonstrate concepts (what does a band-pass filter actually do to a signal?) without needing access to real data or ethics approval. Third, for **methods development**: if you are developing a new analysis method, you need to know how it performs when the answer is known, and that requires simulation.
+
+## Creating a basic signal with numpy
+
+The simplest approach is to build a signal from scratch using numpy. A realistic EEG signal has two main components: a 1/f "pink noise" background (the power spectrum falls off as frequency increases) and oscillatory peaks at specific frequencies (alpha, theta, etc.).
+
+### Pink noise
+
+Real EEG has a characteristic spectral shape: power decreases roughly as 1/f. White noise (equal power at all frequencies) sounds and looks nothing like EEG. Pink noise is a better starting point.
+
+```{python}
+#| eval: false
+import numpy as np
+
+rng = np.random.default_rng(42)
+
+sfreq = 256          # sampling frequency in Hz
+duration = 60        # seconds
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Generate white noise
+white = rng.standard_normal(n_samples)
+
+# Shape it into pink noise via the frequency domain
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1  # avoid division by zero at DC
+pink_filter = 1 / np.sqrt(freqs_fft)  # 1/f^0.5 gives 1/f in power
+pink_noise = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+
+# Scale to realistic EEG amplitude (roughly 20 microvolts RMS)
+pink_noise *= 20e-6 / pink_noise.std()
+```
+
+### Adding oscillations
+
+To add a known oscillatory component, you create a sinusoid at the desired frequency and add it to the noise. You can control the amplitude to set the signal-to-noise ratio.
+
+```{python}
+#| eval: false
+# Add a 10 Hz alpha oscillation
+alpha_amplitude = 5e-6  # 5 microvolts peak
+alpha = alpha_amplitude * np.sin(2 * np.pi * 10 * times)
+
+# Add a weaker 6 Hz theta oscillation
+theta_amplitude = 2e-6
+theta = theta_amplitude * np.sin(2 * np.pi * 6 * times)
+
+# Combine into a single-channel signal
+signal = pink_noise + alpha + theta
+```
+
+### Wrapping it in an MNE Raw object
+
+To use MNE's processing functions, you need to put your simulated data into an MNE `Raw` object. This requires creating an `Info` structure first.
+
+```{python}
+#| eval: false
+import mne
+
+# Create channel info for a single channel
+info = mne.create_info(ch_names=["Oz"], sfreq=sfreq, ch_types=["eeg"])
+
+# Raw expects shape (n_channels, n_samples) and data in volts
+raw = mne.io.RawArray(signal.reshape(1, -1), info)
+
+print(raw)
+print(f"Duration: {raw.times[-1]:.1f} s")
+```
+
+## Adding known artifacts
+
+Real EEG is full of artifacts. If you want to test whether your artifact rejection pipeline works, you need to add artifacts to your simulated data in a controlled way.
+
+### Blink artifacts
+
+Eye blinks produce large, slow deflections (lasting about 200--400 ms) that are strongest at frontal electrodes. You can simulate one as a half-cycle of a low-frequency sinusoid or as a Gaussian bump.
+
+```{python}
+#| eval: false
+def make_blink(n_samples, sfreq, onset_sec, amplitude=100e-6):
+    """Create a single blink artifact as a Gaussian bump."""
+    times = np.arange(n_samples) / sfreq
+    centre = onset_sec
+    width = 0.15  # standard deviation in seconds
+    blink = amplitude * np.exp(-0.5 * ((times - centre) / width) ** 2)
+    return blink
+
+# Add blinks at known times
+blink_times = [2.0, 5.5, 11.3, 18.7, 25.0]
+blinks = np.zeros(n_samples)
+for t in blink_times:
+    blinks += make_blink(n_samples, sfreq, t)
+
+signal_with_blinks = signal + blinks
+```
+
+### Muscle artifacts
+
+Muscle (EMG) artifacts are high-frequency broadband bursts. You can simulate them by adding short bursts of high-frequency noise.
+
+```{python}
+#| eval: false
+def make_muscle_burst(n_samples, sfreq, onset_sec, duration_sec=0.5,
+                      amplitude=10e-6):
+    """Create a burst of high-frequency noise to simulate muscle artifact."""
+    burst = np.zeros(n_samples)
+    start = int(onset_sec * sfreq)
+    length = int(duration_sec * sfreq)
+    end = min(start + length, n_samples)
+    # High-frequency noise (30-100 Hz)
+    t_burst = np.arange(end - start) / sfreq
+    noise = rng.standard_normal(end - start)
+    # Band-pass the noise to 30-100 Hz using a simple frequency-domain filter
+    freqs = np.fft.rfftfreq(end - start, d=1 / sfreq)
+    mask = (freqs >= 30) & (freqs <= 100)
+    spectrum = np.fft.rfft(noise)
+    spectrum[~mask] = 0
+    burst[start:end] = amplitude * np.fft.irfft(spectrum, n=end - start)
+    return burst
+
+muscle = make_muscle_burst(n_samples, sfreq, onset_sec=8.0, duration_sec=1.0)
+signal_with_artifacts = signal_with_blinks + muscle
+```
+
+## Using MNE's simulation functions
+
+MNE provides built-in functions for simulation that handle much of the complexity for you. The `mne.simulation` module can simulate raw data with realistic source-level dynamics.
+
+### Simulating evoked responses
+
+If you want to simulate event-related data (ERPs), `mne.simulation.simulate_evoked` generates evoked responses from a known source configuration. This requires a forward model, which maps brain sources to scalp electrodes.
+
+```{python}
+#| eval: false
+import mne
+from mne.simulation import simulate_evoked, simulate_sparse_stc
+
+# Use the sample dataset's forward model
+data_path = mne.datasets.sample.data_path()
+fwd_fname = data_path / "MEG" / "sample" / "sample_audvis-meg-eeg-oct-6-fwd.fif"
+info_fname = data_path / "MEG" / "sample" / "sample_audvis_raw.fif"
+
+fwd = mne.read_forward_solution(fwd_fname)
+info = mne.io.read_info(info_fname)
+
+# Pick only EEG channels
+info = mne.pick_info(info, mne.pick_types(info, meg=False, eeg=True))
+
+# Simulate a sparse source time course
+stc = simulate_sparse_stc(
+    fwd["src"],
+    n_dipoles=2,       # two active brain regions
+    times=np.arange(300) / info["sfreq"] - 0.1,  # -100 to ~500 ms
+    random_state=42
+)
+
+# Generate the simulated evoked response
+evoked = simulate_evoked(
+    fwd,
+    stc,
+    info,
+    nave=100,           # number of averaged trials (affects noise level)
+    random_state=42
+)
+
+evoked.plot()
+```
+
+### Simulating raw data with mne.simulation.simulate_raw
+
+For continuous (raw) data, `simulate_raw` lets you define source waveforms and project them through a forward model to the scalp.
+
+```{python}
+#| eval: false
+from mne.simulation import simulate_raw, add_noise
+
+# Create a simple raw object with proper info
+raw_sim = mne.io.RawArray(
+    np.zeros((len(info["ch_names"]), int(10 * info["sfreq"]))),
+    info
+)
+
+# Add realistic sensor noise
+cov = mne.make_ad_hoc_cov(info)  # simple diagonal noise covariance
+add_noise(raw_sim, cov, random_state=42)
+
+raw_sim.plot(duration=5, n_channels=20)
+```
+
+## Multi-channel data with spatial structure
+
+Real EEG has spatial structure: a source in the occipital cortex produces strong signals at O1, Oz, O2 and weaker signals at frontal electrodes. If you simulate each channel independently, you lose this structure, and your simulated data will not behave like real data under spatial analyses (e.g., ICA, source localisation).
+
+The simplest way to add spatial structure is to define a few "source" signals and mix them to the scalp channels using a mixing matrix. Each row of the mixing matrix represents how strongly a particular source contributes to a particular channel.
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Define channel names and create info
+ch_names = ["Fp1", "Fp2", "F3", "F4", "C3", "C4", "P3", "P4",
+            "O1", "O2", "F7", "F8", "T7", "T8", "P7", "P8",
+            "Fz", "Cz", "Pz", "Oz"]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Define three "source" signals
+# Source 1: occipital alpha (strong at O1, O2, Oz)
+alpha_source = 5e-6 * np.sin(2 * np.pi * 10 * times)
+
+# Source 2: frontal theta (strong at Fp1, Fp2, F3, F4)
+theta_source = 3e-6 * np.sin(2 * np.pi * 6 * times)
+
+# Source 3: eye blink (very strong at Fp1, Fp2)
+blinks = np.zeros(n_samples)
+for t in np.arange(2, duration, 4):  # blink every 4 seconds
+    blinks += make_blink(n_samples, sfreq, t, amplitude=1.0)
+
+sources = np.vstack([alpha_source, theta_source, blinks])
+
+# Mixing matrix: (n_channels x n_sources)
+# Each column defines how one source projects to the channels
+mixing = np.zeros((n_channels, 3))
+
+# Alpha source: strong at posterior channels
+for i, ch in enumerate(ch_names):
+    if ch.startswith("O") or ch.startswith("P"):
+        mixing[i, 0] = 1.0
+    elif ch.startswith("C"):
+        mixing[i, 0] = 0.3
+    else:
+        mixing[i, 0] = 0.1
+
+# Theta source: strong at frontal channels
+for i, ch in enumerate(ch_names):
+    if ch.startswith("F") or ch.startswith("Fp"):
+        mixing[i, 1] = 1.0
+    elif ch.startswith("C"):
+        mixing[i, 1] = 0.5
+    else:
+        mixing[i, 1] = 0.2
+
+# Blink source: very strong at Fp1/Fp2, falls off posteriorly
+blink_weights = {"Fp1": 80e-6, "Fp2": 80e-6, "F3": 40e-6, "F4": 40e-6,
+                 "Fz": 35e-6, "F7": 30e-6, "F8": 30e-6, "C3": 10e-6,
+                 "C4": 10e-6, "Cz": 10e-6, "T7": 5e-6, "T8": 5e-6,
+                 "P3": 3e-6, "P4": 3e-6, "Pz": 3e-6, "P7": 2e-6,
+                 "P8": 2e-6, "O1": 1e-6, "O2": 1e-6, "Oz": 1e-6}
+for i, ch in enumerate(ch_names):
+    mixing[i, 2] = blink_weights.get(ch, 1e-6)
+
+# Project sources to channels and add pink noise background
+data = mixing @ sources
+for i in range(n_channels):
+    white = rng.standard_normal(n_samples)
+    freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+    freqs_fft[0] = 1
+    pink = np.fft.irfft(np.fft.rfft(white) / np.sqrt(freqs_fft), n=n_samples)
+    data[i] += pink * 15e-6 / pink.std()
+
+# Create the Raw object
+raw_sim = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw_sim.set_montage(montage)
+
+raw_sim.plot(duration=10, n_channels=20, scalings={"eeg": 100e-6})
+```
+
+This approach gives you data where ICA can separate the blink component from the alpha source, just as it would with real data.
+
+## Key takeaways
+
+- Simulated data lets you test analysis pipelines against a known ground truth. If your pipeline cannot recover a 10 Hz oscillation you put in, something is wrong.
+- A realistic EEG simulation needs at least two ingredients: a 1/f pink noise background and oscillatory peaks at specific frequencies. White noise alone is not a good stand-in for EEG.
+- You can add controlled artifacts (blinks, muscle bursts, electrode pops) to test your artifact rejection methods.
+- MNE's `mne.simulation` module provides functions for source-level simulation that projects through a forward model. This is useful for testing source localisation methods.
+- For multi-channel data, use a mixing matrix to give your simulated sources realistic spatial structure. Without this, each channel is independent, and spatial analyses like ICA will not work as they do with real data.

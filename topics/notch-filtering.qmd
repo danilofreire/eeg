@@ -1,0 +1,202 @@
+---
+title: "Notch filtering for line noise"
+description: "What line noise is, where it comes from (50 Hz and 60 Hz power mains), harmonics, using MNE's notch_filter(), spectrum interpolation as an alternative, and when a notch filter is needed."
+date: 2026-03-31
+date-modified: last-modified
+module: 2
+categories: [preprocessing, filtering]
+---
+
+## What is line noise?
+
+Every building has electrical wiring running through its walls, and that wiring radiates electromagnetic fields at the frequency of the power mains. In most of Europe, South America (including Brazil), Africa, and Asia, the mains frequency is **50 Hz**. In North America, parts of Japan, and some other countries, it is **60 Hz**. This electromagnetic interference couples into EEG recordings through the electrodes, cables, and amplifier, producing a sharp spectral peak at the mains frequency.
+
+Line noise is distinctive: in the frequency domain, it appears as a tall, narrow spike at exactly 50 or 60 Hz. In the time domain, it looks like a fine, regular oscillation superimposed on the EEG. It is easy to mistake for gamma-band brain activity if you are not looking at the frequency spectrum.
+
+## Harmonics
+
+The power line signal is not a perfect sinusoid. It has slight distortions that produce **harmonics**: additional peaks at integer multiples of the fundamental frequency. For 50 Hz mains, the harmonics appear at 100, 150, 200, 250 Hz, and so on. For 60 Hz mains, they appear at 120, 180, 240 Hz.
+
+Whether harmonics matter depends on your analysis. If your low-pass filter is set to 40 Hz, the harmonics at 100+ Hz are already removed and you only need to deal with the fundamental. But if you are studying gamma activity and have a low-pass cutoff of 100 Hz or higher, you may need to notch out the harmonics as well.
+
+## Using raw.notch_filter() in MNE
+
+MNE provides a dedicated method for notch filtering that can target the fundamental and any harmonics you specify.
+
+### Basic usage
+
+```{python}
+#| eval: false
+import mne
+
+# Load data
+raw = mne.io.read_raw_edf("recording.edf", preload=True)
+
+# Remove 50 Hz line noise
+raw.notch_filter(freqs=50.0)
+```
+
+### Removing harmonics
+
+```{python}
+#| eval: false
+# Remove 50 Hz and its harmonics (100, 150 Hz)
+raw.notch_filter(freqs=[50, 100, 150])
+
+# Or generate the list automatically
+import numpy as np
+line_freq = 50
+harmonics = np.arange(line_freq, raw.info["sfreq"] / 2, line_freq)
+raw.notch_filter(freqs=harmonics)
+```
+
+The `np.arange` approach generates all harmonics up to the Nyquist frequency (half the sampling rate), which is the maximum frequency that can be represented in the data. Any harmonic above the Nyquist frequency does not exist in the data and does not need to be filtered.
+
+### For 60 Hz (US/North America)
+
+```{python}
+#| eval: false
+# Remove 60 Hz line noise and harmonics
+raw.notch_filter(freqs=[60, 120, 180])
+```
+
+### Full parameter control
+
+```{python}
+#| eval: false
+raw.notch_filter(
+    freqs=50.0,              # frequency to notch (Hz)
+    picks="eeg",             # apply only to EEG channels
+    filter_length="auto",    # automatic filter length
+    notch_widths=None,       # width of the notch (default: frequency / 200)
+    trans_bandwidth=1.0,     # transition bandwidth in Hz
+    method="fir",            # FIR or IIR
+    verbose=True             # print filter parameters
+)
+```
+
+The `notch_widths` parameter controls how wide the notch is. A narrower notch removes less of the surrounding signal but may not catch all the line noise if the frequency drifts slightly. The default works well for most recordings.
+
+## Spectrum interpolation as an alternative
+
+A notch filter removes a narrow band of frequencies, but it also removes any brain activity that happens to be at that frequency. If there is genuine 50 Hz gamma activity in your data, a notch filter will remove it along with the line noise.
+
+An alternative approach is **spectrum interpolation** (also called the "Zapline" method). Instead of zeroing out a narrow frequency band, this method estimates the line noise component using spatial information (it is typically the same across all channels) and subtracts it, leaving any brain activity at that frequency intact.
+
+MNE does not include Zapline directly, but you can use the `meegkit` package:
+
+```{python}
+#| eval: false
+# pip install meegkit
+from meegkit.dss import dss_line
+
+# Remove 50 Hz line noise using DSS-based method
+data = raw.get_data()
+data_clean, _ = dss_line(
+    data.T,
+    fline=50.0,
+    sfreq=raw.info["sfreq"],
+    nremove=1
+)
+
+# Put the cleaned data back
+raw_clean = mne.io.RawArray(data_clean.T, raw.info)
+```
+
+Another option is to use MNE's `raw.notch_filter()` with `method="spectrum_fit"`, which fits and subtracts the line noise peak from the spectrum rather than applying a traditional notch filter:
+
+```{python}
+#| eval: false
+# Spectrum-fit method (estimates and subtracts the peak)
+raw.notch_filter(freqs=50.0, method="spectrum_fit")
+```
+
+## When is a notch filter needed?
+
+Not every EEG dataset needs a notch filter. Here are the situations to consider:
+
+### You probably do not need a notch filter if...
+
+- **Your low-pass cutoff is well below the line frequency.** If you are filtering to 30 Hz or even 40 Hz, the band-pass filter already removes 50/60 Hz. The transition bandwidth of the low-pass filter will attenuate the line noise substantially.
+- **Your amplifier has good common-mode rejection.** Modern research-grade amplifiers (e.g., BioSemi ActiveTwo, Brain Products actiCHamp) have high common-mode rejection ratios that attenuate line noise before it enters the digital signal. The residual line noise may be small enough to ignore.
+
+### You probably need a notch filter if...
+
+- **Your low-pass cutoff is at or above the line frequency.** If you are studying gamma activity and have a low-pass cutoff of 100 Hz, the 50/60 Hz line noise will be in your passband.
+- **Your recording has strong line noise.** Some recording environments (hospital wards, rooms with old wiring, proximity to large electrical equipment) produce line noise that overwhelms the EEG even with good amplifiers. Check the power spectrum: if the line noise peak is much taller than the surrounding frequencies, filter it.
+- **You are computing spectral measures in the gamma range.** Even modest line noise can dominate power estimates at 50/60 Hz, inflating your gamma power measures.
+
+### Checking for line noise
+
+Always look at the power spectrum before deciding:
+
+```{python}
+#| eval: false
+import mne
+
+raw = mne.io.read_raw_edf("recording.edf", preload=True)
+
+# Plot the power spectral density
+raw.compute_psd(fmax=100).plot()
+```
+
+If you see a sharp spike at 50 or 60 Hz that is clearly above the surrounding 1/f background, you have line noise. If the spectrum is smooth at that frequency, a notch filter is unnecessary.
+
+## Working example
+
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+# ── Create simulated data with line noise ────────────────────
+rng = np.random.default_rng(42)
+sfreq = 512
+duration = 30
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Pink noise background
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1
+pink = np.fft.irfft(np.fft.rfft(white) / np.sqrt(freqs_fft), n=n_samples)
+signal = pink * 20e-6 / pink.std()
+
+# Add 50 Hz line noise and its harmonic at 100 Hz
+line_50 = 2e-6 * np.sin(2 * np.pi * 50 * times)
+line_100 = 0.5e-6 * np.sin(2 * np.pi * 100 * times)
+signal += line_50 + line_100
+
+# Add a 40 Hz gamma oscillation (we want to keep this)
+gamma = 1e-6 * np.sin(2 * np.pi * 40 * times)
+signal += gamma
+
+# Wrap in MNE Raw
+info = mne.create_info(ch_names=["Cz"], sfreq=sfreq, ch_types=["eeg"])
+raw = mne.io.RawArray(signal.reshape(1, -1), info)
+
+# ── Apply notch filter ───────────────────────────────────────
+raw_notched = raw.copy().notch_filter(freqs=[50, 100], verbose=True)
+
+# ── Compare PSDs ─────────────────────────────────────────────
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+raw.compute_psd(fmax=150).plot(axes=axes[0], show=False)
+axes[0].set_title("Before notch filter")
+
+raw_notched.compute_psd(fmax=150).plot(axes=axes[1], show=False)
+axes[1].set_title("After notch filter (50, 100 Hz)")
+
+plt.tight_layout()
+plt.show()
+```
+
+## Key takeaways
+
+- Line noise comes from power mains and appears as a sharp peak at 50 Hz (Europe, South America, most of Asia) or 60 Hz (North America). It also produces harmonics at multiples of the fundamental frequency.
+- Use `raw.notch_filter(freqs=50.0)` (or 60.0) to remove line noise. Include harmonics in the frequency list if your analysis bandwidth extends above the fundamental.
+- Spectrum interpolation (e.g., the DSS/Zapline method) is a more targeted alternative that removes line noise without affecting brain activity at the same frequency. Consider it if you are studying gamma oscillations.
+- Check the power spectrum before deciding whether a notch filter is needed. If your band-pass filter already removes the line noise frequency, a separate notch filter is unnecessary.
+- When in doubt, apply the notch filter. It removes a very narrow band of frequencies and has minimal impact on the rest of the signal.

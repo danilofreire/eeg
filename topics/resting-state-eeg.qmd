@@ -1,0 +1,153 @@
+---
+title: "Resting-state EEG"
+description: "What resting-state EEG is, eyes-open vs eyes-closed protocols, why it is used, what it reveals about brain organisation, alpha reactivity, the default mode network in EEG, and relevance for clinical populations."
+date: 2026-03-31
+date-modified: last-modified
+module: 4
+categories: [experimental-design, resting-state]
+---
+
+## Why this topic matters
+
+When we study the brain, we usually ask people to do something: respond to a stimulus, memorise a list, press a button. The brain's response to these tasks tells us about the neural processes involved. But the brain is also active when you are not doing anything in particular. Even with your eyes closed and your mind wandering, billions of neurones are firing in coordinated patterns.
+
+Resting-state EEG measures this spontaneous activity. It turns out that these "idle" patterns are not random. They reflect the brain's intrinsic organisation, its default wiring, and its capacity for flexible coordination. For clinical populations (ageing, Parkinson's disease, disorders of consciousness), resting-state measures can reveal dysfunction that task-based paradigms might miss, because patients may struggle with the tasks themselves.
+
+## What resting-state EEG is
+
+A resting-state EEG recording is collected while the participant sits quietly without performing any specific task. The participant is typically seated in a comfortable chair in a quiet, dimly lit room, with EEG electrodes placed on the scalp.
+
+There are two standard protocols:
+
+### Eyes closed (EC)
+
+The participant closes their eyes for a fixed period (typically 2--5 minutes). This is the simpler condition and produces the largest alpha oscillations. With the eyes closed, the visual cortex is not processing external input, and alpha oscillations (8--13 Hz) in occipital and parietal regions become prominent.
+
+Eyes-closed resting state is easy for participants and produces reliable, high-amplitude signals. It is used in most clinical EEG protocols and is the standard baseline for many research studies.
+
+### Eyes open (EO)
+
+The participant keeps their eyes open, usually fixating on a small cross or dot on a screen. This suppresses alpha oscillations (a phenomenon called **alpha suppression** or **alpha blocking**) and produces a different spectral profile with more beta activity.
+
+Eyes-open resting state is more representative of waking brain activity, since we spend most of our day with eyes open. But it introduces more noise sources: eye movements, blinks, and visual processing of the fixation point and surrounding environment.
+
+### Combined protocol
+
+Many studies record both conditions in alternating blocks (e.g., 2 minutes eyes closed, 2 minutes eyes open, repeated 2--3 times). This allows measurement of **alpha reactivity**, the change in alpha power between EC and EO conditions, which is itself a clinically informative variable.
+
+## Why resting-state EEG is used
+
+### Minimising task confounds
+
+Task-based paradigms require participants to understand instructions, stay motivated, and perform at a certain level. These requirements introduce confounds: differences between groups might reflect differences in task performance rather than differences in brain function.
+
+Resting-state recordings avoid this problem. Everyone can sit still with their eyes closed. This makes resting-state EEG particularly valuable for:
+
+- **Clinical populations** who may have difficulty with cognitive tasks (e.g., patients with severe Parkinson's disease, dementia, or disorders of consciousness).
+- **Cross-group comparisons** where groups differ in age, education, or cognitive ability.
+- **Longitudinal studies** where you want a stable baseline that is not affected by learning effects or changing task strategies.
+
+### Capturing intrinsic brain dynamics
+
+The brain's resting-state activity is not "noise" waiting for a task to impose structure. It reflects the brain's **intrinsic functional organisation**: the set of networks that are active by default and that provide the scaffolding for task-related activity.
+
+In fMRI research, resting-state recordings led to the discovery of the default mode network and other resting-state networks. EEG captures similar information, but with much higher temporal resolution (milliseconds rather than seconds). This makes it better suited for studying the dynamics of brain coordination, including the rapid transitions between states that metastability measures capture.
+
+### Practical advantages
+
+Resting-state EEG is also simpler to collect than task-based EEG:
+
+- No stimulus presentation system is needed.
+- No response devices are required.
+- Recording sessions are shorter (5--10 minutes vs 30--60 minutes for complex tasks).
+- Data analysis does not require event-locked averaging or trial sorting.
+
+## What resting-state EEG reveals
+
+### Spectral power
+
+The most basic analysis of resting-state EEG is the power spectrum: how much energy is present at each frequency. Healthy adults show characteristic spectral features:
+
+- A **1/f background**: power decreases with increasing frequency, reflecting the scale-free dynamics of cortical networks.
+- An **alpha peak** at 8--13 Hz, most prominent in posterior regions with eyes closed. The peak frequency and amplitude vary with age, arousal, and neurological condition.
+- A **beta peak** at 13--30 Hz, more prominent with eyes open or during alert wakefulness.
+
+Changes in spectral power are associated with many clinical conditions. Alzheimer's disease is characterised by a slowing of the alpha peak (shifting to lower frequencies) and increased theta power. Parkinson's disease shows increased beta power in motor regions. Depression has been linked to frontal alpha asymmetry.
+
+### Alpha reactivity
+
+The ratio of alpha power in the eyes-closed condition to the eyes-open condition is called **alpha reactivity**:
+
+$$\text{Alpha reactivity} = \frac{\text{Alpha power (EC)}}{\text{Alpha power (EO)}}$$
+
+or sometimes expressed as a percentage change. In healthy adults, closing the eyes approximately doubles the occipital alpha power.
+
+Reduced alpha reactivity has been reported in Alzheimer's disease, Parkinson's disease, and disorders of consciousness. It suggests that the brain's ability to modulate its intrinsic oscillatory activity is impaired.
+
+### Functional connectivity
+
+Beyond spectral power, resting-state EEG can reveal the functional connectivity between brain regions. Phase-based measures (PLV, coherence) computed during rest show reproducible spatial patterns that correspond to known brain networks.
+
+These connectivity patterns are not static: they change over time, with the brain transitioning between different coordination states. Metastability analysis captures this temporal structure and quantifies how flexibly the brain explores different states.
+
+## The default mode network in EEG
+
+The **default mode network** (DMN) was first identified in fMRI as a set of brain regions (medial prefrontal cortex, posterior cingulate, precuneus, lateral temporal regions) that are more active during rest than during tasks. It is associated with self-referential thinking, mind wandering, and memory retrieval.
+
+EEG cannot measure the DMN as directly as fMRI, because its spatial resolution is lower and it is limited to the cortical surface. However, EEG studies have found correlates of the DMN:
+
+- **Alpha and beta oscillations** in midline and posterior regions show patterns consistent with DMN activity.
+- **Source-localised EEG** (using inverse solutions like eLORETA) can estimate activity in DMN regions and compute connectivity between them.
+- **EEG-fMRI studies** have confirmed that alpha oscillations correlate with DMN activity measured in fMRI.
+
+For Natalia's project, the DMN is relevant because resting-state dynamics are partly driven by DMN activity. Altered DMN connectivity has been reported in Parkinson's disease, and metastability analysis may reveal dynamic aspects of DMN function that static connectivity measures miss.
+
+## Relevance for clinical populations
+
+### Ageing
+
+Normal ageing is associated with:
+
+- A slowing of the alpha peak frequency (from around 10 Hz in young adults to 8--9 Hz in older adults).
+- Reduced alpha power and alpha reactivity.
+- Increased theta power.
+- Altered connectivity patterns, with some connections strengthening and others weakening.
+
+These changes are gradual and variable across individuals. Resting-state EEG can track them longitudinally and may help distinguish normal ageing from early neurodegeneration.
+
+### Parkinson's disease
+
+Parkinson's disease shows several resting-state EEG signatures:
+
+- **Increased theta power** in frontal and central regions, especially in patients with cognitive impairment.
+- **Slowing of the alpha peak**, similar to ageing but more pronounced.
+- **Altered beta connectivity**: excessive beta synchronisation in motor networks, which may reflect the pathological rigidity of the motor system.
+- **Reduced metastability**: preliminary evidence suggests that the brain's dynamic flexibility is reduced in PD, particularly in motor-related regions.
+
+For Natalia's project, resting-state EEG from PD patients (both with and without Freezing of Gait) will be compared to healthy controls. The key question is whether metastability, measured from resting-state alpha or beta oscillations, differs between these groups and relates to the severity of motor symptoms.
+
+### Disorders of consciousness
+
+In patients with severe brain injury who are in a vegetative state or minimally conscious state, resting-state EEG is one of the few tools available for assessing brain function. These patients cannot perform tasks, so resting-state measures provide the only window into their brain dynamics.
+
+Reduced spectral complexity, lower alpha power, and decreased connectivity have been reported in patients with disorders of consciousness, with some measures showing correlation with the level of awareness.
+
+## Practical considerations for resting-state recordings
+
+Recording good resting-state EEG requires attention to several practical details:
+
+- **Duration**: at least 5 minutes per condition (EC and EO). Longer is better for connectivity and metastability analyses, which need enough data to estimate temporal variability reliably. Ten minutes is common in research protocols.
+- **Vigilance**: participants may become drowsy during prolonged eyes-closed recordings, especially older adults and patients. Drowsiness changes the spectral profile (increased theta, decreased alpha) and should be monitored. Some protocols include periodic checks ("Are you still awake?").
+- **Instruction wording**: tell participants to relax and let their mind wander, but not to fall asleep. For eyes open, provide a fixation point to reduce eye movements.
+- **Environmental control**: minimise auditory and visual distractions. A quiet, dimly lit room is standard.
+- **Electrode impedance**: check impedances before recording. High impedance channels introduce noise that is particularly problematic in resting-state analysis because there are no events to average across.
+
+## Key takeaways
+
+- **Resting-state EEG** records the brain's spontaneous activity while the participant sits quietly. It captures intrinsic brain dynamics without the confounds of task performance.
+- The two standard conditions are **eyes closed** (EC), which produces strong alpha oscillations, and **eyes open** (EO), which suppresses alpha. Both are typically recorded for 2--5 minutes each.
+- **Alpha reactivity** (the change in alpha power between EC and EO) is a clinically informative measure that is reduced in several neurological conditions.
+- Resting-state EEG reveals the brain's **intrinsic functional organisation** through spectral power, functional connectivity, and dynamic coordination patterns.
+- For clinical populations, resting-state measures are especially valuable because they do not require task performance. This makes them suitable for patients with Parkinson's disease, cognitive impairment, or disorders of consciousness.
+- **Metastability analysis** of resting-state EEG can quantify the brain's dynamic flexibility, providing information that static measures of power or connectivity do not capture.
+- Practical considerations include recording duration (at least 5 minutes per condition), monitoring vigilance, providing clear instructions, and controlling the recording environment.

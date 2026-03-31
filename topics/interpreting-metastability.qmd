@@ -1,0 +1,304 @@
+---
+title: "Interpreting metastability values"
+description: "What high and low metastability mean for brain dynamics, the criticality hypothesis, metastability in health and disease, effect of frequency band and epoch length on values, and practical guidelines for reporting."
+date: 2026-03-31
+date-modified: last-modified
+module: 5
+categories: [connectivity, metastability, interpretation]
+---
+
+## Why this topic matters
+
+Computing metastability is the easy part. Interpreting the numbers is harder. What does it mean if a participant's global metastability is 0.003? Is that high or low? What if one channel has a metastability of 0.01 and another has 0.001? And how much do your preprocessing choices (epoch length, frequency band, number of channels) affect these values?
+
+This page provides practical guidance for interpreting metastability values, understanding what they tell you about brain dynamics, and reporting them properly in research.
+
+## The spectrum from order to disorder
+
+Metastability describes where a system falls on a spectrum between two extremes:
+
+### Low metastability: order and rigidity
+
+At one end, $\text{MS} \approx 0$. The system is locked into a single coordination pattern that never changes. Every brain region maintains the same role, the same community membership, the same participation strength, time point after time point.
+
+This is like an orchestra where every musician plays exactly the same note forever. There is perfect order, but nothing interesting happens. The system cannot adapt, respond, or process new information.
+
+In neural terms, low metastability corresponds to excessive synchronisation: all regions are locked in step, leaving no room for flexible reconfiguration. This is the pattern associated with pathological states like Parkinson's disease (excessive beta synchrony) and certain types of epileptic activity.
+
+### Very high metastability: disorder and instability
+
+At the other end, metastability is very high. The coordination pattern changes wildly from one time point to the next. There is no stable structure at all.
+
+This is like an orchestra where every musician plays random notes with no coordination. There is no order, and the system cannot sustain any coherent function.
+
+In neural terms, very high metastability could indicate noise-driven dynamics, where the phase alignment matrix fluctuates randomly rather than reflecting meaningful brain state transitions. This can happen with very short epochs, noisy recordings, or when the signal-to-noise ratio is low.
+
+### The "sweet spot": moderate-high metastability
+
+The interesting region is in between. Moderate-to-high metastability means the system transitions between different coordination states in a structured way. It dwells in one pattern for a while, then transitions to another, then another.
+
+This is like an orchestra performing a symphony: the musicians coordinate in different patterns for each movement, maintaining coherence within each section while transitioning between sections. There is both structure (within a dwelling state) and flexibility (between states).
+
+This middle ground is where the healthy brain is thought to operate. High enough metastability for flexibility, but not so high that the system is chaotic.
+
+## The criticality hypothesis
+
+The idea that the brain operates at a "sweet spot" connects to a broader theoretical framework: the **criticality hypothesis**.
+
+In physics, a system is at its **critical point** when it sits at the boundary between two phases (like water at exactly 100C, between liquid and gas). At the critical point, the system shows maximum fluctuations, long-range correlations, and sensitivity to small perturbations.
+
+Applied to the brain, the criticality hypothesis proposes that healthy neural dynamics operate near the critical point between full synchrony (order) and full desynchrony (disorder). At this point:
+
+- Information transmission is maximised.
+- The system has the widest repertoire of possible states.
+- Small inputs can produce large, coordinated responses.
+- The system is flexible but not unstable.
+
+Metastability is one signature of near-critical dynamics. A system at criticality shows fluctuations between more synchronised and less synchronised states, producing moderate-to-high metastability. A system pushed away from criticality (towards too much order or too much disorder) shows reduced metastability.
+
+This is a theoretical framework, not a proven fact. But it provides useful intuition for interpreting metastability values: higher metastability (within a healthy range) suggests the brain is operating in a more flexible, near-critical regime.
+
+## What metastability tells you about Parkinson's disease
+
+Parkinson's disease is characterised by excessive beta-band synchronisation in the basal ganglia-cortical circuits. From a metastability perspective, this means:
+
+- The coordination pattern involving motor regions is abnormally stable (low metastability in beta).
+- The brain cannot easily transition away from this pattern.
+- Motor symptoms (bradykinesia, rigidity, freezing of gait) may reflect this inability to switch between coordination states.
+
+Dopaminergic medication and deep brain stimulation both reduce pathological beta synchrony and may increase metastability, restoring some of the brain's dynamic flexibility.
+
+For Natalia's project, the prediction is that:
+
+- Healthy controls will show the highest regional metastability (most flexible).
+- PD patients without Freezing of Gait will show reduced metastability (moderately rigid).
+- PD patients with Freezing of Gait will show the lowest metastability (most rigid), particularly in frontal and motor regions.
+
+These are testable hypotheses. The actual values will depend on the frequency band, the specific channels, and the preprocessing pipeline.
+
+## Other conditions associated with altered metastability
+
+### Disorders of consciousness
+
+Patients in vegetative state or minimally conscious state show markedly reduced metastability compared to healthy controls. The brain is locked into a limited set of coordination patterns and cannot transition between them. The degree of metastability reduction correlates with the level of consciousness (Demertzi et al., 2019).
+
+### Epilepsy
+
+Seizures are a dramatic example of pathological synchronisation: large populations of neurones fire in lockstep, producing the characteristic high-amplitude, rhythmic EEG patterns. During a seizure, metastability drops sharply as the brain is trapped in a single, highly synchronised state.
+
+Between seizures, some epilepsy patients show altered metastability at rest, suggesting that their brains operate further from the critical point than healthy brains.
+
+### Ageing
+
+Healthy ageing is associated with changes in metastability, though the direction depends on the frequency band and the brain region. Some studies report decreased metastability in older adults, particularly in frontal regions, which may relate to age-related declines in cognitive flexibility.
+
+### Psychiatric conditions
+
+Schizophrenia, depression, and attention deficit disorders have all been linked to altered brain dynamics, though the metastability literature in these areas is still developing. The general pattern is that conditions involving cognitive rigidity tend to show reduced metastability, while conditions involving instability or disorganisation may show altered (not necessarily reduced) metastability patterns.
+
+## Practical considerations
+
+### Epoch length
+
+The length of the data epoch affects metastability estimates. Shorter epochs provide fewer time points over which to compute the variance, leading to noisier estimates. Very short epochs (under 10 seconds) may produce unreliable metastability values.
+
+As a rule of thumb, use at least 30 seconds of clean data. For resting-state studies, 2-5 minutes is typical. If you have multiple epochs per participant, you can compute metastability within each epoch and then average, or concatenate epochs before computing (but be cautious about edge effects at concatenation points).
+
+### Frequency band
+
+Metastability values are frequency-band specific. Beta-band metastability and alpha-band metastability can tell you different things about the same brain.
+
+For Parkinson's disease research, beta (13-30 Hz) is the primary band of interest because of the well-established pathological beta synchrony. But alpha (8-13 Hz) and theta (4-8 Hz) are also worth examining, as PD affects multiple frequency bands.
+
+Always report which frequency band you analysed. Never compute metastability from broadband (unfiltered) data, because the instantaneous phase is not meaningful for broadband signals.
+
+### Number of channels
+
+More channels generally give you a richer picture of regional metastability, but they also increase computational cost and the severity of multiple comparisons correction. With 16 channels, you need to correct for 16 comparisons. With 64 channels, you need to correct for 64.
+
+There is no "correct" number of channels. It depends on your research question. If you are interested in broad regional differences (frontal vs parietal vs occipital), 16-32 channels may suffice. If you need fine spatial resolution, you need more.
+
+### Noise and artefacts
+
+Noisy data inflates metastability artificially. If the phase estimates are noisy, the eigenvector fluctuates randomly, producing high variance that has nothing to do with brain dynamics.
+
+This is why thorough preprocessing (filtering, artefact rejection, ICA) is important before computing metastability. A "clean" recording with moderate metastability is more informative than a noisy recording with high metastability.
+
+### Reference choice
+
+The choice of EEG reference affects phase estimates and therefore metastability. Common references (average reference, linked mastoids, Cz) produce different phase relationships between channels. Always report your reference choice, and be cautious when comparing metastability values across studies that used different references.
+
+## Guidelines for reporting metastability
+
+When reporting metastability in a paper or thesis, include the following information:
+
+1. **Both global and regional metastability.** Global metastability (variance of the Kuramoto order parameter) gives the overall picture. Regional metastability (variance of each eigenvector element) gives the spatial detail. Report both.
+
+2. **Frequency band.** State the band (e.g., beta, 13-30 Hz) and the filter specifications (filter order, type, implementation).
+
+3. **Epoch length.** How many seconds of data per participant? How were epochs selected?
+
+4. **Preprocessing steps.** Filtering, artefact rejection, ICA, re-referencing. Any of these can affect the results.
+
+5. **Number of channels and their locations.** Which montage? Which channels were included?
+
+6. **Sign convention for eigenvectors.** Did you use the continuity fix? How did you initialise it?
+
+7. **Statistical tests and corrections.** What test (ANOVA, permutation)? What correction for multiple comparisons (Bonferroni, FDR)? Applied across channels, across frequency bands, or both?
+
+## Working example: comparing "healthy" and "rigid" networks
+
+Let us simulate two networks with different coupling strengths and compare their metastability profiles.
+
+```{python}
+#| fig-cap: "Comparison of metastability between a 'healthy' network (moderate coupling, higher metastability) and a 'rigid' network (strong coupling, lower metastability). Left: eigenvector dynamics over time. Right: regional metastability bar chart."
+#| code-fold: false
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import hilbert, butter, filtfilt
+
+np.random.seed(42)
+
+def simulate_network_metastability(n_channels, n_timepoints, coupling_strength,
+                                    freq=10, fs=256, noise_std=1.0):
+    """Simulate a network and compute regional metastability.
+
+    Parameters
+    ----------
+    n_channels : int
+        Number of channels.
+    n_timepoints : int
+        Number of time points.
+    coupling_strength : float
+        How tightly coupled the oscillators are.
+    freq : float
+        Natural frequency in Hz.
+    fs : int
+        Sampling rate in Hz.
+    noise_std : float
+        Standard deviation of phase noise.
+
+    Returns
+    -------
+    regional_ms : array of shape (n_channels,)
+    v_dominant : array of shape (n_timepoints, n_channels)
+    """
+    dt = 1 / fs
+    t = np.arange(n_timepoints) * dt
+
+    # Simulate Kuramoto-like phases with all-to-all coupling
+    phases = np.zeros((n_channels, n_timepoints))
+    # Random initial phases
+    phases[:, 0] = np.random.uniform(0, 2 * np.pi, n_channels)
+    # Slightly different natural frequencies
+    omegas = 2 * np.pi * (freq + np.random.uniform(-0.5, 0.5, n_channels))
+
+    for tp in range(1, n_timepoints):
+        mean_phase = np.angle(np.mean(np.exp(1j * phases[:, tp - 1])))
+        for ch in range(n_channels):
+            coupling_term = coupling_strength * np.sin(mean_phase - phases[ch, tp - 1])
+            phases[ch, tp] = (phases[ch, tp - 1] +
+                              omegas[ch] * dt +
+                              coupling_term * dt +
+                              noise_std * np.sqrt(dt) * np.random.randn())
+
+    # Compute phase alignment matrix and dominant eigenvector
+    v_dominant = np.zeros((n_timepoints, n_channels))
+    for tp in range(n_timepoints):
+        phi = phases[:, tp]
+        phase_diff = phi[:, None] - phi[None, :]
+        A = np.cos(phase_diff)
+        eigenvalues, eigenvectors = np.linalg.eigh(A)
+        v_dominant[tp] = eigenvectors[:, -1]
+
+    # Sign continuity fix
+    if v_dominant[0, np.argmax(np.abs(v_dominant[0]))] < 0:
+        v_dominant[0] *= -1
+    for tp in range(1, n_timepoints):
+        if np.dot(v_dominant[tp], v_dominant[tp - 1]) < 0:
+            v_dominant[tp] *= -1
+
+    regional_ms = np.var(v_dominant, axis=0)
+    return regional_ms, v_dominant
+
+# Simulate both networks
+n_ch = 12
+n_tp = 1000
+
+ms_healthy, v_healthy = simulate_network_metastability(
+    n_ch, n_tp, coupling_strength=2.0, noise_std=1.5
+)
+ms_rigid, v_rigid = simulate_network_metastability(
+    n_ch, n_tp, coupling_strength=15.0, noise_std=0.5
+)
+
+# Plot
+fig, axes = plt.subplots(2, 2, figsize=(12, 7))
+t = np.arange(n_tp) / 256
+
+# Top left: healthy eigenvector dynamics
+for ch in [0, 3, 6, 9]:
+    axes[0, 0].plot(t, v_healthy[:, ch], linewidth=0.8, alpha=0.8, label=f"Ch{ch}")
+axes[0, 0].set_title("'Healthy' network: eigenvector dynamics")
+axes[0, 0].set_xlabel("Time (s)")
+axes[0, 0].set_ylabel("v_k(t)")
+axes[0, 0].legend(fontsize=8, loc="upper right")
+
+# Top right: rigid eigenvector dynamics
+for ch in [0, 3, 6, 9]:
+    axes[0, 1].plot(t, v_rigid[:, ch], linewidth=0.8, alpha=0.8, label=f"Ch{ch}")
+axes[0, 1].set_title("'Rigid' network: eigenvector dynamics")
+axes[0, 1].set_xlabel("Time (s)")
+axes[0, 1].set_ylabel("v_k(t)")
+axes[0, 1].legend(fontsize=8, loc="upper right")
+
+# Make y-axis limits the same for comparison
+y_min = min(axes[0, 0].get_ylim()[0], axes[0, 1].get_ylim()[0])
+y_max = max(axes[0, 0].get_ylim()[1], axes[0, 1].get_ylim()[1])
+axes[0, 0].set_ylim(y_min, y_max)
+axes[0, 1].set_ylim(y_min, y_max)
+
+# Bottom: regional metastability comparison
+x = np.arange(n_ch)
+width = 0.35
+axes[1, 0].bar(x - width/2, ms_healthy, width, label="Healthy", color="steelblue",
+               edgecolor="white", linewidth=0.5)
+axes[1, 0].bar(x + width/2, ms_rigid, width, label="Rigid", color="indianred",
+               edgecolor="white", linewidth=0.5)
+axes[1, 0].set_xlabel("Channel")
+axes[1, 0].set_ylabel("Regional metastability")
+axes[1, 0].set_title("Regional metastability by channel")
+axes[1, 0].set_xticks(x)
+axes[1, 0].set_xticklabels([f"Ch{i}" for i in range(n_ch)], fontsize=8)
+axes[1, 0].legend()
+
+# Bottom right: summary
+axes[1, 1].bar(["Healthy\n(moderate coupling)", "Rigid\n(strong coupling)"],
+               [np.mean(ms_healthy), np.mean(ms_rigid)],
+               color=["steelblue", "indianred"], edgecolor="white", linewidth=0.5)
+axes[1, 1].set_ylabel("Mean metastability")
+axes[1, 1].set_title("Global comparison")
+
+plt.tight_layout()
+plt.show()
+
+print(f"Healthy network - mean MS: {np.mean(ms_healthy):.6f}, "
+      f"range: [{np.min(ms_healthy):.6f}, {np.max(ms_healthy):.6f}]")
+print(f"Rigid network   - mean MS: {np.mean(ms_rigid):.6f}, "
+      f"range: [{np.min(ms_rigid):.6f}, {np.max(ms_rigid):.6f}]")
+```
+
+The "healthy" network (moderate coupling) shows higher metastability: the eigenvector elements fluctuate more because the network reconfigures over time. The "rigid" network (strong coupling) shows lower metastability: the oscillators are locked in step and the coordination pattern barely changes.
+
+This is a simplified simulation, but it captures the core logic. In real EEG data, the differences between groups may be subtler and concentrated in specific channels or frequency bands.
+
+## Key takeaways
+
+1. **Low metastability** means rigidity: the brain is locked in one coordination pattern. This is associated with pathological states like PD.
+2. **Moderate-to-high metastability** means flexibility: the brain transitions between different coordination states. This is associated with healthy function.
+3. **Very high metastability** may indicate noise or instability rather than meaningful flexibility. Context and preprocessing quality matter.
+4. The **criticality hypothesis** suggests the healthy brain operates near the boundary between order and disorder, where metastability is high.
+5. **Epoch length, frequency band, number of channels, and noise** all affect metastability estimates. Always account for these in your analysis.
+6. When reporting, include **both global and regional metastability**, the frequency band, epoch length, preprocessing steps, and statistical corrections.
+7. Compare values **within a study**, not across studies with different methods. Absolute metastability values are not standardised.
