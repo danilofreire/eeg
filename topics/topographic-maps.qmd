@@ -205,7 +205,6 @@ fig = psd.plot_topomap(
     show=False
 )
 fig.set_size_inches(14, 4)
-plt.tight_layout()
 plt.show()
 ```
 

@@ -37,7 +37,6 @@ Instantaneous phase via the Hilbert transform, relative phase alignment, dominan
 ::: {.quick-links}
 [Topics](topics/index.qmd)
 [Exercises](exercises/index.qmd)
-[Log](log/index.qmd)
 :::
 
 ## Libraries used

@@ -8,3 +8,6 @@ __pycache__/
 .env
 CLAUDE.md
 AGENTS.md
+
+/.quarto/
+**/*.quarto_ipynb
