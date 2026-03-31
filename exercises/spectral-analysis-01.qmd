@@ -414,3 +414,1321 @@ for ch in range(n_channels):
 
 The occipital channels (O1, O2, Oz) should show high alpha power relative to the others. The central channels (C3, C4) should show higher beta power. Frontal channels (Fp1, Fp2) and Pz will only have noise, so their band powers should be roughly uniform and much lower.
 :::
+
+
+## Exercise 6: Effect of window length on PSD resolution
+
+Create a signal that combines two close sine waves at 9 Hz and 11 Hz (plus some noise). Compute the PSD with Welch's method four times, using `nperseg` values of 256, 512, 1024, and 2048. Plot all four PSDs on the same figure. You should see that short windows blur the two peaks into one, while longer windows can separate them. This demonstrates the trade-off between frequency resolution and the number of averaged segments.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Frequency resolution is approximately `sfreq / nperseg`. With `sfreq = 256` and `nperseg = 256`, the resolution is 1 Hz, which is not enough to separate peaks that are only 2 Hz apart (you need better than 2 Hz resolution, but the spectral leakage from a 1 Hz bin width will merge them). With `nperseg = 2048`, resolution is 0.125 Hz, which easily resolves two peaks 2 Hz apart. Use subplots or overlay the four PSDs with a legend.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 30
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Two close peaks at 9 Hz and 11 Hz, plus noise
+sig = (1.5 * np.sin(2 * np.pi * 9 * times)
+       + 1.5 * np.sin(2 * np.pi * 11 * times)
+       + rng.standard_normal(n_samples) * 0.8)
+
+# Compute PSD with different window lengths
+nperseg_values = [256, 512, 1024, 2048]
+
+fig, axes = plt.subplots(2, 2, figsize=(12, 8), sharex=True, sharey=True)
+axes = axes.ravel()
+
+for ax, nperseg in zip(axes, nperseg_values):
+    freqs_psd, psd = signal.welch(sig, fs=sfreq, nperseg=nperseg,
+                                  noverlap=nperseg // 2)
+    freq_res = sfreq / nperseg
+    ax.plot(freqs_psd, psd, linewidth=1.2, color="#2c3e50")
+    ax.axvline(9, color="#e74c3c", linestyle="--", alpha=0.6, linewidth=0.8)
+    ax.axvline(11, color="#3498db", linestyle="--", alpha=0.6, linewidth=0.8)
+    ax.set_xlim(4, 18)
+    ax.set_title(f"nperseg = {nperseg}  (resolution = {freq_res:.2f} Hz)")
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("PSD")
+
+fig.suptitle("Effect of window length on frequency resolution", fontsize=13)
+plt.tight_layout()
+plt.show()
+
+# Print frequency resolution for each setting
+for nperseg in nperseg_values:
+    print(f"nperseg = {nperseg:>5d}  ->  freq. resolution = "
+          f"{sfreq / nperseg:.3f} Hz")
+```
+
+With `nperseg = 256` (1 Hz resolution), the two peaks merge into a single broad hump centred around 10 Hz. At `nperseg = 512` (0.5 Hz), you may start to see a hint of two peaks. At `nperseg = 1024` and `nperseg = 2048`, the two peaks at 9 Hz and 11 Hz are clearly separated. The cost of using longer windows is that you get fewer segments to average, so the PSD estimate is noisier.
+:::
+
+
+## Exercise 7: Find the individual alpha frequency (IAF)
+
+Create a simulated EEG signal where the alpha peak sits at 10.5 Hz rather than exactly 10 Hz (this is realistic, since the individual alpha frequency varies from person to person, typically between 8 and 13 Hz). Compute the PSD with Welch's method and then find the exact peak frequency in the 8--13 Hz range by locating the frequency bin with the maximum power. Print the detected IAF and compare it with the true value.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Generate pink noise and add a sine wave at 10.5 Hz. After computing the PSD, create a boolean mask for the alpha range (`(freqs >= 8) & (freqs <= 13)`), then use `np.argmax(psd[mask])` to find the index of the peak within that range. The corresponding frequency is `freqs[mask][peak_index]`. Use a long `nperseg` (e.g., 2048) to get enough frequency resolution to distinguish 10.5 Hz from 10.0 Hz.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+true_iaf = 10.5  # Hz
+
+# Pink noise background
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1  # avoid division by zero
+pink_filter = 1 / np.sqrt(freqs_fft)
+pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+pink = pink / pink.std()
+
+# Add alpha oscillation at 10.5 Hz
+alpha = 2.0 * np.sin(2 * np.pi * true_iaf * times)
+eeg = pink + alpha
+
+# Compute PSD with good frequency resolution
+freqs_psd, psd = signal.welch(eeg, fs=sfreq, nperseg=2048, noverlap=1024)
+
+# Find peak in the alpha range
+alpha_mask = (freqs_psd >= 8) & (freqs_psd <= 13)
+alpha_freqs = freqs_psd[alpha_mask]
+alpha_psd = psd[alpha_mask]
+peak_idx = np.argmax(alpha_psd)
+detected_iaf = alpha_freqs[peak_idx]
+
+print(f"True IAF:     {true_iaf:.2f} Hz")
+print(f"Detected IAF: {detected_iaf:.2f} Hz")
+print(f"Error:        {abs(detected_iaf - true_iaf):.3f} Hz")
+
+# Plot
+fig, ax = plt.subplots(figsize=(8, 4))
+ax.semilogy(freqs_psd, psd, linewidth=1.2, color="#2c3e50")
+ax.axvline(detected_iaf, color="#e74c3c", linestyle="--",
+           label=f"Detected IAF = {detected_iaf:.2f} Hz")
+ax.axvspan(8, 13, alpha=0.15, color="orange", label="Alpha band")
+ax.set_xlim(0, 40)
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("PSD")
+ax.set_title("Individual alpha frequency detection")
+ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+The detected IAF should be very close to 10.5 Hz (the error depends on the frequency resolution, which is `256 / 2048 = 0.125 Hz` here). In real EEG data, researchers use the IAF to define subject-specific alpha bands (e.g., IAF +/- 2 Hz) rather than using the fixed 8--13 Hz range for everyone.
+:::
+
+
+## Exercise 8: Estimate the 1/f aperiodic slope
+
+Create pink noise with a known 1/f exponent. In the frequency domain, pink noise has a power spectrum that falls off as $1/f^\beta$, where $\beta = 1$ for classical pink noise. Compute the PSD, take the logarithm of both the frequencies and the PSD values, and fit a straight line using `np.polyfit`. The slope of that line is your estimate of $-\beta$. Compare it with the known ground truth. This is the basis of spectral parameterisation methods like FOOOF/specparam.
+
+::: {.callout-tip collapse="true" title="Hint"}
+To generate noise with a specific exponent $\beta$, take white noise, compute its FFT, multiply each frequency bin by $f^{-\beta/2}$ (since power is amplitude squared), then take the inverse FFT. For the fit, work in log-log space: `log_f = np.log10(freqs)` and `log_psd = np.log10(psd)`. Exclude the DC component (frequency 0) and very high frequencies (above 45 Hz or so) where noise dominates. Use `np.polyfit(log_f, log_psd, 1)` to fit a line; the first coefficient is the slope.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 120
+n_samples = sfreq * duration
+
+true_exponent = 1.5  # 1/f^1.5 noise (steeper than classical pink)
+
+# Generate 1/f^beta noise
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1  # avoid division by zero
+# Scale amplitude by f^(-beta/2) so that power ~ f^(-beta)
+coloured_filter = freqs_fft ** (-true_exponent / 2)
+coloured_noise = np.fft.irfft(
+    np.fft.rfft(white) * coloured_filter, n=n_samples
+)
+
+# Compute PSD
+freqs_psd, psd = signal.welch(coloured_noise, fs=sfreq, nperseg=2048,
+                               noverlap=1024)
+
+# Fit in log-log space (exclude DC and very high frequencies)
+fit_mask = (freqs_psd >= 1) & (freqs_psd <= 45)
+log_f = np.log10(freqs_psd[fit_mask])
+log_psd = np.log10(psd[fit_mask])
+
+slope, intercept = np.polyfit(log_f, log_psd, 1)
+estimated_exponent = -slope  # slope is negative, exponent is positive
+
+print(f"True aperiodic exponent:      {true_exponent:.2f}")
+print(f"Estimated aperiodic exponent: {estimated_exponent:.2f}")
+print(f"Error:                        {abs(estimated_exponent - true_exponent):.3f}")
+
+# Plot
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+# Left: PSD in log-log space with fit
+ax = axes[0]
+ax.scatter(log_f, log_psd, s=5, alpha=0.5, color="#2c3e50", label="PSD")
+fit_line = slope * log_f + intercept
+ax.plot(log_f, fit_line, color="#e74c3c", linewidth=2,
+        label=f"Fit: slope = {slope:.2f}")
+ax.set_xlabel("log10(Frequency)")
+ax.set_ylabel("log10(PSD)")
+ax.set_title("Log-log PSD with linear fit")
+ax.legend()
+
+# Right: PSD in standard axes
+ax = axes[1]
+ax.semilogy(freqs_psd, psd, linewidth=1, color="#2c3e50")
+ax.set_xlim(0, 50)
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("PSD")
+ax.set_title(f"PSD of 1/f^{true_exponent} noise")
+
+plt.tight_layout()
+plt.show()
+```
+
+The estimated exponent should be close to 1.5. In real EEG, the aperiodic exponent typically ranges between 1 and 2, and it changes with age, cognitive state, and neurological conditions. The FOOOF/specparam toolbox automates this fitting and also separates the periodic peaks from the aperiodic background, which gives a cleaner estimate than this simple linear fit.
+:::
+
+
+## Exercise 9: Create topographic maps of alpha and beta band power
+
+Using MNE, create simulated multi-channel data (20 channels with a standard montage) where alpha power (10 Hz) is strongest at occipital channels and beta power (20 Hz) is strongest at central channels. Compute the band power for each channel and use `mne.viz.plot_topomap()` to create scalp maps for each band.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `mne.channels.make_standard_montage("standard_1020")` and pick a subset of 20 channels. Create an `mne.Info` object with `mne.create_info(ch_names, sfreq, ch_types="eeg")` and set the montage. To make alpha strong at occipital sites, add a larger-amplitude 10 Hz sine wave to channels like O1, O2, Oz. For beta at central sites, add 20 Hz to C3, C4, Cz. Compute PSD per channel with `scipy.signal.welch`, integrate over each band, and pass the resulting array to `mne.viz.plot_topomap(values, info)`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+import mne
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 30
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Define channels and create MNE info
+ch_names = [
+    "Fp1", "Fp2", "F7", "F3", "Fz", "F4", "F8",
+    "T7", "C3", "Cz", "C4", "T8",
+    "P7", "P3", "Pz", "P4", "P8",
+    "O1", "Oz", "O2",
+]
+n_channels = len(ch_names)
+
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+montage = mne.channels.make_standard_montage("standard_1020")
+info.set_montage(montage)
+
+# Simulate data: baseline noise for all channels
+data = rng.standard_normal((n_channels, n_samples)) * 0.5
+
+# Add strong alpha (10 Hz) at occipital channels
+occipital = ["O1", "Oz", "O2"]
+for ch in occipital:
+    idx = ch_names.index(ch)
+    data[idx] += 2.5 * np.sin(2 * np.pi * 10 * times)
+
+# Add moderate alpha at parietal channels (spatial spread)
+parietal = ["P3", "Pz", "P4"]
+for ch in parietal:
+    idx = ch_names.index(ch)
+    data[idx] += 1.0 * np.sin(2 * np.pi * 10 * times)
+
+# Add strong beta (20 Hz) at central channels
+central = ["C3", "Cz", "C4"]
+for ch in central:
+    idx = ch_names.index(ch)
+    data[idx] += 2.0 * np.sin(2 * np.pi * 20 * times)
+
+# Compute band power per channel
+alpha_power = np.zeros(n_channels)
+beta_power = np.zeros(n_channels)
+
+for ch in range(n_channels):
+    freqs_psd, psd = signal.welch(data[ch], fs=sfreq, nperseg=1024,
+                                  noverlap=512)
+    alpha_mask = (freqs_psd >= 8) & (freqs_psd < 13)
+    beta_mask = (freqs_psd >= 13) & (freqs_psd < 30)
+    alpha_power[ch] = np.trapz(psd[alpha_mask], freqs_psd[alpha_mask])
+    beta_power[ch] = np.trapz(psd[beta_mask], freqs_psd[beta_mask])
+
+# Plot topographic maps
+fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+
+im1, _ = mne.viz.plot_topomap(alpha_power, info, axes=axes[0], show=False,
+                               cmap="YlOrRd")
+axes[0].set_title("Alpha power (8-13 Hz)")
+fig.colorbar(im1, ax=axes[0], shrink=0.6)
+
+im2, _ = mne.viz.plot_topomap(beta_power, info, axes=axes[1], show=False,
+                               cmap="YlOrRd")
+axes[1].set_title("Beta power (13-30 Hz)")
+fig.colorbar(im2, ax=axes[1], shrink=0.6)
+
+plt.tight_layout()
+plt.show()
+
+# Print values for verification
+print(f"{'Channel':<6} {'Alpha':>10} {'Beta':>10}")
+print("-" * 28)
+for ch in range(n_channels):
+    print(f"{ch_names[ch]:<6} {alpha_power[ch]:>10.3f} {beta_power[ch]:>10.3f}")
+```
+
+The alpha topomap should show a hot spot over the occipital region (O1, Oz, O2) with some spread to parietal channels. The beta topomap should show the highest values at central channels (C3, Cz, C4). Topographic maps are one of the most common ways to visualise the spatial distribution of EEG spectral features.
+:::
+
+
+## Exercise 10: Time-frequency decomposition with Morlet wavelets
+
+Create a 10-second signal where the dominant frequency changes over time: 10 Hz in the first half and 20 Hz in the second half, plus some background noise. Use `scipy.signal.morlet2` with `scipy.signal.cwt` to compute the continuous wavelet transform and plot the time-frequency representation. The plot should clearly show the frequency transition at the midpoint.
+
+::: {.callout-tip collapse="true" title="Hint"}
+`scipy.signal.cwt(signal, scipy.signal.morlet2, widths, w=5)` computes the continuous wavelet transform. The `widths` parameter controls which frequencies are analysed: for a Morlet wavelet with `w` cycles, the relationship is `width = w * sfreq / (2 * np.pi * freq)`. Create an array of target frequencies from 1 to 40 Hz, convert them to widths, and pass them to `cwt`. The output has shape `(n_frequencies, n_samples)`. Plot `np.abs(result)**2` as the power.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal as sig
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 10
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+midpoint = n_samples // 2
+
+# Signal: 10 Hz in first half, 20 Hz in second half, plus noise
+noise = rng.standard_normal(n_samples) * 0.3
+oscillation = np.zeros(n_samples)
+oscillation[:midpoint] = 1.5 * np.sin(2 * np.pi * 10 * times[:midpoint])
+oscillation[midpoint:] = 1.5 * np.sin(2 * np.pi * 20 * times[midpoint:])
+eeg = oscillation + noise
+
+# Define frequencies to analyse and convert to wavelet widths
+freqs = np.linspace(2, 40, 100)
+w = 6  # number of cycles in the Morlet wavelet
+widths = w * sfreq / (2 * np.pi * freqs)
+
+# Compute continuous wavelet transform
+cwt_result = sig.cwt(eeg, sig.morlet2, widths, w=w)
+power = np.abs(cwt_result) ** 2
+
+# Plot
+fig, axes = plt.subplots(2, 1, figsize=(10, 7))
+
+# Top: time-domain signal
+ax = axes[0]
+ax.plot(times, eeg, linewidth=0.4, color="#2c3e50")
+ax.axvline(duration / 2, color="#e74c3c", linestyle="--", alpha=0.7,
+           label="Frequency switch")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Amplitude")
+ax.set_title("Simulated signal: 10 Hz then 20 Hz")
+ax.legend()
+
+# Bottom: time-frequency plot
+ax = axes[1]
+mesh = ax.pcolormesh(times, freqs, power, shading="gouraud", cmap="viridis")
+ax.axhline(10, color="white", linestyle="--", linewidth=0.7, alpha=0.7)
+ax.axhline(20, color="white", linestyle="--", linewidth=0.7, alpha=0.7)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Frequency (Hz)")
+ax.set_title("Time-frequency power (Morlet wavelet)")
+fig.colorbar(mesh, ax=ax, label="Power")
+
+plt.tight_layout()
+plt.show()
+
+print(f"Signal: 10 Hz from 0-{duration/2:.0f} s, "
+      f"20 Hz from {duration/2:.0f}-{duration:.0f} s")
+print(f"Wavelet parameters: w = {w} cycles, "
+      f"{len(freqs)} frequencies from {freqs[0]:.0f} to {freqs[-1]:.0f} Hz")
+```
+
+The time-frequency plot should show a bright band at 10 Hz in the first half and at 20 Hz in the second half. The transition is not perfectly sharp because the wavelet has a temporal spread (the more cycles you use, the better the frequency resolution but the worse the time resolution). This is the Heisenberg uncertainty principle at work: you cannot have perfect resolution in both time and frequency simultaneously.
+:::
+
+
+## Exercise 11: Simulate event-related desynchronisation (ERD)
+
+Create epoched data that simulates alpha desynchronisation after a visual stimulus. Before time zero (baseline), alpha power is strong. After time zero, alpha power drops. Generate 40 epochs, compute the time course of alpha power (using a sliding window), average across epochs, and quantify the ERD as the percentage drop from baseline. Plot the result.
+
+::: {.callout-tip collapse="true" title="Hint"}
+For each epoch, create a signal where the alpha amplitude is high before t = 0 and low after t = 0 (e.g., multiply the alpha sine wave by an envelope that steps down at time zero). Add noise to each epoch. To compute the time course of alpha power, bandpass filter the signal into the alpha range (8--13 Hz) and then square the filtered signal (instantaneous power). Smooth with a moving average or use the Hilbert transform (`scipy.signal.hilbert`) to get the analytic amplitude. ERD% = `(active - baseline) / baseline * 100`.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+epoch_duration = 3.0  # seconds: -1 to +2 s relative to event
+n_samples_epoch = int(sfreq * epoch_duration)
+times = np.linspace(-1, 2, n_samples_epoch, endpoint=False)
+n_epochs = 40
+
+# Create alpha envelope: full amplitude before t=0, reduced after
+alpha_freq = 10  # Hz
+baseline_amp = 2.0
+active_amp = 0.5  # alpha drops after stimulus
+
+epochs = np.zeros((n_epochs, n_samples_epoch))
+for i in range(n_epochs):
+    # Alpha oscillation with time-varying amplitude
+    envelope = np.where(times < 0, baseline_amp, active_amp)
+    # Add gradual transition (50 ms ramp)
+    ramp_samples = int(0.05 * sfreq)
+    zero_idx = np.argmin(np.abs(times))
+    ramp = np.linspace(baseline_amp, active_amp, ramp_samples)
+    envelope[zero_idx:zero_idx + ramp_samples] = ramp
+
+    alpha = envelope * np.sin(2 * np.pi * alpha_freq * times
+                              + rng.uniform(0, 2 * np.pi))
+    noise = rng.standard_normal(n_samples_epoch) * 0.8
+    epochs[i] = alpha + noise
+
+# Bandpass filter into alpha band (8-13 Hz)
+sos = signal.butter(4, [8, 13], btype="band", fs=sfreq, output="sos")
+filtered = np.zeros_like(epochs)
+for i in range(n_epochs):
+    filtered[i] = signal.sosfiltfilt(sos, epochs[i])
+
+# Compute instantaneous power using the Hilbert transform
+analytic = signal.hilbert(filtered, axis=1)
+inst_power = np.abs(analytic) ** 2
+
+# Average across epochs
+mean_power = inst_power.mean(axis=0)
+
+# Smooth for visualisation (moving average, 100 ms window)
+kernel_size = int(0.1 * sfreq)
+kernel = np.ones(kernel_size) / kernel_size
+smoothed_power = np.convolve(mean_power, kernel, mode="same")
+
+# Compute ERD percentage
+baseline_mask = (times >= -0.8) & (times < -0.1)
+baseline_power = smoothed_power[baseline_mask].mean()
+erd_percent = (smoothed_power - baseline_power) / baseline_power * 100
+
+# Quantify
+active_mask = (times >= 0.5) & (times < 1.5)
+mean_erd = erd_percent[active_mask].mean()
+print(f"Baseline alpha power: {baseline_power:.4f}")
+print(f"Mean ERD (0.5-1.5 s): {mean_erd:.1f}%")
+
+# Plot
+fig, axes = plt.subplots(2, 1, figsize=(10, 7))
+
+ax = axes[0]
+ax.plot(times, smoothed_power, linewidth=1.5, color="#2c3e50")
+ax.axvline(0, color="#e74c3c", linestyle="--", alpha=0.7, label="Stimulus")
+ax.axhline(baseline_power, color="grey", linestyle=":", alpha=0.6,
+           label="Baseline level")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Alpha power")
+ax.set_title(f"Alpha power time course (n = {n_epochs} epochs)")
+ax.legend()
+
+ax = axes[1]
+ax.plot(times, erd_percent, linewidth=1.5, color="#8e44ad")
+ax.axvline(0, color="#e74c3c", linestyle="--", alpha=0.7, label="Stimulus")
+ax.axhline(0, color="grey", linestyle=":", alpha=0.6)
+ax.fill_between(times, erd_percent, 0, where=erd_percent < 0,
+                alpha=0.3, color="#8e44ad", label="ERD")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("ERD (%)")
+ax.set_title(f"Event-related desynchronisation (mean ERD = {mean_erd:.1f}%)")
+ax.legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+You should see alpha power dropping sharply after time zero and staying low throughout the post-stimulus period. The ERD percentage should be negative (since power decreased), typically around -70% to -80% given our simulation parameters. In real data, the ERD is usually smaller (around -20% to -50%) because the signal-to-noise ratio is lower.
+:::
+
+
+## Exercise 12: Simulate event-related synchronisation (beta rebound)
+
+Create epoched data that simulates a movement-related beta response: beta power drops briefly at time zero (the movement), then rebounds above baseline around 0.5--1.0 seconds later. Generate 40 epochs, compute the time course of beta power (13--30 Hz), and quantify both the ERD (power drop at movement) and the ERS (beta rebound above baseline). Plot the result.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use a beta envelope that has three phases: (1) baseline level before t = 0, (2) suppression between t = 0 and t = 0.4 s, and (3) rebound above baseline between t = 0.5 and t = 1.0 s, then return to baseline. The ERS percentage is computed the same way as ERD: `(active - baseline) / baseline * 100`, but the result should be positive for the rebound period.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+epoch_duration = 3.0  # -1 to +2 s
+n_samples_epoch = int(sfreq * epoch_duration)
+times = np.linspace(-1, 2, n_samples_epoch, endpoint=False)
+n_epochs = 40
+beta_freq = 20  # Hz
+
+# Build a beta amplitude envelope with ERD then ERS (rebound)
+baseline_amp = 1.5
+erd_amp = 0.3         # strong suppression during movement
+ers_amp = 2.2         # rebound above baseline
+
+envelope = np.ones(n_samples_epoch) * baseline_amp
+for i, t in enumerate(times):
+    if 0 <= t < 0.4:
+        # ERD phase: suppression
+        envelope[i] = erd_amp
+    elif 0.4 <= t < 0.5:
+        # Transition from ERD to ERS
+        frac = (t - 0.4) / 0.1
+        envelope[i] = erd_amp + frac * (ers_amp - erd_amp)
+    elif 0.5 <= t < 1.0:
+        # ERS phase: rebound
+        envelope[i] = ers_amp
+    elif 1.0 <= t < 1.3:
+        # Return to baseline
+        frac = (t - 1.0) / 0.3
+        envelope[i] = ers_amp + frac * (baseline_amp - ers_amp)
+
+# Generate epochs
+epochs = np.zeros((n_epochs, n_samples_epoch))
+for i in range(n_epochs):
+    beta = envelope * np.sin(2 * np.pi * beta_freq * times
+                             + rng.uniform(0, 2 * np.pi))
+    noise = rng.standard_normal(n_samples_epoch) * 1.0
+    epochs[i] = beta + noise
+
+# Bandpass filter into beta band
+sos = signal.butter(4, [13, 30], btype="band", fs=sfreq, output="sos")
+filtered = np.zeros_like(epochs)
+for i in range(n_epochs):
+    filtered[i] = signal.sosfiltfilt(sos, epochs[i])
+
+# Instantaneous power via Hilbert transform
+analytic = signal.hilbert(filtered, axis=1)
+inst_power = np.abs(analytic) ** 2
+mean_power = inst_power.mean(axis=0)
+
+# Smooth
+kernel_size = int(0.1 * sfreq)
+kernel = np.ones(kernel_size) / kernel_size
+smoothed = np.convolve(mean_power, kernel, mode="same")
+
+# Baseline and ERD/ERS
+baseline_mask = (times >= -0.8) & (times < -0.1)
+baseline_power = smoothed[baseline_mask].mean()
+erd_ers_percent = (smoothed - baseline_power) / baseline_power * 100
+
+# Quantify
+erd_mask = (times >= 0.1) & (times < 0.35)
+ers_mask = (times >= 0.55) & (times < 0.95)
+mean_erd = erd_ers_percent[erd_mask].mean()
+mean_ers = erd_ers_percent[ers_mask].mean()
+
+print(f"Baseline beta power: {baseline_power:.4f}")
+print(f"Mean ERD (0.1-0.35 s): {mean_erd:.1f}%")
+print(f"Mean ERS / beta rebound (0.55-0.95 s): {mean_ers:.1f}%")
+
+# Plot
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.plot(times, erd_ers_percent, linewidth=1.5, color="#2c3e50")
+ax.axvline(0, color="#e74c3c", linestyle="--", alpha=0.7, label="Movement")
+ax.axhline(0, color="grey", linestyle=":", alpha=0.6)
+ax.fill_between(times, erd_ers_percent, 0, where=erd_ers_percent < 0,
+                alpha=0.3, color="#3498db", label="ERD")
+ax.fill_between(times, erd_ers_percent, 0, where=erd_ers_percent > 0,
+                alpha=0.3, color="#e74c3c", label="ERS (rebound)")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Power change (%)")
+ax.set_title("Beta ERD/ERS (movement-related beta dynamics)")
+ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+The plot should show beta power dropping below baseline right after the movement (the ERD, shown in blue) and then rebounding above baseline around 0.5--1.0 seconds later (the ERS or "beta rebound", shown in red). This pattern is very well established in motor neuroscience: beta suppression reflects cortical activation during movement, and the rebound is thought to reflect active inhibition or return to a resting state.
+:::
+
+
+## Exercise 13: Compute ERSP with baseline correction
+
+Create epoched data where the spectral content changes over time (strong alpha before the event, strong beta after the event). Compute the spectrogram for each epoch, average across epochs, and apply baseline correction in both dB and percent-change modes. Plot both to see how they differ in scale and interpretability.
+
+::: {.callout-tip collapse="true" title="Hint"}
+For each epoch, compute the spectrogram with `scipy.signal.spectrogram` (use a short `nperseg` for good time resolution, e.g., 128 samples). Average the spectrograms across all epochs. For baseline correction, take the mean power in each frequency bin during the pre-stimulus interval. In dB mode: `10 * log10(power / baseline)`. In percent-change mode: `(power - baseline) / baseline * 100`. Broadcast the baseline array across the time dimension.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+epoch_duration = 3.0  # -1 to +2 s
+n_samples_epoch = int(sfreq * epoch_duration)
+times_epoch = np.linspace(-1, 2, n_samples_epoch, endpoint=False)
+n_epochs = 50
+
+# Generate epochs: alpha before event, beta after event
+all_Sxx = []
+
+for i in range(n_epochs):
+    noise = rng.standard_normal(n_samples_epoch) * 0.5
+
+    # Alpha (10 Hz) in baseline, fading out after event
+    alpha_env = np.where(times_epoch < 0, 1.5, 0.3)
+    alpha = alpha_env * np.sin(2 * np.pi * 10 * times_epoch
+                               + rng.uniform(0, 2 * np.pi))
+
+    # Beta (22 Hz) appears after event
+    beta_env = np.where(times_epoch >= 0.2, 1.2, 0.2)
+    beta = beta_env * np.sin(2 * np.pi * 22 * times_epoch
+                             + rng.uniform(0, 2 * np.pi))
+
+    epoch = noise + alpha + beta
+
+    # Compute spectrogram for this epoch
+    freqs_s, times_s, Sxx = signal.spectrogram(
+        epoch, fs=sfreq, nperseg=128, noverlap=112
+    )
+    all_Sxx.append(Sxx)
+
+# Average spectrogram across epochs
+mean_Sxx = np.mean(all_Sxx, axis=0)
+
+# Map spectrogram time bins to actual epoch times
+times_s_actual = times_s / sfreq * sfreq + times_epoch[0]
+# More direct: spectrogram times start from 0, shift to epoch start
+times_s_actual = times_s - 1.0  # shift by 1 s since epoch starts at -1
+
+# Baseline correction
+baseline_mask = (times_s_actual >= -0.8) & (times_s_actual < -0.1)
+baseline_power = mean_Sxx[:, baseline_mask].mean(axis=1, keepdims=True)
+
+# Avoid division by zero
+baseline_power = np.maximum(baseline_power, 1e-10)
+
+# dB correction
+ersp_db = 10 * np.log10(mean_Sxx / baseline_power)
+
+# Percent-change correction
+ersp_pct = (mean_Sxx - baseline_power) / baseline_power * 100
+
+# Plot
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+ax = axes[0]
+vmax_db = np.percentile(np.abs(ersp_db), 95)
+mesh = ax.pcolormesh(times_s_actual, freqs_s, ersp_db,
+                     shading="gouraud", cmap="RdBu_r",
+                     vmin=-vmax_db, vmax=vmax_db)
+ax.axvline(0, color="black", linestyle="--", linewidth=0.8)
+ax.set_ylim(0, 40)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Frequency (Hz)")
+ax.set_title("ERSP (dB)")
+fig.colorbar(mesh, ax=ax, label="Power (dB re baseline)")
+
+ax = axes[1]
+vmax_pct = np.percentile(np.abs(ersp_pct), 95)
+mesh = ax.pcolormesh(times_s_actual, freqs_s, ersp_pct,
+                     shading="gouraud", cmap="RdBu_r",
+                     vmin=-vmax_pct, vmax=vmax_pct)
+ax.axvline(0, color="black", linestyle="--", linewidth=0.8)
+ax.set_ylim(0, 40)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Frequency (Hz)")
+ax.set_title("ERSP (% change)")
+fig.colorbar(mesh, ax=ax, label="Power change (%)")
+
+plt.tight_layout()
+plt.show()
+
+print("Blue = power decrease relative to baseline")
+print("Red = power increase relative to baseline")
+print(f"Number of epochs averaged: {n_epochs}")
+```
+
+Both plots should show the same pattern: alpha power (around 10 Hz) decreasing after the event and beta power (around 22 Hz) increasing after the event. The dB scale is symmetric on a log scale and compresses large values, which makes it easier to see both small and large changes. The percent-change scale is linear and more intuitive (a value of 200 means power tripled) but can be dominated by large changes in bands with low baseline power.
+:::
+
+
+## Exercise 14: Simulate and extract a P300-like ERP
+
+Create 50 epochs where each trial contains a brief positive peak at 300 ms after the stimulus (the P300 component), simulated as a Gaussian pulse centred at 300 ms at parietal channels, buried in noise. Average across trials to extract the ERP. Plot the ERP waveform and measure the P300 amplitude and latency.
+
+::: {.callout-tip collapse="true" title="Hint"}
+A Gaussian pulse centred at 300 ms can be created as `amplitude * np.exp(-((times - 0.3)**2) / (2 * width**2))` where `width` controls the duration (try 0.05 for a 50 ms standard deviation). Add random noise to each trial (the noise amplitude should be several times larger than the signal, so that the P300 is invisible in single trials but emerges after averaging). To measure latency, find the time of the maximum in the 200--500 ms window.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+epoch_duration = 1.0  # -0.2 to +0.8 s
+n_samples = int(sfreq * epoch_duration)
+times = np.linspace(-0.2, 0.8, n_samples, endpoint=False)
+n_trials = 50
+
+# P300 parameters
+p300_latency = 0.300  # seconds
+p300_amplitude = 5.0  # microvolts
+p300_width = 0.050    # standard deviation of Gaussian (seconds)
+
+# The P300 template (same for every trial)
+p300_template = p300_amplitude * np.exp(
+    -((times - p300_latency) ** 2) / (2 * p300_width ** 2)
+)
+
+# Generate epochs: P300 + noise
+noise_amplitude = 15.0  # much larger than the P300
+epochs = np.zeros((n_trials, n_samples))
+for i in range(n_trials):
+    # Add slight jitter to P300 latency (+/- 20 ms)
+    jitter = rng.normal(0, 0.02)
+    trial_p300 = p300_amplitude * np.exp(
+        -((times - (p300_latency + jitter)) ** 2) / (2 * p300_width ** 2)
+    )
+    noise = rng.standard_normal(n_samples) * noise_amplitude
+    epochs[i] = trial_p300 + noise
+
+# Compute the ERP (average across trials)
+erp = epochs.mean(axis=0)
+
+# Measure P300 amplitude and latency (search in 200-500 ms window)
+window_mask = (times >= 0.2) & (times <= 0.5)
+window_times = times[window_mask]
+window_erp = erp[window_mask]
+peak_idx = np.argmax(window_erp)
+measured_latency = window_times[peak_idx]
+measured_amplitude = window_erp[peak_idx]
+
+print(f"True P300 latency:     {p300_latency * 1000:.0f} ms")
+print(f"Measured P300 latency: {measured_latency * 1000:.1f} ms")
+print(f"True P300 amplitude:   {p300_amplitude:.1f} uV")
+print(f"Measured P300 amplitude: {measured_amplitude:.2f} uV")
+print(f"Number of trials:      {n_trials}")
+
+# Plot
+fig, axes = plt.subplots(2, 1, figsize=(10, 7))
+
+# Top: single trials (show first 5 and the ERP)
+ax = axes[0]
+for i in range(5):
+    ax.plot(times * 1000, epochs[i], linewidth=0.5, alpha=0.4,
+            color="#95a5a6")
+ax.plot(times * 1000, erp, linewidth=2, color="#2c3e50", label="ERP (average)")
+ax.axvline(0, color="#e74c3c", linestyle="--", alpha=0.7, label="Stimulus")
+ax.set_xlabel("Time (ms)")
+ax.set_ylabel("Amplitude (uV)")
+ax.set_title("Single trials (grey) and ERP (black)")
+ax.legend()
+
+# Bottom: ERP with peak marked
+ax = axes[1]
+ax.plot(times * 1000, erp, linewidth=2, color="#2c3e50")
+ax.axvline(0, color="#e74c3c", linestyle="--", alpha=0.7, label="Stimulus")
+ax.plot(measured_latency * 1000, measured_amplitude, "o", color="#e74c3c",
+        markersize=10, label=f"P300: {measured_amplitude:.1f} uV "
+                             f"at {measured_latency * 1000:.0f} ms")
+ax.axhline(0, color="grey", linestyle=":", alpha=0.5)
+ax.set_xlabel("Time (ms)")
+ax.set_ylabel("Amplitude (uV)")
+ax.set_title("Extracted ERP with P300 peak")
+ax.legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+In the single-trial plot, the P300 is invisible because the noise is three times larger than the signal. After averaging 50 trials, the noise cancels out (it is random and uncorrelated across trials) while the P300 adds up coherently, producing a clear positive peak around 300 ms. The measured latency may differ slightly from 300 ms because of the latency jitter we added to make the simulation more realistic.
+:::
+
+
+## Exercise 15: Compute ERP signal-to-noise ratio
+
+Using the same P300 simulation setup as Exercise 14, compute the signal-to-noise ratio (SNR) of the ERP as the peak amplitude divided by the standard deviation of the pre-stimulus baseline. Repeat the computation with 10, 25, 50, and 100 trials. Plot SNR as a function of the number of trials and verify that SNR grows approximately as $\sqrt{N}$.
+
+::: {.callout-tip collapse="true" title="Hint"}
+For each number of trials, average that many epochs, measure the peak amplitude in the P300 window (200--500 ms), and measure the standard deviation of the baseline period (-200 to 0 ms). SNR = peak / baseline_std. To check the $\sqrt{N}$ relationship, overlay a scaled $\sqrt{N}$ curve on the plot. The theoretical prediction is that if you double the number of trials, the SNR should increase by a factor of $\sqrt{2} \approx 1.41$.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+epoch_duration = 1.0
+n_samples = int(sfreq * epoch_duration)
+times = np.linspace(-0.2, 0.8, n_samples, endpoint=False)
+
+p300_latency = 0.300
+p300_amplitude = 5.0
+p300_width = 0.050
+noise_amplitude = 15.0
+
+# Generate a large pool of epochs
+max_trials = 150
+all_epochs = np.zeros((max_trials, n_samples))
+for i in range(max_trials):
+    jitter = rng.normal(0, 0.02)
+    trial_p300 = p300_amplitude * np.exp(
+        -((times - (p300_latency + jitter)) ** 2) / (2 * p300_width ** 2)
+    )
+    noise = rng.standard_normal(n_samples) * noise_amplitude
+    all_epochs[i] = trial_p300 + noise
+
+# Compute SNR for different numbers of trials
+trial_counts = [10, 25, 50, 100]
+snr_values = []
+
+baseline_mask = (times >= -0.2) & (times < 0)
+p300_mask = (times >= 0.2) & (times <= 0.5)
+
+print(f"{'N trials':>10} {'Peak amp':>10} {'Baseline SD':>12} {'SNR':>8}")
+print("-" * 44)
+
+for n in trial_counts:
+    erp = all_epochs[:n].mean(axis=0)
+    peak_amp = erp[p300_mask].max()
+    baseline_std = erp[baseline_mask].std()
+    snr = peak_amp / baseline_std
+    snr_values.append(snr)
+    print(f"{n:>10d} {peak_amp:>10.2f} {baseline_std:>12.3f} {snr:>8.2f}")
+
+snr_values = np.array(snr_values)
+trial_counts = np.array(trial_counts)
+
+# Theoretical sqrt(N) curve, scaled to match the first data point
+sqrt_curve = snr_values[0] * np.sqrt(trial_counts / trial_counts[0])
+
+# Plot
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.plot(trial_counts, snr_values, "o-", color="#2c3e50", linewidth=2,
+        markersize=8, label="Measured SNR")
+ax.plot(trial_counts, sqrt_curve, "--", color="#e74c3c", linewidth=1.5,
+        label=r"Theoretical $\sqrt{N}$ scaling")
+ax.set_xlabel("Number of trials")
+ax.set_ylabel("SNR")
+ax.set_title("ERP signal-to-noise ratio vs number of trials")
+ax.legend()
+ax.set_xticks(trial_counts)
+plt.tight_layout()
+plt.show()
+
+# Verify sqrt(N) relationship
+print(f"\nSNR ratios (each step):")
+for i in range(1, len(trial_counts)):
+    ratio = snr_values[i] / snr_values[i - 1]
+    expected = np.sqrt(trial_counts[i] / trial_counts[i - 1])
+    print(f"  {trial_counts[i-1]:>3d} -> {trial_counts[i]:>3d} trials: "
+          f"SNR ratio = {ratio:.2f}, expected sqrt ratio = {expected:.2f}")
+```
+
+The SNR should roughly follow the $\sqrt{N}$ curve. This is because noise averages out as $1/\sqrt{N}$ (by the central limit theorem), while the signal stays constant. This is why ERP experiments need many trials: to get a 2x improvement in SNR, you need 4x as many trials. The exact values will not be a perfect match because we are working with a finite random sample, but the trend should be clear.
+:::
+
+
+## Exercise 16: Compare eyes-open vs eyes-closed resting-state PSD
+
+Simulate two conditions: eyes-closed (with a strong alpha peak at 10 Hz) and eyes-open (with a weak or absent alpha peak). Compute the PSD for each condition, plot them overlaid, and compute the difference in alpha band power. This is the most basic resting-state EEG paradigm and the alpha blocking effect is one of the oldest findings in EEG research (Berger, 1929).
+
+::: {.callout-tip collapse="true" title="Hint"}
+Both conditions should have the same 1/f background noise. The eyes-closed condition gets a strong alpha oscillation (amplitude around 2.0) while the eyes-open condition gets a weak one (amplitude around 0.3) or none at all. Compute the PSD for both with the same parameters, plot them on the same axes, and shade the alpha band. Compute the alpha power difference as the integral of the PSD in the 8--13 Hz range for each condition.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+def make_eeg(alpha_amp, rng_local):
+    """Generate simulated EEG with a given alpha amplitude."""
+    white = rng_local.standard_normal(n_samples)
+    freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+    freqs_fft[0] = 1
+    pink_filter = 1 / np.sqrt(freqs_fft)
+    pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+    pink = pink / pink.std()
+    alpha = alpha_amp * np.sin(2 * np.pi * 10 * times)
+    return pink + alpha
+
+# Generate both conditions
+eeg_closed = make_eeg(alpha_amp=2.5, rng_local=rng)
+eeg_open = make_eeg(alpha_amp=0.3, rng_local=rng)
+
+# Compute PSDs
+freqs_psd, psd_closed = signal.welch(eeg_closed, fs=sfreq, nperseg=1024,
+                                      noverlap=512)
+_, psd_open = signal.welch(eeg_open, fs=sfreq, nperseg=1024, noverlap=512)
+
+# Compute alpha band power
+alpha_mask = (freqs_psd >= 8) & (freqs_psd < 13)
+alpha_closed = np.trapz(psd_closed[alpha_mask], freqs_psd[alpha_mask])
+alpha_open = np.trapz(psd_open[alpha_mask], freqs_psd[alpha_mask])
+alpha_diff = alpha_closed - alpha_open
+
+print(f"Alpha power (eyes closed): {alpha_closed:.4f}")
+print(f"Alpha power (eyes open):   {alpha_open:.4f}")
+print(f"Difference:                {alpha_diff:.4f}")
+print(f"Ratio (closed / open):     {alpha_closed / alpha_open:.2f}x")
+
+# Plot
+fig, ax = plt.subplots(figsize=(9, 5))
+ax.semilogy(freqs_psd, psd_closed, linewidth=1.5, color="#e74c3c",
+            label="Eyes closed")
+ax.semilogy(freqs_psd, psd_open, linewidth=1.5, color="#3498db",
+            label="Eyes open")
+ax.axvspan(8, 13, alpha=0.15, color="orange", label="Alpha band (8-13 Hz)")
+ax.set_xlim(0, 45)
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("PSD")
+ax.set_title("Eyes-closed vs eyes-open resting-state PSD")
+ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+The eyes-closed PSD should show a prominent alpha peak rising above the 1/f background, while the eyes-open PSD should look much flatter in the alpha range. This "alpha blocking" effect was one of the first EEG phenomena described by Hans Berger in 1929 and is still used today as a basic check that an EEG system is working properly.
+:::
+
+
+## Exercise 17: Compute the theta/beta ratio
+
+Simulate multi-channel EEG data (8 channels). Compute the theta (4--8 Hz) and beta (13--30 Hz) band power for each channel. Calculate the theta/beta ratio (TBR) for each channel and print a summary table. The TBR has been investigated as a potential biomarker in ADHD research, though its clinical utility remains debated.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Generate each channel with a 1/f background and add varying amounts of theta and beta to different channels (to make the results more interesting). Compute the PSD for each channel, integrate over the theta and beta bands, and divide. Format the output as a table with columns for channel name, theta power, beta power, and their ratio.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+ch_names = ["Fp1", "Fp2", "F3", "F4", "C3", "C4", "O1", "O2"]
+n_channels = len(ch_names)
+
+# Theta and beta amplitudes per channel (simulate some variability)
+# Frontal channels: more theta; Central channels: more beta
+theta_amps = {"Fp1": 1.5, "Fp2": 1.4, "F3": 1.2, "F4": 1.3,
+              "C3": 0.6, "C4": 0.5, "O1": 0.4, "O2": 0.4}
+beta_amps = {"Fp1": 0.4, "Fp2": 0.5, "F3": 0.6, "F4": 0.5,
+             "C3": 1.3, "C4": 1.4, "O1": 0.7, "O2": 0.6}
+
+# Generate data
+data = np.zeros((n_channels, n_samples))
+for ch_idx, ch_name in enumerate(ch_names):
+    # Pink noise background
+    white = rng.standard_normal(n_samples)
+    freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+    freqs_fft[0] = 1
+    pink_filter = 1 / np.sqrt(freqs_fft)
+    pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+    pink = pink / pink.std()
+
+    theta = theta_amps[ch_name] * np.sin(2 * np.pi * 6 * times)
+    beta = beta_amps[ch_name] * np.sin(2 * np.pi * 20 * times)
+    data[ch_idx] = pink + theta + beta
+
+# Compute band powers and TBR
+theta_powers = np.zeros(n_channels)
+beta_powers = np.zeros(n_channels)
+
+for ch in range(n_channels):
+    freqs_psd, psd = signal.welch(data[ch], fs=sfreq, nperseg=1024,
+                                  noverlap=512)
+    theta_mask = (freqs_psd >= 4) & (freqs_psd < 8)
+    beta_mask = (freqs_psd >= 13) & (freqs_psd < 30)
+    theta_powers[ch] = np.trapz(psd[theta_mask], freqs_psd[theta_mask])
+    beta_powers[ch] = np.trapz(psd[beta_mask], freqs_psd[beta_mask])
+
+tbr = theta_powers / beta_powers
+
+# Print table
+print(f"{'Channel':<8} {'Theta':>10} {'Beta':>10} {'TBR':>8}")
+print("-" * 38)
+for ch in range(n_channels):
+    print(f"{ch_names[ch]:<8} {theta_powers[ch]:>10.4f} "
+          f"{beta_powers[ch]:>10.4f} {tbr[ch]:>8.2f}")
+print("-" * 38)
+print(f"{'Mean':<8} {theta_powers.mean():>10.4f} "
+      f"{beta_powers.mean():>10.4f} {tbr.mean():>8.2f}")
+
+# Identify channel with highest TBR
+max_ch = ch_names[np.argmax(tbr)]
+print(f"\nHighest TBR at channel {max_ch}: {tbr.max():.2f}")
+```
+
+Frontal channels (Fp1, Fp2, F3, F4) should have a higher theta/beta ratio because we gave them more theta and less beta. Central channels (C3, C4) should have a lower ratio because of the stronger beta there. In clinical research, elevated frontal TBR has been reported in some ADHD studies, though the finding has not been consistently replicated and the TBR is not currently recommended as a standalone diagnostic measure.
+:::
+
+
+## Exercise 18: Compute frontal alpha asymmetry
+
+Simulate data for two frontal channels (F3 and F4) where alpha power is stronger on the right (F4) than on the left (F3). Compute log-transformed alpha power for each channel and calculate the frontal alpha asymmetry index as `ln(F4) - ln(F3)`. Since greater alpha power reflects less cortical activity (alpha is an "idling" rhythm), a positive asymmetry value indicates relatively greater left cortical activity. Print and interpret the result.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Give F4 a larger alpha amplitude than F3 (e.g., 2.0 vs 1.0). Compute the PSD for both channels, integrate in the alpha band (8--13 Hz), and take the natural log. The asymmetry score is `np.log(alpha_f4) - np.log(alpha_f3)`. A positive value means more alpha on the right, which (counterintuitively) means more cortical activation on the left, because alpha suppression indicates activation.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 120
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+def make_frontal_eeg(alpha_amp, rng_local):
+    """Generate frontal EEG with a given alpha amplitude."""
+    white = rng_local.standard_normal(n_samples)
+    freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+    freqs_fft[0] = 1
+    pink_filter = 1 / np.sqrt(freqs_fft)
+    pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+    pink = pink / pink.std()
+    alpha = alpha_amp * np.sin(2 * np.pi * 10 * times
+                               + rng_local.uniform(0, 2 * np.pi))
+    return pink + alpha
+
+# F3 (left): weaker alpha = more active left hemisphere
+f3_data = make_frontal_eeg(alpha_amp=1.0, rng_local=rng)
+
+# F4 (right): stronger alpha = less active right hemisphere
+f4_data = make_frontal_eeg(alpha_amp=2.0, rng_local=rng)
+
+# Compute PSDs
+freqs_psd, psd_f3 = signal.welch(f3_data, fs=sfreq, nperseg=1024,
+                                  noverlap=512)
+_, psd_f4 = signal.welch(f4_data, fs=sfreq, nperseg=1024, noverlap=512)
+
+# Alpha band power
+alpha_mask = (freqs_psd >= 8) & (freqs_psd < 13)
+alpha_f3 = np.trapz(psd_f3[alpha_mask], freqs_psd[alpha_mask])
+alpha_f4 = np.trapz(psd_f4[alpha_mask], freqs_psd[alpha_mask])
+
+# Asymmetry index
+asymmetry = np.log(alpha_f4) - np.log(alpha_f3)
+
+print(f"Alpha power F3 (left):    {alpha_f3:.4f}")
+print(f"Alpha power F4 (right):   {alpha_f4:.4f}")
+print(f"ln(alpha F3):             {np.log(alpha_f3):.4f}")
+print(f"ln(alpha F4):             {np.log(alpha_f4):.4f}")
+print(f"Asymmetry (ln F4 - ln F3): {asymmetry:.4f}")
+print()
+if asymmetry > 0:
+    print("Positive asymmetry: more alpha on the right.")
+    print("Interpretation: relatively greater LEFT cortical activity")
+    print("(because alpha suppression = cortical activation).")
+else:
+    print("Negative asymmetry: more alpha on the left.")
+    print("Interpretation: relatively greater RIGHT cortical activity.")
+
+# Plot
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.semilogy(freqs_psd, psd_f3, linewidth=1.5, color="#3498db",
+            label=f"F3 (left)")
+ax.semilogy(freqs_psd, psd_f4, linewidth=1.5, color="#e74c3c",
+            label=f"F4 (right)")
+ax.axvspan(8, 13, alpha=0.15, color="orange", label="Alpha band")
+ax.set_xlim(0, 40)
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("PSD")
+ax.set_title(f"Frontal alpha asymmetry = {asymmetry:.3f}")
+ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+The asymmetry index should be positive because F4 has more alpha power than F3 by construction. In affective neuroscience, this pattern (relatively greater left frontal activity) has been associated with approach motivation, while the reverse pattern (greater right frontal activity, or negative asymmetry) has been associated with withdrawal motivation. However, the effect sizes in the literature are small and the measure has test-retest reliability issues.
+:::
+
+
+## Exercise 19: Compare Welch and multitaper PSD estimation
+
+Using MNE, create a simulated Raw object with a known spectral structure (alpha peak at 10 Hz over pink noise). Compute the PSD using both Welch's method and the multitaper method via `raw.compute_psd()`. Plot both PSDs on the same axes and discuss their differences.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create an `mne.io.RawArray` from your simulated data and an `mne.Info` object. Then call `raw.compute_psd(method="welch")` and `raw.compute_psd(method="multitaper")` to get PSD objects. Extract the data with `.get_data()` and the frequencies with `.freqs`. The multitaper estimate uses discrete prolate spheroidal sequences (DPSS, also known as Slepian sequences) as tapers rather than a single windowed segment, which produces smoother estimates with less spectral leakage.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+import mne
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+
+# Generate signal: pink noise + alpha
+white = rng.standard_normal(n_samples)
+freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+freqs_fft[0] = 1
+pink_filter = 1 / np.sqrt(freqs_fft)
+pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+pink = pink / pink.std()
+
+alpha = 2.0 * np.sin(2 * np.pi * 10 * times)
+eeg = pink + alpha
+
+# Create MNE Raw object
+info = mne.create_info(ch_names=["Oz"], sfreq=sfreq, ch_types="eeg")
+raw = mne.io.RawArray(eeg.reshape(1, -1), info)
+
+# Compute PSD with Welch's method
+psd_welch = raw.compute_psd(method="welch", fmin=0.5, fmax=50,
+                             n_fft=1024, n_overlap=512)
+freqs_w = psd_welch.freqs
+psd_w = psd_welch.get_data()[0]  # first (only) channel
+
+# Compute PSD with multitaper method
+psd_mt = raw.compute_psd(method="multitaper", fmin=0.5, fmax=50,
+                          bandwidth=2.0)
+freqs_m = psd_mt.freqs
+psd_m = psd_mt.get_data()[0]
+
+# Plot comparison
+fig, axes = plt.subplots(2, 1, figsize=(10, 8))
+
+# Top: both PSDs overlaid
+ax = axes[0]
+ax.semilogy(freqs_w, psd_w, linewidth=1.2, color="#3498db",
+            label="Welch", alpha=0.8)
+ax.semilogy(freqs_m, psd_m, linewidth=1.2, color="#e74c3c",
+            label="Multitaper", alpha=0.8)
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("PSD (V^2/Hz)")
+ax.set_title("Welch vs Multitaper PSD estimation")
+ax.legend()
+
+# Bottom: ratio of the two
+ax = axes[1]
+# Interpolate to common frequency grid for comparison
+from scipy.interpolate import interp1d
+interp_mt = interp1d(freqs_m, psd_m, bounds_error=False, fill_value=np.nan)
+psd_m_interp = interp_mt(freqs_w)
+ratio = psd_w / psd_m_interp
+ax.plot(freqs_w, ratio, linewidth=1, color="#2c3e50")
+ax.axhline(1, color="grey", linestyle=":", alpha=0.7)
+ax.set_xlabel("Frequency (Hz)")
+ax.set_ylabel("Welch / Multitaper ratio")
+ax.set_title("Ratio of the two PSD estimates")
+ax.set_ylim(0, 3)
+
+plt.tight_layout()
+plt.show()
+
+print("Both methods should show the same alpha peak at 10 Hz.")
+print("The multitaper estimate is typically smoother because it")
+print("averages across multiple orthogonal tapers, reducing variance.")
+print("Welch's method averages across time segments instead.")
+```
+
+Both methods should show the same overall spectral shape: a 1/f slope with an alpha peak at 10 Hz. The multitaper estimate is generally smoother (less wiggly) because it uses multiple orthogonal tapers on each data segment, which reduces variance at the cost of slightly lower frequency resolution. Welch's method achieves variance reduction by averaging across time segments instead. In practice, multitaper is often preferred for short data segments where you cannot afford to split the data into many windows.
+:::
+
+
+## Exercise 20: Three-condition group study with ANOVA
+
+Simulate a three-group experiment with 12 subjects per group: "rest", "task-easy", and "task-hard". Each group has a different mean alpha power level (rest has the most alpha, task-hard the least, reflecting increasing cognitive engagement). Compute alpha band power for each subject, run a one-way ANOVA using `scipy.stats.f_oneway`, and follow up with pairwise t-tests. Create a box plot of alpha power for the three groups.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Give each group a different alpha oscillation amplitude: e.g., 2.0 for rest, 1.2 for task-easy, 0.5 for task-hard. Add between-subject variability by drawing each subject's amplitude from a normal distribution centred at the group mean. Compute the PSD and alpha band power for each subject as in Exercise 4. Use `scipy.stats.f_oneway(group1, group2, group3)` for the ANOVA and `scipy.stats.ttest_ind` for pairwise comparisons. Apply a Bonferroni correction for three comparisons (multiply p-values by 3).
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+from scipy.stats import f_oneway, ttest_ind
+
+rng = np.random.default_rng(42)
+
+sfreq = 256
+duration = 60
+n_samples = sfreq * duration
+times = np.arange(n_samples) / sfreq
+n_subjects = 12
+
+# Group parameters: (name, mean_alpha_amp, sd_alpha_amp)
+groups = [
+    ("Rest",      2.0, 0.3),
+    ("Task-easy", 1.2, 0.25),
+    ("Task-hard", 0.5, 0.2),
+]
+
+def simulate_subject_alpha(alpha_amp, rng_local):
+    """Simulate one subject and return alpha band power."""
+    white = rng_local.standard_normal(n_samples)
+    freqs_fft = np.fft.rfftfreq(n_samples, d=1 / sfreq)
+    freqs_fft[0] = 1
+    pink_filter = 1 / np.sqrt(freqs_fft)
+    pink = np.fft.irfft(np.fft.rfft(white) * pink_filter, n=n_samples)
+    pink = pink / pink.std()
+
+    eeg = pink + alpha_amp * np.sin(2 * np.pi * 10 * times)
+
+    freqs_psd, psd = signal.welch(eeg, fs=sfreq, nperseg=1024, noverlap=512)
+    mask = (freqs_psd >= 8) & (freqs_psd < 13)
+    return np.trapz(psd[mask], freqs_psd[mask])
+
+# Simulate all subjects
+group_data = {}
+for name, mean_amp, sd_amp in groups:
+    powers = []
+    for _ in range(n_subjects):
+        amp = max(0.1, rng.normal(mean_amp, sd_amp))
+        powers.append(simulate_subject_alpha(amp, rng))
+    group_data[name] = np.array(powers)
+
+# Print descriptive statistics
+print(f"{'Group':<12} {'Mean':>8} {'SD':>8} {'Min':>8} {'Max':>8}")
+print("-" * 48)
+for name, data in group_data.items():
+    print(f"{name:<12} {data.mean():>8.3f} {data.std():>8.3f} "
+          f"{data.min():>8.3f} {data.max():>8.3f}")
+
+# One-way ANOVA
+f_stat, p_anova = f_oneway(*group_data.values())
+print(f"\nOne-way ANOVA: F = {f_stat:.3f}, p = {p_anova:.6f}")
+
+# Pairwise t-tests with Bonferroni correction
+print("\nPairwise t-tests (Bonferroni corrected for 3 comparisons):")
+group_names = list(group_data.keys())
+n_comparisons = 3
+for i in range(len(group_names)):
+    for j in range(i + 1, len(group_names)):
+        g1, g2 = group_names[i], group_names[j]
+        t_stat, p_val = ttest_ind(group_data[g1], group_data[g2])
+        p_corrected = min(p_val * n_comparisons, 1.0)
+        sig = "*" if p_corrected < 0.05 else "n.s."
+        print(f"  {g1} vs {g2}: t = {t_stat:.3f}, "
+              f"p = {p_val:.6f}, p_corrected = {p_corrected:.6f} {sig}")
+
+# Box plot
+fig, ax = plt.subplots(figsize=(8, 5))
+bp = ax.boxplot(
+    [group_data[name] for name in group_names],
+    labels=group_names,
+    patch_artist=True,
+    widths=0.5,
+)
+
+colours = ["#3498db", "#f39c12", "#e74c3c"]
+for patch, colour in zip(bp["boxes"], colours):
+    patch.set_facecolor(colour)
+    patch.set_alpha(0.5)
+
+# Overlay individual data points
+for i, name in enumerate(group_names):
+    x = rng.normal(i + 1, 0.04, size=n_subjects)
+    ax.scatter(x, group_data[name], color=colours[i], alpha=0.7,
+               edgecolors="black", linewidths=0.5, s=30, zorder=3)
+
+ax.set_ylabel("Alpha band power (8-13 Hz)")
+ax.set_title(f"Alpha power by condition (ANOVA: F = {f_stat:.1f}, "
+             f"p = {p_anova:.2e})")
+plt.tight_layout()
+plt.show()
+```
+
+The ANOVA should be significant (p < 0.05) because the three groups have clearly different alpha power levels by design. The pairwise comparisons should show that the rest group has significantly more alpha than both task conditions, and the task-hard group has significantly less alpha than the task-easy group. In real experiments, the effect of cognitive load on alpha power is well documented: harder tasks produce more alpha suppression, reflecting greater cortical engagement.
+:::

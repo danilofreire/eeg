@@ -350,3 +350,1308 @@ print(f"Downsampled n_samples: {raw_downsampled.n_times}")
 
 In the original PSD, you should see peaks at 10 Hz and 200 Hz. After filtering and downsampling, the 200 Hz peak is gone (it was above the new Nyquist frequency of 125 Hz and was removed by the anti-aliasing filter). The 10 Hz peak remains intact because it is well within the passband.
 :::
+
+
+## Exercise 6: Compare FIR vs IIR filter response
+
+Create a signal with a known alpha peak at 10 Hz and high-frequency noise above 40 Hz. Apply both a FIR band-pass filter (`method="fir"`) and an IIR band-pass filter (`method="iir"`) between 1 and 40 Hz. Plot the PSD after each and time how long each filter takes.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `raw.copy().filter(1, 40, method="fir")` and `raw.copy().filter(1, 40, method="iir")`. To time them, wrap each call with `time.time()`. FIR filters have a linear phase response and a gentler roll-off; IIR filters are faster but can introduce phase distortion. Compare the PSDs near the 40 Hz cutoff to see the difference in roll-off steepness.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+import time
+
+sfreq = 500
+duration = 60
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+# Signal: 10 Hz alpha + broadband high-frequency noise + background
+ch_names = ["Oz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+hf_noise = 3e-6 * np.random.randn(n_samples)  # broadband
+hf_noise += 4e-6 * np.sin(2 * np.pi * 60 * times)  # 60 Hz component
+hf_noise += 3e-6 * np.sin(2 * np.pi * 80 * times)  # 80 Hz component
+background = 2e-6 * np.random.randn(n_samples)
+signal = (alpha + hf_noise + background).reshape(1, -1)
+
+raw = mne.io.RawArray(signal, info)
+
+# FIR filter
+t0 = time.time()
+raw_fir = raw.copy().filter(1, 40, method="fir")
+fir_time = time.time() - t0
+
+# IIR filter
+t0 = time.time()
+raw_iir = raw.copy().filter(1, 40, method="iir")
+iir_time = time.time() - t0
+
+# Plot PSDs
+fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+
+raw.compute_psd(fmax=100).plot(axes=axes[0], show=False)
+axes[0].set_title("Original")
+
+raw_fir.compute_psd(fmax=100).plot(axes=axes[1], show=False)
+axes[1].set_title(f"FIR band-pass ({fir_time:.3f} s)")
+
+raw_iir.compute_psd(fmax=100).plot(axes=axes[2], show=False)
+axes[2].set_title(f"IIR band-pass ({iir_time:.3f} s)")
+
+plt.tight_layout()
+plt.show()
+
+print(f"FIR filter time: {fir_time:.4f} s")
+print(f"IIR filter time: {iir_time:.4f} s")
+print(f"IIR is {fir_time / iir_time:.1f}x faster than FIR")
+```
+
+Compare the two PSD plots near 40 Hz. The IIR filter typically shows a steeper roll-off (sharper transition from passband to stopband), while the FIR filter has a more gradual transition. The IIR filter is usually faster because it uses fewer coefficients, but the FIR filter has a linear phase response, which means it does not distort the timing of signal components.
+:::
+
+
+## Exercise 7: High-pass filter to remove slow drifts
+
+Create data with a strong 0.05 Hz slow drift added to a 10 Hz alpha oscillation. Apply a high-pass filter at 0.1 Hz. Plot the time-domain signal before and after to show that the drift is removed while alpha is preserved.
+
+::: {.callout-tip collapse="true" title="Hint"}
+A high-pass filter keeps frequencies above the cutoff and removes frequencies below it. Use `raw.filter(l_freq=0.1, h_freq=None)`. The slow drift at 0.05 Hz is below the 0.1 Hz cutoff, so it should be removed. Plot several seconds of the time-domain signal to see the effect clearly.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 60
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Cz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Alpha oscillation at 10 Hz
+alpha = 8e-6 * np.sin(2 * np.pi * 10 * times)
+
+# Strong slow drift at 0.05 Hz (period = 20 s)
+drift = 30e-6 * np.sin(2 * np.pi * 0.05 * times)
+
+# Small background noise
+noise = 2e-6 * np.random.randn(n_samples)
+
+signal = (alpha + drift + noise).reshape(1, -1)
+raw = mne.io.RawArray(signal, info)
+
+# Apply high-pass filter at 0.1 Hz
+raw_filtered = raw.copy().filter(l_freq=0.1, h_freq=None)
+
+# Plot time-domain comparison (first 30 seconds to see the drift)
+fig, axes = plt.subplots(2, 1, figsize=(14, 6), sharex=True)
+t_plot = slice(0, int(30 * sfreq))
+t_sec = times[:int(30 * sfreq)]
+
+axes[0].plot(t_sec, raw.get_data()[0, t_plot] * 1e6, linewidth=0.5)
+axes[0].set_title("Before high-pass filter (drift visible)")
+axes[0].set_ylabel("Amplitude (uV)")
+
+axes[1].plot(t_sec, raw_filtered.get_data()[0, t_plot] * 1e6, linewidth=0.5)
+axes[1].set_title("After high-pass filter at 0.1 Hz (drift removed)")
+axes[1].set_ylabel("Amplitude (uV)")
+axes[1].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+
+# Verify: standard deviation should drop because drift is gone
+std_before = np.std(raw.get_data()[0]) * 1e6
+std_after = np.std(raw_filtered.get_data()[0]) * 1e6
+print(f"Std before filtering: {std_before:.1f} uV")
+print(f"Std after filtering:  {std_after:.1f} uV")
+```
+
+In the top panel, you should see the 10 Hz alpha riding on top of a large, slow wave. After filtering, the slow wave is gone and only the alpha oscillation (plus some background noise) remains. The standard deviation drops because the high-amplitude drift no longer contributes to the signal.
+:::
+
+
+## Exercise 8: Low-pass filter to suppress muscle artefact
+
+Create data with a 10 Hz oscillation plus high-frequency (40--100 Hz) simulated EMG noise. Apply a low-pass filter at 30 Hz. Compare the PSD before and after.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `raw.filter(l_freq=None, h_freq=30)` for a low-pass filter. Muscle artefacts typically produce broadband high-frequency activity, so a low-pass filter is a simple way to reduce them. Build the EMG noise as a sum of several high-frequency sine waves or as band-limited random noise.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 30
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["T7", "T8"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Clean 10 Hz alpha oscillation on both channels
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+data = np.tile(alpha, (2, 1))
+data += np.random.randn(2, n_samples) * 2e-6  # background
+
+# Add broadband EMG noise (40-100 Hz) to both channels
+for freq in [45, 55, 65, 75, 85, 95]:
+    emg_component = 4e-6 * np.sin(
+        2 * np.pi * freq * times + np.random.uniform(0, 2 * np.pi)
+    )
+    data += emg_component
+
+raw = mne.io.RawArray(data, info)
+
+# Apply low-pass filter at 30 Hz
+raw_filtered = raw.copy().filter(l_freq=None, h_freq=30)
+
+# Compare PSDs
+fig, axes = plt.subplots(1, 2, figsize=(14, 4))
+
+raw.compute_psd(fmax=120).plot(axes=axes[0], show=False)
+axes[0].set_title("PSD before low-pass filter")
+
+raw_filtered.compute_psd(fmax=120).plot(axes=axes[1], show=False)
+axes[1].set_title("PSD after low-pass filter (30 Hz)")
+
+plt.tight_layout()
+plt.show()
+
+# Time-domain comparison for T7
+fig2, axes2 = plt.subplots(2, 1, figsize=(14, 5), sharex=True)
+t_slice = slice(0, int(2 * sfreq))
+t_sec = times[:int(2 * sfreq)]
+
+axes2[0].plot(t_sec, raw.get_data(picks="T7")[0, t_slice] * 1e6, linewidth=0.5)
+axes2[0].set_title("T7 before low-pass filter (EMG noise visible)")
+axes2[0].set_ylabel("Amplitude (uV)")
+
+axes2[1].plot(t_sec, raw_filtered.get_data(picks="T7")[0, t_slice] * 1e6, linewidth=0.5)
+axes2[1].set_title("T7 after low-pass filter at 30 Hz")
+axes2[1].set_ylabel("Amplitude (uV)")
+axes2[1].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+```
+
+The PSD before filtering shows a 10 Hz peak plus multiple peaks in the 40--100 Hz range. After low-pass filtering at 30 Hz, everything above 30 Hz is strongly attenuated, leaving only the 10 Hz alpha. In the time domain, the jagged high-frequency fluctuations disappear and the signal looks much smoother.
+:::
+
+
+## Exercise 9: Remove 60 Hz line noise and harmonics
+
+Simulate data contaminated with 60 Hz noise and its harmonics at 120 Hz and 180 Hz. Apply a notch filter at all three frequencies. Verify the PSD shows clean removal of all three peaks.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Pass a list of frequencies to `raw.notch_filter([60, 120, 180])`. MNE will apply a separate notch at each frequency. Make each harmonic progressively weaker (as they often are in real recordings) so the PSD looks realistic.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 30
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Cz", "Pz", "Oz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Background EEG with a 10 Hz alpha peak
+data = np.random.randn(3, n_samples) * 3e-6
+alpha = 8e-6 * np.sin(2 * np.pi * 10 * times)
+data += alpha
+
+# Add 60 Hz line noise and harmonics (progressively weaker)
+line_60 = 6e-6 * np.sin(2 * np.pi * 60 * times)
+line_120 = 3e-6 * np.sin(2 * np.pi * 120 * times)
+line_180 = 1.5e-6 * np.sin(2 * np.pi * 180 * times)
+data += line_60 + line_120 + line_180
+
+raw = mne.io.RawArray(data, info)
+
+# Plot PSD before
+fig_before = raw.compute_psd(fmax=220).plot(show=False)
+fig_before.suptitle("PSD before notch filter")
+
+# Apply notch filter at 60, 120, and 180 Hz
+raw_notched = raw.copy().notch_filter([60, 120, 180])
+
+# Plot PSD after
+fig_after = raw_notched.compute_psd(fmax=220).plot(show=False)
+fig_after.suptitle("PSD after notch filter (60, 120, 180 Hz)")
+
+plt.show()
+
+# Quantify the removal by checking power at the notch frequencies
+from mne.time_frequency import psd_array_multitaper
+
+psd_before, freqs = psd_array_multitaper(
+    raw.get_data(), sfreq=sfreq, fmax=220
+)
+psd_after, _ = psd_array_multitaper(
+    raw_notched.get_data(), sfreq=sfreq, fmax=220
+)
+
+for f_target in [60, 120, 180]:
+    idx = np.argmin(np.abs(freqs - f_target))
+    power_before = 10 * np.log10(psd_before[0, idx])
+    power_after = 10 * np.log10(psd_after[0, idx])
+    print(
+        f"{f_target} Hz: {power_before:.1f} dB (before) -> "
+        f"{power_after:.1f} dB (after), "
+        f"reduction = {power_before - power_after:.1f} dB"
+    )
+```
+
+The PSD before filtering shows three sharp peaks at 60, 120, and 180 Hz on top of the broadband background. After the notch filter, all three peaks are removed. The 10 Hz alpha peak remains untouched. The printed power reductions should be substantial (typically 10--30 dB at each frequency).
+:::
+
+
+## Exercise 10: Re-reference to linked mastoids
+
+Create data with channels including TP9 and TP10 (mastoid positions). Re-reference to the average of these two channels. Compare a frontal channel before and after re-referencing.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `raw.set_eeg_reference(["TP9", "TP10"])`. This subtracts the average of TP9 and TP10 from every channel. The linked-mastoid reference is common in auditory and language research. Include enough channels in your simulation so that the effect is visible.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 10
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "C3", "C4",
+    "P3", "P4", "O1", "O2", "Fz", "Cz", "Pz",
+    "TP9", "TP10"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Generate data: each channel gets background noise plus a shared drift
+data = np.random.randn(n_channels, n_samples) * 5e-6
+
+# Add a common reference artefact (shared slow drift) to all channels
+ref_drift = 15e-6 * np.sin(2 * np.pi * 0.3 * times)
+data += ref_drift
+
+# Add alpha to occipital channels
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+data[ch_names.index("O1")] += alpha
+data[ch_names.index("O2")] += alpha
+
+# Add extra activity to the mastoid channels (simulating nearby muscle)
+mastoid_activity = 8e-6 * np.sin(2 * np.pi * 3 * times)
+data[ch_names.index("TP9")] += mastoid_activity
+data[ch_names.index("TP10")] += mastoid_activity
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+
+# Store Fp1 before re-referencing
+fp1_before = raw.get_data(picks="Fp1")[0].copy()
+
+# Re-reference to linked mastoids
+raw.set_eeg_reference(["TP9", "TP10"])
+
+fp1_after = raw.get_data(picks="Fp1")[0]
+
+# Plot comparison
+fig, axes = plt.subplots(2, 1, figsize=(14, 6), sharex=True)
+t_slice = slice(0, int(5 * sfreq))
+t_sec = times[:int(5 * sfreq)]
+
+axes[0].plot(t_sec, fp1_before[t_slice] * 1e6)
+axes[0].set_title("Fp1 before re-referencing")
+axes[0].set_ylabel("Amplitude (uV)")
+
+axes[1].plot(t_sec, fp1_after[t_slice] * 1e6)
+axes[1].set_title("Fp1 after linked-mastoid reference (TP9 + TP10)")
+axes[1].set_ylabel("Amplitude (uV)")
+axes[1].set_xlabel("Time (s)")
+
+plt.tight_layout()
+plt.show()
+
+print(f"Fp1 std before: {np.std(fp1_before) * 1e6:.2f} uV")
+print(f"Fp1 std after:  {np.std(fp1_after) * 1e6:.2f} uV")
+```
+
+After re-referencing to the linked mastoids, the common reference drift is reduced (because it was also present in TP9 and TP10 and gets subtracted). You may also notice that the 3 Hz mastoid-specific activity now appears (inverted) in all channels. This is the trade-off with any reference: you remove what the reference channels pick up, but you also redistribute any unique activity they contain.
+:::
+
+
+## Exercise 11: Re-reference using a projection (average reference as projector)
+
+Apply the average reference as a projection rather than modifying the data directly. Compare the result of `projection=True` vs `projection=False` by examining the data arrays.
+
+::: {.callout-tip collapse="true" title="Hint"}
+With `projection=True`, MNE stores the average reference as a "projector" in `raw.info["projs"]` without changing the data. The projection is only applied when you call `raw.get_data()` or access the data through MNE plotting functions. With `projection=False`, MNE modifies the stored data immediately. Compare the raw data arrays to see this difference.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 10
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Fp1", "Fp2", "C3", "C4", "O1", "O2"]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create data with a distinct pattern per channel
+data = np.random.randn(n_channels, n_samples) * 5e-6
+data[0] += 10e-6 * np.sin(2 * np.pi * 2 * times)   # Fp1: 2 Hz
+data[4] += 10e-6 * np.sin(2 * np.pi * 10 * times)   # O1: 10 Hz
+data[5] += 10e-6 * np.sin(2 * np.pi * 10 * times)   # O2: 10 Hz
+
+# Create two copies
+raw_proj = mne.io.RawArray(data.copy(), info.copy())
+raw_direct = mne.io.RawArray(data.copy(), info.copy())
+
+# Apply average reference as a projection (data not changed in memory)
+raw_proj.set_eeg_reference("average", projection=True)
+
+# Apply average reference directly (data is changed in memory)
+raw_direct.set_eeg_reference("average", projection=False)
+
+# Access the underlying data arrays
+data_proj_raw = raw_proj._data.copy()    # raw internal data (unchanged)
+data_proj_get = raw_proj.get_data()       # data with projection applied
+data_direct = raw_direct.get_data()       # data already modified
+
+# Check: the internal data of the projection version should be unchanged
+max_diff_internal = np.max(np.abs(data_proj_raw - data))
+print(f"Max difference between original and proj internal data: "
+      f"{max_diff_internal * 1e6:.6f} uV")
+print(f"(Should be ~0 because projection has not been applied to stored data)")
+
+# Check: get_data() from the projection version should match
+# the directly re-referenced version
+max_diff_output = np.max(np.abs(data_proj_get - data_direct))
+print(f"\nMax difference between proj get_data() and direct re-ref: "
+      f"{max_diff_output * 1e6:.6f} uV")
+print(f"(Should be ~0 because both yield the same result)")
+
+# Show the projectors
+print(f"\nProjectors in raw_proj: {len(raw_proj.info['projs'])}")
+for proj in raw_proj.info["projs"]:
+    print(f"  {proj}")
+print(f"Projectors in raw_direct: {len(raw_direct.info['projs'])}")
+```
+
+The key point is that `projection=True` does not touch the stored data; it adds a projector that is applied on the fly when you read the data. This is useful if you want to compare referenced and unreferenced data without making separate copies. Both approaches produce the same output when you call `get_data()`.
+:::
+
+
+## Exercise 12: Detect bad channels using variance
+
+Create multi-channel data where two channels have abnormally high variance (simulating noisy electrodes). Write a function that identifies channels whose variance exceeds 3 standard deviations above the median channel variance. Test it on your simulated data.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Compute the variance of each channel with `np.var(raw.get_data(), axis=1)`. Then find the median and standard deviation of these variances. A channel is "bad" if its variance is more than 3 standard deviations above the median. Use `np.median()` and `np.std()` on the array of per-channel variances.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 30
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "C3", "C4",
+    "P3", "P4", "O1", "O2", "Fz", "Cz", "Pz", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Clean data
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 8e-6 * np.sin(2 * np.pi * 10 * times)
+data += alpha
+
+# Corrupt two channels with high noise
+data[ch_names.index("F4")] += np.random.randn(n_samples) * 80e-6
+data[ch_names.index("P3")] += np.random.randn(n_samples) * 60e-6
+
+raw = mne.io.RawArray(data, info)
+
+
+def detect_bad_channels_variance(raw, threshold_z=3.0):
+    """Detect bad channels based on abnormally high variance.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw data object.
+    threshold_z : float
+        Number of standard deviations above the median variance to flag
+        a channel as bad.
+
+    Returns
+    -------
+    bad_channels : list of str
+        Names of the channels flagged as bad.
+    """
+    data = raw.get_data(picks="eeg")
+    ch_names = [raw.ch_names[i] for i in mne.pick_types(raw.info, eeg=True)]
+
+    variances = np.var(data, axis=1)
+    median_var = np.median(variances)
+    std_var = np.std(variances)
+
+    threshold = median_var + threshold_z * std_var
+    bad_channels = [
+        ch_names[i]
+        for i, v in enumerate(variances)
+        if v > threshold
+    ]
+
+    # Print details
+    print(f"Median variance: {median_var * 1e12:.2f} uV^2")
+    print(f"Std of variances: {std_var * 1e12:.2f} uV^2")
+    print(f"Threshold ({threshold_z} SD): {threshold * 1e12:.2f} uV^2")
+    print()
+    for i, ch in enumerate(ch_names):
+        flag = " *** BAD ***" if ch in bad_channels else ""
+        print(f"  {ch}: variance = {variances[i] * 1e12:.2f} uV^2{flag}")
+
+    return bad_channels
+
+
+bad_chs = detect_bad_channels_variance(raw, threshold_z=3.0)
+print(f"\nDetected bad channels: {bad_chs}")
+```
+
+The function should detect F4 and P3 as bad channels because their variances are much higher than the rest. The exact threshold depends on the random seed, but with the noise levels used here (80 uV and 60 uV added vs 5 uV baseline), both channels should be clearly above the 3-SD threshold.
+:::
+
+
+## Exercise 13: Detect bad channels using inter-channel correlation
+
+Create multi-channel data where one channel is uncorrelated with its neighbours (simulating a disconnected electrode). Compute the mean correlation of each channel with all others and flag channels whose mean correlation is below a threshold.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `np.corrcoef(data)` to get the full correlation matrix. For each channel, compute its mean correlation with all other channels (excluding the diagonal, which is always 1). A disconnected electrode produces random noise that is uncorrelated with other channels, so its mean correlation will be near zero.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 30
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "C3", "C4",
+    "P3", "P4", "O1", "O2", "Fz", "Cz", "Pz", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create correlated data: all channels share a common signal
+common_signal = 10e-6 * np.sin(2 * np.pi * 10 * times)
+data = np.random.randn(n_channels, n_samples) * 3e-6
+data += common_signal  # shared signal makes channels correlated
+
+# Replace one channel (P4) with pure uncorrelated noise
+bad_idx = ch_names.index("P4")
+data[bad_idx] = np.random.randn(n_samples) * 5e-6  # no shared signal
+
+raw = mne.io.RawArray(data, info)
+
+
+def detect_bad_channels_correlation(raw, threshold=0.3):
+    """Detect bad channels based on low inter-channel correlation.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw data object.
+    threshold : float
+        Minimum mean correlation. Channels below this are flagged.
+
+    Returns
+    -------
+    bad_channels : list of str
+        Names of the channels flagged as bad.
+    """
+    data = raw.get_data(picks="eeg")
+    ch_names = [raw.ch_names[i] for i in mne.pick_types(raw.info, eeg=True)]
+
+    # Correlation matrix
+    corr_matrix = np.corrcoef(data)
+    n = corr_matrix.shape[0]
+
+    # Mean correlation with all other channels (exclude self-correlation)
+    mean_corrs = []
+    for i in range(n):
+        others = [corr_matrix[i, j] for j in range(n) if j != i]
+        mean_corrs.append(np.mean(others))
+
+    mean_corrs = np.array(mean_corrs)
+
+    bad_channels = [
+        ch_names[i]
+        for i, mc in enumerate(mean_corrs)
+        if mc < threshold
+    ]
+
+    print(f"Correlation threshold: {threshold}")
+    print()
+    for i, ch in enumerate(ch_names):
+        flag = " *** BAD ***" if ch in bad_channels else ""
+        print(f"  {ch}: mean correlation = {mean_corrs[i]:.3f}{flag}")
+
+    return bad_channels
+
+
+bad_chs = detect_bad_channels_correlation(raw, threshold=0.3)
+print(f"\nDetected bad channels: {bad_chs}")
+```
+
+P4 should be the only channel flagged because it is pure noise with no shared signal. All other channels share the 10 Hz common oscillation, so their mean inter-channel correlations will be well above 0.3. P4's mean correlation will be near zero.
+:::
+
+
+## Exercise 14: Interpolate multiple bad channels and verify
+
+Mark three channels as bad in multi-channel data with a standard montage. Interpolate them all at once. Compare the interpolated signals with the original clean signals (before corruption) using correlation.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Store a copy of the clean data before corrupting the channels. After interpolation, compute the Pearson correlation between the interpolated channel and the original clean channel using `np.corrcoef()`. A high correlation means the interpolation recovered the signal well.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 30
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8",
+    "C3", "C4", "T7", "T8",
+    "P3", "P4", "P7", "P8",
+    "O1", "O2", "Fz", "Cz", "Pz", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Create clean data with a spatially smooth pattern
+data = np.random.randn(n_channels, n_samples) * 3e-6
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+data += alpha  # shared oscillation
+
+raw_clean = mne.io.RawArray(data.copy(), info.copy())
+montage = mne.channels.make_standard_montage("standard_1020")
+raw_clean.set_montage(montage)
+
+# Store clean data for comparison
+clean_data = data.copy()
+
+# Corrupt three channels
+bad_channels = ["F3", "T8", "Pz"]
+for ch in bad_channels:
+    idx = ch_names.index(ch)
+    data[idx] = np.random.randn(n_samples) * 80e-6  # pure noise
+
+raw = mne.io.RawArray(data, info)
+raw.set_montage(montage)
+
+# Mark bad and interpolate
+raw.info["bads"] = bad_channels
+print(f"Bad channels: {raw.info['bads']}")
+
+raw.interpolate_bads()
+
+# Compare interpolated signals with clean originals
+print("\nCorrelation between interpolated and original clean signals:")
+for ch in bad_channels:
+    idx = ch_names.index(ch)
+    original = clean_data[idx]
+    interpolated = raw.get_data(picks=ch)[0]
+    corr = np.corrcoef(original, interpolated)[0, 1]
+    print(f"  {ch}: r = {corr:.3f}")
+
+# Also check that non-bad channels are unchanged
+print("\nNon-bad channels should be unchanged:")
+for ch in ["Fp1", "C4", "O2"]:
+    idx = ch_names.index(ch)
+    original = clean_data[idx]
+    current = raw.get_data(picks=ch)[0]
+    max_diff = np.max(np.abs(original - current))
+    print(f"  {ch}: max difference = {max_diff * 1e6:.6f} uV")
+```
+
+The interpolated channels should show a positive correlation with their clean originals, typically between 0.5 and 0.9 depending on the channel's position and how many neighbours contribute. Channels surrounded by many clean neighbours (like Pz) tend to interpolate better than peripheral channels. Non-bad channels should remain unchanged (max difference near zero or exactly zero).
+:::
+
+
+## Exercise 15: Compare baseline correction windows
+
+Create epochs with a clear signal change (simulated ERP). Apply three different baseline correction windows: (-0.2, 0), (-0.5, 0), and (-0.1, 0). Plot the average for each and observe how the baseline window affects the ERP amplitude.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Create events at regular intervals. Build a signal where a brief ERP-like peak occurs after each event, and add a slow drift so the baseline level shifts over time. Use `mne.Epochs(..., baseline=(-0.2, 0))` to set the baseline window. Different windows sample different amounts of the pre-stimulus period, so if there is a drift the baseline correction will give slightly different results.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Cz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Background noise + slow drift
+noise = np.random.randn(n_samples) * 3e-6
+drift = 10e-6 * np.sin(2 * np.pi * 0.05 * times)
+signal = noise + drift
+
+# Create events every 2 seconds (starting at 1 s)
+event_times = np.arange(1, duration - 1, 2)
+event_samples = (event_times * sfreq).astype(int)
+
+# Add a simulated ERP (a Gaussian peak ~150 ms after each event)
+erp_latency = 0.15  # seconds after event
+erp_width = 0.05    # seconds (std of the Gaussian)
+erp_amplitude = 8e-6
+
+for s in event_samples:
+    # Place a Gaussian-shaped ERP after the event
+    erp_centre = s + int(erp_latency * sfreq)
+    for t in range(max(0, erp_centre - 100), min(n_samples, erp_centre + 100)):
+        dt = (t - erp_centre) / sfreq
+        signal[t] += erp_amplitude * np.exp(-0.5 * (dt / erp_width) ** 2)
+
+data = signal.reshape(1, -1)
+raw = mne.io.RawArray(data, info)
+
+# Create events array for MNE
+events = np.column_stack([
+    event_samples,
+    np.zeros(len(event_samples), dtype=int),
+    np.ones(len(event_samples), dtype=int)
+])
+
+# Create epochs with three different baseline windows
+baseline_windows = [(-0.2, 0), (-0.5, 0), (-0.1, 0)]
+evokeds = []
+
+for bl in baseline_windows:
+    epochs = mne.Epochs(
+        raw, events, event_id=1,
+        tmin=-0.5, tmax=0.8,
+        baseline=bl,
+        preload=True
+    )
+    evoked = epochs.average()
+    evoked.comment = f"baseline {bl}"
+    evokeds.append(evoked)
+
+# Plot all three on the same axes
+fig, ax = plt.subplots(figsize=(10, 5))
+colours = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+
+for evoked, bl, colour in zip(evokeds, baseline_windows, colours):
+    erp_times = evoked.times
+    erp_data = evoked.get_data(picks="Cz")[0] * 1e6
+    ax.plot(erp_times, erp_data, label=f"Baseline {bl}", color=colour)
+
+ax.axvline(0, color="black", linestyle="--", alpha=0.5, label="Stimulus onset")
+ax.axhline(0, color="grey", linestyle="-", alpha=0.3)
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Amplitude (uV)")
+ax.set_title("Effect of baseline correction window on ERP")
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+# Print peak amplitudes
+for evoked, bl in zip(evokeds, baseline_windows):
+    peak_amp = np.max(evoked.get_data(picks="Cz")[0]) * 1e6
+    print(f"Baseline {bl}: peak amplitude = {peak_amp:.2f} uV")
+```
+
+All three averages should show the ERP peak around 150 ms, but the absolute amplitude of the peak will differ slightly depending on the baseline window. This happens because the slow drift means the pre-stimulus period is not perfectly flat, and a wider baseline window averages over more of that drift. In practice, the choice of baseline window matters when your pre-stimulus period contains slow activity.
+:::
+
+
+## Exercise 16: Detect and reject flat channels
+
+Create data where two channels are completely flat (zero signal, simulating hardware failure). Write a function that identifies flat channels by checking whether their standard deviation is below a threshold. Mark them as bad.
+
+::: {.callout-tip collapse="true" title="Hint"}
+A flat channel has a standard deviation of zero (or very close to zero if there is tiny numerical noise). Compute `np.std(data, axis=1)` for each channel and compare against a small threshold such as 1e-7. This catches channels that are stuck at a constant value due to hardware problems.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 20
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "C3", "C4",
+    "P3", "P4", "O1", "O2", "Fz", "Cz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Normal data
+data = np.random.randn(n_channels, n_samples) * 5e-6
+alpha = 8e-6 * np.sin(2 * np.pi * 10 * times)
+data += alpha
+
+# Make two channels completely flat
+data[ch_names.index("F3")] = 0.0
+data[ch_names.index("P4")] = 0.0
+
+raw = mne.io.RawArray(data, info)
+
+
+def detect_flat_channels(raw, threshold=1e-7):
+    """Detect flat channels (hardware failure or disconnection).
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        The raw data object.
+    threshold : float
+        Standard deviation below which a channel is considered flat.
+        Units are the same as the data (volts for EEG).
+
+    Returns
+    -------
+    flat_channels : list of str
+        Names of the flat channels.
+    """
+    data = raw.get_data(picks="eeg")
+    ch_names = [raw.ch_names[i] for i in mne.pick_types(raw.info, eeg=True)]
+
+    stds = np.std(data, axis=1)
+
+    flat_channels = [
+        ch_names[i]
+        for i, s in enumerate(stds)
+        if s < threshold
+    ]
+
+    print(f"Flat-channel threshold: {threshold:.1e} V")
+    print()
+    for i, ch in enumerate(ch_names):
+        flag = " *** FLAT ***" if ch in flat_channels else ""
+        print(f"  {ch}: std = {stds[i]:.2e} V{flag}")
+
+    return flat_channels
+
+
+flat_chs = detect_flat_channels(raw)
+print(f"\nDetected flat channels: {flat_chs}")
+
+# Mark them as bad
+raw.info["bads"] = flat_chs
+print(f"raw.info['bads'] = {raw.info['bads']}")
+```
+
+The function should identify F3 and P4 as flat because their standard deviations are exactly zero. All other channels have standard deviations around 5--10 uV (approximately 5e-6 to 10e-6 V), which is well above the threshold.
+:::
+
+
+## Exercise 17: Observe filter edge effects on an ERP-like signal
+
+Create a simulated ERP signal (a brief peak at a known latency). Apply a high-pass filter at different cutoffs (0.01, 0.1, 0.5, and 1.0 Hz) and plot each to observe how aggressive filtering distorts the ERP shape and timing.
+
+::: {.callout-tip collapse="true" title="Hint"}
+High-pass filters with higher cutoffs remove more low-frequency content, which can distort slow components of ERPs. The effect looks like an artificial undershoot or overshoot around the peak, and can even shift the apparent peak latency. Use the same simulated ERP for all four filters so the comparison is fair. A long recording (several minutes) helps the filter work properly.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 500
+duration = 300  # 5 minutes for stable filter behaviour
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Cz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Background noise
+signal = np.random.randn(n_samples) * 2e-6
+
+# Create events every 3 seconds
+event_times = np.arange(2, duration - 2, 3)
+event_samples = (event_times * sfreq).astype(int)
+
+# Add a Gaussian ERP peak at 170 ms post-stimulus
+erp_latency = 0.17
+erp_width = 0.04
+erp_amplitude = 10e-6
+
+for s in event_samples:
+    centre = s + int(erp_latency * sfreq)
+    for t in range(max(0, centre - 150), min(n_samples, centre + 150)):
+        dt = (t - centre) / sfreq
+        signal[t] += erp_amplitude * np.exp(-0.5 * (dt / erp_width) ** 2)
+
+data = signal.reshape(1, -1)
+raw = mne.io.RawArray(data, info)
+
+events = np.column_stack([
+    event_samples,
+    np.zeros(len(event_samples), dtype=int),
+    np.ones(len(event_samples), dtype=int)
+])
+
+# Apply different high-pass cutoffs and average
+cutoffs = [0.01, 0.1, 0.5, 1.0]
+fig, axes = plt.subplots(2, 2, figsize=(14, 8), sharex=True, sharey=True)
+axes = axes.flatten()
+
+for i, cutoff in enumerate(cutoffs):
+    raw_filt = raw.copy().filter(l_freq=cutoff, h_freq=None)
+
+    epochs = mne.Epochs(
+        raw_filt, events, event_id=1,
+        tmin=-0.2, tmax=0.5,
+        baseline=(-0.2, 0),
+        preload=True
+    )
+    evoked = epochs.average()
+
+    erp_data = evoked.get_data(picks="Cz")[0] * 1e6
+    erp_times = evoked.times
+
+    axes[i].plot(erp_times, erp_data, linewidth=1.5)
+    axes[i].axvline(0, color="black", linestyle="--", alpha=0.5)
+    axes[i].axvline(erp_latency, color="red", linestyle=":", alpha=0.5,
+                    label="True peak (170 ms)")
+    axes[i].axhline(0, color="grey", linestyle="-", alpha=0.3)
+    axes[i].set_title(f"High-pass at {cutoff} Hz")
+    axes[i].set_ylabel("Amplitude (uV)")
+    axes[i].legend(fontsize=8)
+
+axes[2].set_xlabel("Time (s)")
+axes[3].set_xlabel("Time (s)")
+
+plt.suptitle("Filter edge effects on ERP shape", fontsize=13)
+plt.tight_layout()
+plt.show()
+
+# Report peak latencies
+print("Peak latencies and amplitudes:")
+for cutoff in cutoffs:
+    raw_filt = raw.copy().filter(l_freq=cutoff, h_freq=None)
+    epochs = mne.Epochs(
+        raw_filt, events, event_id=1,
+        tmin=-0.2, tmax=0.5,
+        baseline=(-0.2, 0),
+        preload=True
+    )
+    evoked = epochs.average()
+    erp_data = evoked.get_data(picks="Cz")[0] * 1e6
+    peak_idx = np.argmax(erp_data)
+    peak_time = evoked.times[peak_idx] * 1000  # ms
+    peak_amp = erp_data[peak_idx]
+    print(f"  {cutoff} Hz HP: peak at {peak_time:.1f} ms, "
+          f"amplitude = {peak_amp:.2f} uV")
+```
+
+With a very gentle high-pass (0.01 Hz), the ERP looks close to its true shape. As the cutoff increases, you will see: (1) an artificial undershoot before and after the peak, (2) reduced peak amplitude, and (3) a possible shift in peak latency. At 1.0 Hz, the distortion is quite visible. This is why ERP researchers typically use low high-pass cutoffs (0.01--0.1 Hz).
+:::
+
+
+## Exercise 18: Downsample from 1000 Hz to 128 Hz
+
+Create data at 1000 Hz with frequency components at 5, 10, 30, and 55 Hz. Downsample to 128 Hz (Nyquist = 64 Hz). Verify that the 55 Hz component is gone while the others survive. Compare the PSD before and after.
+
+::: {.callout-tip collapse="true" title="Hint"}
+The new Nyquist frequency after downsampling to 128 Hz is 64 Hz. The 55 Hz component is below 64 Hz so it should survive. But MNE's `raw.resample()` applies an anti-aliasing low-pass filter that typically cuts off somewhat below the Nyquist. Check the PSD carefully: the 55 Hz component might be attenuated depending on the filter. Components at 5, 10, and 30 Hz should be well preserved.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+import matplotlib.pyplot as plt
+
+sfreq = 1000
+duration = 60
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Cz", "Oz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Build data with four distinct frequency components
+data = np.random.randn(2, n_samples) * 2e-6
+
+freqs_and_amps = [(5, 8e-6), (10, 10e-6), (30, 6e-6), (55, 5e-6)]
+for freq, amp in freqs_and_amps:
+    component = amp * np.sin(2 * np.pi * freq * times)
+    data += component
+
+raw = mne.io.RawArray(data, info)
+
+# PSD before downsampling
+fig, axes = plt.subplots(1, 2, figsize=(14, 4))
+
+raw.compute_psd(fmax=100).plot(axes=axes[0], show=False)
+axes[0].set_title(f"PSD at {sfreq} Hz (original)")
+
+# Downsample to 128 Hz
+raw_down = raw.copy().resample(128)
+
+raw_down.compute_psd(fmax=60).plot(axes=axes[1], show=False)
+axes[1].set_title(f"PSD at {raw_down.info['sfreq']:.0f} Hz (downsampled)")
+
+plt.tight_layout()
+plt.show()
+
+# Quantify power at each target frequency
+from mne.time_frequency import psd_array_multitaper
+
+psd_orig, freqs_orig = psd_array_multitaper(
+    raw.get_data(), sfreq=sfreq, fmax=100
+)
+psd_down, freqs_down = psd_array_multitaper(
+    raw_down.get_data(), sfreq=128, fmax=60
+)
+
+print("Power at target frequencies (channel Cz, dB):")
+print(f"{'Freq (Hz)':<12} {'Original':<15} {'Downsampled':<15} {'Diff'}")
+print("-" * 55)
+
+for freq, _ in freqs_and_amps:
+    idx_orig = np.argmin(np.abs(freqs_orig - freq))
+    power_orig = 10 * np.log10(psd_orig[0, idx_orig])
+
+    if freq < 60:
+        idx_down = np.argmin(np.abs(freqs_down - freq))
+        power_down = 10 * np.log10(psd_down[0, idx_down])
+        diff = power_orig - power_down
+        print(f"{freq:<12} {power_orig:<15.1f} {power_down:<15.1f} {diff:.1f} dB")
+    else:
+        print(f"{freq:<12} {power_orig:<15.1f} {'N/A':<15} (above Nyquist)")
+
+print(f"\nOriginal: {raw.info['sfreq']} Hz, {raw.n_times} samples")
+print(f"Downsampled: {raw_down.info['sfreq']} Hz, {raw_down.n_times} samples")
+```
+
+The 5, 10, and 30 Hz components should be well preserved after downsampling. The 55 Hz component is close to the new Nyquist (64 Hz), so MNE's anti-aliasing filter will attenuate it. Depending on the filter transition band, the 55 Hz peak may be reduced or nearly gone. This shows why it is important to consider what frequencies you need to preserve before choosing a target sampling rate.
+:::
+
+
+## Exercise 19: Compare overlapping vs non-overlapping epochs
+
+Create fixed-length epochs with 50% overlap (events every 1 second, epochs of 2 seconds) vs no overlap (events every 2 seconds). Compare the number of epochs obtained from the same recording.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Use `mne.make_fixed_length_events()` with the `duration` parameter to control the step between events. For non-overlapping 2-second epochs, use `duration=2.0`. For 50% overlap, use `duration=1.0` (events every 1 second) but keep the epoch length at 2 seconds (`tmin=0, tmax=2`).
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+sfreq = 500
+duration = 60  # 1 minute of data
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = ["Cz", "Pz", "Oz"]
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+data = np.random.randn(3, n_samples) * 5e-6
+alpha = 8e-6 * np.sin(2 * np.pi * 10 * times)
+data += alpha
+
+raw = mne.io.RawArray(data, info)
+
+# Non-overlapping epochs: events every 2 seconds, epoch length 2 seconds
+events_no_overlap = mne.make_fixed_length_events(raw, duration=2.0)
+epochs_no_overlap = mne.Epochs(
+    raw, events_no_overlap,
+    tmin=0, tmax=2.0,
+    baseline=None,
+    preload=True
+)
+
+# Overlapping epochs: events every 1 second, epoch length 2 seconds
+events_overlap = mne.make_fixed_length_events(raw, duration=1.0)
+epochs_overlap = mne.Epochs(
+    raw, events_overlap,
+    tmin=0, tmax=2.0,
+    baseline=None,
+    preload=True
+)
+
+print(f"Recording duration: {duration} seconds")
+print(f"Epoch length: 2.0 seconds")
+print()
+print(f"Non-overlapping (step = 2.0 s):")
+print(f"  Number of events: {len(events_no_overlap)}")
+print(f"  Number of epochs: {len(epochs_no_overlap)}")
+print()
+print(f"50% overlap (step = 1.0 s):")
+print(f"  Number of events: {len(events_overlap)}")
+print(f"  Number of epochs: {len(epochs_overlap)}")
+print()
+print(f"Ratio: {len(epochs_overlap) / len(epochs_no_overlap):.1f}x more "
+      f"epochs with overlap")
+
+# Show that overlapping epochs share data
+# Epoch 0 of the overlap set and epoch 1 of the overlap set
+# share the second half / first half of their data
+if len(epochs_overlap) > 1:
+    epoch_0 = epochs_overlap.get_data()[0, 0, :]  # first channel
+    epoch_1 = epochs_overlap.get_data()[1, 0, :]
+
+    # Second half of epoch 0 should equal first half of epoch 1
+    half = int(sfreq * 1.0)
+    second_half_0 = epoch_0[half:]
+    first_half_1 = epoch_1[:half]
+    match = np.allclose(second_half_0, first_half_1)
+    print(f"Second half of epoch 0 matches first half of epoch 1: {match}")
+```
+
+With non-overlapping epochs you get about 30 epochs from 60 seconds. With 50% overlap you get roughly 59, nearly twice as many. The overlap version reuses data: the second half of each epoch is the same as the first half of the next one. Overlapping epochs are useful for spectral analysis (they reduce variance of power estimates) but are not appropriate for trial-based ERP analysis where each epoch should be independent.
+:::
+
+
+## Exercise 20: Build a complete preprocessing pipeline function
+
+Write a function `preprocess(raw)` that applies: (1) band-pass filter 1--40 Hz, (2) notch filter at 50 Hz, (3) detect and interpolate bad channels using the variance method, (4) re-reference to average, and (5) create 2-second epochs. Test it on simulated data and print a summary at each step.
+
+::: {.callout-tip collapse="true" title="Hint"}
+Combine all the techniques from the previous exercises into a single function. Use `raw.copy()` at the start so the original data is not modified. For step 3, reuse the variance-based bad-channel detection function from Exercise 12. Return the epochs object so the caller can use it directly. Printing a summary at each step is useful for debugging and for building confidence that each step did what you expected.
+:::
+
+::: {.callout-note collapse="true" title="Solution"}
+```{python}
+#| eval: false
+import numpy as np
+import mne
+
+
+def detect_bad_channels_by_variance(raw, threshold_z=3.0):
+    """Identify channels with abnormally high variance."""
+    data = raw.get_data(picks="eeg")
+    ch_names = [raw.ch_names[i] for i in mne.pick_types(raw.info, eeg=True)]
+    variances = np.var(data, axis=1)
+    median_var = np.median(variances)
+    std_var = np.std(variances)
+    threshold = median_var + threshold_z * std_var
+    return [ch_names[i] for i, v in enumerate(variances) if v > threshold]
+
+
+def preprocess(raw, l_freq=1.0, h_freq=40.0, notch_freq=50.0,
+               bad_chan_threshold=3.0, epoch_duration=2.0):
+    """Run a complete preprocessing pipeline on raw EEG data.
+
+    Parameters
+    ----------
+    raw : mne.io.Raw
+        Raw EEG data with a montage already set.
+    l_freq : float
+        High-pass cutoff for the band-pass filter (Hz).
+    h_freq : float
+        Low-pass cutoff for the band-pass filter (Hz).
+    notch_freq : float
+        Line-noise frequency for the notch filter (Hz).
+    bad_chan_threshold : float
+        Z-score threshold for bad-channel detection.
+    epoch_duration : float
+        Length of fixed-length epochs (seconds).
+
+    Returns
+    -------
+    epochs : mne.Epochs
+        The preprocessed epoched data.
+    """
+    raw = raw.copy()
+    print("=" * 60)
+    print("PREPROCESSING PIPELINE")
+    print("=" * 60)
+    print(f"Input: {len(raw.ch_names)} channels, "
+          f"{raw.n_times} samples, "
+          f"{raw.info['sfreq']} Hz")
+    print()
+
+    # Step 1: Band-pass filter
+    print(f"Step 1: Band-pass filter ({l_freq}-{h_freq} Hz)")
+    raw.filter(l_freq=l_freq, h_freq=h_freq)
+    print(f"  Done.")
+    print()
+
+    # Step 2: Notch filter
+    print(f"Step 2: Notch filter at {notch_freq} Hz")
+    raw.notch_filter(notch_freq)
+    print(f"  Done.")
+    print()
+
+    # Step 3: Detect and interpolate bad channels
+    print(f"Step 3: Bad channel detection (variance, z={bad_chan_threshold})")
+    bad_chs = detect_bad_channels_by_variance(raw, threshold_z=bad_chan_threshold)
+    if bad_chs:
+        raw.info["bads"] = bad_chs
+        raw.interpolate_bads()
+        print(f"  Detected and interpolated: {bad_chs}")
+    else:
+        print(f"  No bad channels detected.")
+    print()
+
+    # Step 4: Re-reference to average
+    print("Step 4: Re-reference to average")
+    raw.set_eeg_reference("average", projection=False)
+    print(f"  Done.")
+    print()
+
+    # Step 5: Create fixed-length epochs
+    print(f"Step 5: Create {epoch_duration}-second epochs")
+    events = mne.make_fixed_length_events(raw, duration=epoch_duration)
+    epochs = mne.Epochs(
+        raw, events,
+        tmin=0, tmax=epoch_duration,
+        baseline=(0, 0.2),
+        preload=True
+    )
+    print(f"  Created {len(epochs)} epochs")
+    print()
+
+    print("=" * 60)
+    print("PIPELINE COMPLETE")
+    print(f"Output: {len(epochs)} epochs, "
+          f"{len(epochs.ch_names)} channels, "
+          f"{epochs.times[-1]:.1f} s per epoch")
+    print("=" * 60)
+
+    return epochs
+
+
+# --- Test the pipeline on simulated data ---
+
+sfreq = 500
+duration = 120
+times = np.arange(0, duration, 1 / sfreq)
+n_samples = len(times)
+
+ch_names = [
+    "Fp1", "Fp2", "F3", "F4", "F7", "F8",
+    "C3", "C4", "T7", "T8",
+    "P3", "P4", "P7", "P8",
+    "O1", "O2", "Fz", "Cz", "Pz", "Oz"
+]
+n_channels = len(ch_names)
+info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types="eeg")
+
+# Generate realistic-ish data
+data = np.random.randn(n_channels, n_samples) * 5e-6
+
+# Add alpha oscillation (stronger in occipital channels)
+alpha = 10e-6 * np.sin(2 * np.pi * 10 * times)
+for ch in ["O1", "O2", "Oz", "P3", "P4", "Pz"]:
+    data[ch_names.index(ch)] += alpha
+
+# Add 50 Hz line noise
+line_noise = 4e-6 * np.sin(2 * np.pi * 50 * times)
+data += line_noise
+
+# Add slow drift
+drift = 12e-6 * np.sin(2 * np.pi * 0.05 * times)
+data += drift
+
+# Corrupt two channels
+data[ch_names.index("F7")] += np.random.randn(n_samples) * 70e-6
+data[ch_names.index("T8")] += np.random.randn(n_samples) * 60e-6
+
+raw = mne.io.RawArray(data, info)
+montage = mne.channels.make_standard_montage("standard_1020")
+raw.set_montage(montage)
+
+# Run the pipeline
+epochs = preprocess(raw)
+
+# Quick sanity check on the output
+print(f"\nSanity checks:")
+print(f"  Epochs shape: {epochs.get_data().shape}")
+print(f"  Mean amplitude: {np.mean(np.abs(epochs.get_data())) * 1e6:.2f} uV")
+print(f"  Bad channels remaining: {epochs.info['bads']}")
+```
+
+The pipeline should print a step-by-step log: the band-pass filter removes the slow drift and high-frequency noise, the notch filter removes the 50 Hz line noise, the variance detector finds F7 and T8 as bad channels and interpolates them, the average reference is applied, and finally 2-second epochs are created. The output is a clean `Epochs` object ready for further analysis.
+:::
