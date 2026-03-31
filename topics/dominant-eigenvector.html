@@ -426,7 +426,7 @@ window.Quarto = {
 <section id="working-example-eigendecomposition-and-eigenvector-dynamics" class="level2">
 <h2 class="anchored" data-anchor-id="working-example-eigendecomposition-and-eigenvector-dynamics">Working example: eigendecomposition and eigenvector dynamics</h2>
 <p>Let us build a phase alignment matrix from simulated phases, compute its eigendecomposition, and visualise the eigenvector. Then we will track how the eigenvector changes over time.</p>
-<div id="06178318" class="cell" data-execution_count="1">
+<div id="ee058905" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -528,7 +528,7 @@ window.Quarto = {
 </div>
 <p>In the top panel, you can see the community structure: channels 0-5 have positive eigenvector values (community A) and channels 6-11 have negative values (community B). The bar heights show participation strength.</p>
 <p>In the bottom panel, you can see how the eigenvector elements change over time. Community A channels (blue lines) stay positive and community B channels (red lines) stay negative, but the magnitudes fluctuate. The variance of each channel’s time series is its regional metastability.</p>
-<div id="9c8023d9" class="cell" data-execution_count="2">
+<div id="7f266822" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute regional metastability</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>regional_ms <span class="op">=</span> np.var(v_dominant, axis<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>

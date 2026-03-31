@@ -475,7 +475,7 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="working-example-metastability-from-simulated-eeg">Working example: metastability from simulated EEG</h2>
 <p>The code below is a self-contained example that walks through the full pipeline: simulate multi-channel oscillatory data, extract instantaneous phase, build the phase alignment matrix, compute the dominant eigenvector over time, and derive regional metastability. It uses only <code>numpy</code>, <code>scipy</code>, and <code>matplotlib</code> (no MNE required).</p>
 <p>We simulate 16 channels of 10 Hz oscillatory activity with varying coupling strengths: some channels are tightly coupled (they stay in phase), while others drift independently. This mimics a brain network where some regions are strongly connected and others are more autonomous.</p>
-<div id="e514f3b5" class="cell" data-execution_count="1">
+<div id="582d4815" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hilbert, butter, filtfilt</span>
@@ -720,7 +720,7 @@ Mean Kuramoto R: 0.9548</code></pre>
 <h2 class="anchored" data-anchor-id="working-example-plv-connectivity-matrix">Working example: PLV connectivity matrix</h2>
 <p>The previous example focused on metastability. This example shows a different but complementary analysis: computing a PLV connectivity matrix from multi-channel data, which can reveal which brain regions are synchronised in a given frequency band.</p>
 <p>We simulate 16 channels arranged in two clusters. Channels 0–7 share one common oscillation, while channels 8–15 share a different one. Channels within the same cluster should show high PLV (consistent phase differences), while channels in different clusters should show low PLV (random phase relationships).</p>
-<div id="c843ca90" class="cell" data-execution_count="2">
+<div id="aac74cf7" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hilbert, butter, filtfilt</span>
@@ -858,7 +858,7 @@ Mean PLV (between cluster): 0.9948 (SD = 0.0013)</code></pre>
 <h2 class="anchored" data-anchor-id="working-example-comparing-metastability-across-groups">Working example: comparing metastability across groups</h2>
 <p>This example simulates the kind of group comparison that Natalia will run with real data. We generate metastability values for three groups (healthy controls, PD without FoG, PD with FoG) across 8 channels, then test for group differences with proper multiple-comparison corrections.</p>
 <p>The simulation is set up so that healthy controls have the highest metastability (most flexible dynamics), PD without FoG has moderate metastability, and PD with FoG has the lowest (most rigid). The effect size varies by channel: some channels show large group differences and others show little difference, which is realistic for EEG data.</p>
-<div id="8d686750" class="cell" data-execution_count="3">
+<div id="8cd85e0e" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> f_oneway, ttest_ind</span>

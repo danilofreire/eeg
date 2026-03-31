@@ -386,7 +386,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="working-example-ica-on-simulated-data-with-blink-artifact" class="level2">
 <h2 class="anchored" data-anchor-id="working-example-ica-on-simulated-data-with-blink-artifact">Working example: ICA on simulated data with blink artifact</h2>
 <p>The code below creates simulated EEG data, adds a synthetic blink artifact to the frontal channels, runs ICA, and identifies the blink component. This lets you see the full ICA workflow from start to finish on data where you know exactly what the artifact looks like.</p>
-<div id="73c62a7f" class="cell" data-execution_count="1">
+<div id="d86379f7" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -494,7 +494,7 @@ Designing a one-pass, zero-phase, non-causal bandpass filter:
 
 Fitting ICA to data using 32 channels (please be patient, this may take a while)
 Selecting by number: 15 components
-Fitting ICA took 1.5s.
+Fitting ICA took 4.6s.
 Using EOG channel: Fp1
 ... filtering ICA sources
 Setting up band-pass filter from 1 - 10 Hz
@@ -526,12 +526,12 @@ Designing a two-pass forward and reverse, zero-phase, non-causal bandpass filter
 </code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/opt/miniconda3/envs/datasci185-py312/lib/python3.12/site-packages/sklearn/decomposition/_fastica.py:127: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+<pre><code>/opt/miniconda3/lib/python3.13/site-packages/sklearn/decomposition/_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
   warnings.warn(</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Blink component(s) identified: [0]
-Correlation scores: [0.74627416]</code></pre>
+<pre><code>Blink component(s) identified: [np.int64(0)]
+Correlation scores: [0.79314387]</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">

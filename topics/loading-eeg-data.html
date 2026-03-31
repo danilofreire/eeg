@@ -272,7 +272,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>EDF is one of the most widely used formats for sharing EEG data. It is a simple, open format that many recording systems can export to. EDF+ is an extension that supports annotations (event markers) and discontinuous recordings.</p>
 <section id="loading-an-edf-file" class="level3">
 <h3 class="anchored" data-anchor-id="loading-an-edf-file">Loading an EDF file</h3>
-<div id="95c67968" class="cell" data-execution_count="1">
+<div id="27c38465" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load an EDF file</span></span>
@@ -287,7 +287,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="key-parameters" class="level3">
 <h3 class="anchored" data-anchor-id="key-parameters">Key parameters</h3>
-<div id="fcf4f50a" class="cell" data-execution_count="2">
+<div id="4bc6949b" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># The full function signature (most-used parameters)</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.read_raw_edf(</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    input_fname,        <span class="co"># path to the .edf file</span></span>
@@ -320,7 +320,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>All three files must be in the same directory and have the same base name.</p>
 <section id="loading-a-brainvision-file" class="level3">
 <h3 class="anchored" data-anchor-id="loading-a-brainvision-file">Loading a BrainVision file</h3>
-<div id="50db879a" class="cell" data-execution_count="3">
+<div id="074e7efe" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Point to the .vhdr header file (MNE finds the .vmrk and .eeg automatically)</span></span>
@@ -335,7 +335,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="key-parameters-1" class="level3">
 <h3 class="anchored" data-anchor-id="key-parameters-1">Key parameters</h3>
-<div id="8d5c1bb4" class="cell" data-execution_count="4">
+<div id="011ecec1" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.read_raw_brainvision(</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    vhdr_fname,         <span class="co"># path to the .vhdr header file</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    eog<span class="op">=</span>(<span class="st">"HEOG"</span>, <span class="st">"VEOG"</span>),  <span class="co"># channel names to set as EOG</span></span>
@@ -360,7 +360,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>EEGLAB is a popular MATLAB toolbox for EEG analysis. It stores data in <code>.set</code> files (which are MATLAB <code>.mat</code> files with a specific structure). The associated <code>.fdt</code> file contains the actual data if it was saved separately.</p>
 <section id="loading-an-eeglab-file" class="level3">
 <h3 class="anchored" data-anchor-id="loading-an-eeglab-file">Loading an EEGLAB file</h3>
-<div id="54ac3685" class="cell" data-execution_count="5">
+<div id="ddec92ee" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load an EEGLAB .set file</span></span>
@@ -375,7 +375,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="key-parameters-2" class="level3">
 <h3 class="anchored" data-anchor-id="key-parameters-2">Key parameters</h3>
-<div id="e85acfeb" class="cell" data-execution_count="6">
+<div id="85cff03e" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.read_raw_eeglab(</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    input_fname,        <span class="co"># path to the .set file</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    eog<span class="op">=</span><span class="va">None</span>,           <span class="co"># channel names or indices to set as EOG</span></span>
@@ -405,7 +405,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>If you receive data that is already in FIF format (e.g., from a collaborator who uses MNE), loading it is trivial:</p>
 <section id="loading-a-fif-file" class="level3">
 <h3 class="anchored" data-anchor-id="loading-a-fif-file">Loading a FIF file</h3>
-<div id="a8b3bf04" class="cell" data-execution_count="7">
+<div id="88247f5f" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load a FIF file</span></span>
@@ -420,7 +420,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="key-parameters-3" class="level3">
 <h3 class="anchored" data-anchor-id="key-parameters-3">Key parameters</h3>
-<div id="cf901648" class="cell" data-execution_count="8">
+<div id="f46c5788" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.read_raw_fif(</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    fname,              <span class="co"># path to the .fif file</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    allow_maxshield<span class="op">=</span><span class="va">False</span>,  <span class="co"># allow loading MaxShield-processed data</span></span>
@@ -433,7 +433,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="saving-to-fif" class="level3">
 <h3 class="anchored" data-anchor-id="saving-to-fif">Saving to FIF</h3>
 <p>Once you have loaded and preprocessed data from any format, you can save it in FIF for efficient reloading later:</p>
-<div id="57badc41" class="cell" data-execution_count="9">
+<div id="9d5ad2c7" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Save preprocessed data in FIF format</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>raw.save(<span class="st">"preprocessed_raw.fif"</span>, overwrite<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -447,7 +447,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="setting-channel-types-after-loading" class="level2">
 <h2 class="anchored" data-anchor-id="setting-channel-types-after-loading">Setting channel types after loading</h2>
 <p>Regardless of the file format, you will often need to correct channel types. Most formats label all channels as EEG, even if some are EOG (eye), ECG (heart), EMG (muscle), or trigger channels.</p>
-<div id="12e5e76c" class="cell" data-execution_count="10">
+<div id="915147c9" class="cell" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Suppose you loaded a file where everything is labelled as EEG</span></span>
@@ -469,7 +469,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="setting-the-montage" class="level2">
 <h2 class="anchored" data-anchor-id="setting-the-montage">Setting the montage</h2>
 <p>A montage tells MNE where each electrode is located on the scalp. This information is needed for topographic plots, interpolation of bad channels, and source localisation.</p>
-<div id="e136cbcb" class="cell" data-execution_count="11">
+<div id="8f800628" class="cell" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Set a standard 10-20 montage</span></span>
@@ -487,7 +487,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="complete-loading-workflow" class="level2">
 <h2 class="anchored" data-anchor-id="complete-loading-workflow">Complete loading workflow</h2>
 <p>Here is a typical workflow for loading and preparing data from an EDF file:</p>
-<div id="8eaad1fc" class="cell" data-execution_count="12">
+<div id="b633e9f9" class="cell" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Load the file</span></span>

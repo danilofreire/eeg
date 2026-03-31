@@ -288,7 +288,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="the-data-approach-recommended-for-most-uses" class="level3">
 <h3 class="anchored" data-anchor-id="the-data-approach-recommended-for-most-uses">The data approach (recommended for most uses)</h3>
 <p>The data approach modifies the data in place. The new reference is subtracted from every EEG channel immediately.</p>
-<div id="48dd3937" class="cell" data-execution_count="1">
+<div id="a1c8b15f" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -307,14 +307,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"After average reference:"</span>)</span>
 <span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(raw_avg.info[<span class="st">"custom_ref_applied"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="a7e6c9e3" class="cell" data-execution_count="2">
+<div id="249ac2be" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Linked mastoids reference ──────────────────────────────────</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Re-reference to the average of M1 and M2</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>raw_mastoids <span class="op">=</span> raw.copy().set_eeg_reference([<span class="st">"M1"</span>, <span class="st">"M2"</span>], projection<span class="op">=</span><span class="va">False</span>)</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"After linked mastoids reference:"</span>)</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(raw_mastoids.info[<span class="st">"custom_ref_applied"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div id="08c87567" class="cell" data-execution_count="3">
+<div id="6274eb7d" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Single channel reference (e.g., Cz) ───────────────────────</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># If Cz were in the data, you would do:</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># raw_cz = raw.copy().set_eeg_reference(["Cz"], projection=False)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -323,7 +323,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="the-projection-approach" class="level3">
 <h3 class="anchored" data-anchor-id="the-projection-approach">The projection approach</h3>
 <p>The projection approach does not modify the data immediately. Instead, it adds a <strong>projector</strong> to the data that is applied on the fly whenever you access the data (e.g., for plotting or computing). The raw data stored in memory remains unchanged.</p>
-<div id="58eec332" class="cell" data-execution_count="4">
+<div id="6f495c5f" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Average reference as a projection</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>raw_proj <span class="op">=</span> raw.copy().set_eeg_reference(<span class="st">"average"</span>, projection<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -344,7 +344,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="rest-in-mne-python" class="level3">
 <h3 class="anchored" data-anchor-id="rest-in-mne-python">REST in MNE-Python</h3>
 <p>MNE supports REST re-referencing through the same <code>set_eeg_reference()</code> method. You need a forward model, which MNE can compute if you have electrode locations and a head model:</p>
-<div id="320845c2" class="cell" data-execution_count="5">
+<div id="ec0184cf" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># REST re-referencing (requires electrode locations and a forward model)</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># This is a simplified example; in practice you would compute the</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># forward model from a BEM (boundary element model) or sphere model</span></span>
@@ -359,7 +359,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="a-practical-note-on-reference-and-ica" class="level2">
 <h2 class="anchored" data-anchor-id="a-practical-note-on-reference-and-ica">A practical note on reference and ICA</h2>
 <p>If you plan to run ICA, re-reference to average <strong>before</strong> fitting ICA. The average reference reduces the data rank by one, so set the number of ICA components to <code>n_channels - 1</code> to avoid numerical issues. If you re-reference after ICA, the ICA solution may not be valid because the spatial patterns were learned under a different reference.</p>
-<div id="15fdbfd4" class="cell" data-execution_count="6">
+<div id="fe7d7e13" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Re-reference to average before ICA</span></span>

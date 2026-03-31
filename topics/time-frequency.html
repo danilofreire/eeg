@@ -317,7 +317,7 @@ window.Quarto = {
 <p>MNE provides two main functions for time-frequency decomposition:</p>
 <section id="using-morlet-wavelets" class="level3">
 <h3 class="anchored" data-anchor-id="using-morlet-wavelets">Using Morlet wavelets</h3>
-<div id="6adb7f63" class="cell" data-execution_count="1">
+<div id="6cad923e" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -343,7 +343,7 @@ window.Quarto = {
 </section>
 <section id="using-the-multitaper-method" class="level3">
 <h3 class="anchored" data-anchor-id="using-the-multitaper-method">Using the multitaper method</h3>
-<div id="c6714a54" class="cell" data-execution_count="2">
+<div id="a1f693de" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Multitaper time-frequency</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>tfr_mt <span class="op">=</span> epochs.compute_tfr(method<span class="op">=</span><span class="st">"multitaper"</span>, freqs<span class="op">=</span>freqs,</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>                            n_cycles<span class="op">=</span>n_cycles, return_itc<span class="op">=</span><span class="va">False</span>,</span>
@@ -354,7 +354,7 @@ window.Quarto = {
 </section>
 <section id="plotting-time-frequency-maps" class="level2">
 <h2 class="anchored" data-anchor-id="plotting-time-frequency-maps">Plotting time-frequency maps</h2>
-<div id="df6cd1b7" class="cell" data-execution_count="3">
+<div id="9c87f817" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Basic TFR plot for a single channel</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>tfr.plot(picks<span class="op">=</span><span class="st">"Cz"</span>, baseline<span class="op">=</span>(<span class="op">-</span><span class="fl">0.5</span>, <span class="dv">0</span>), mode<span class="op">=</span><span class="st">"percent"</span>,</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>         title<span class="op">=</span><span class="st">"Time-frequency: Cz"</span>)</span>
@@ -413,7 +413,7 @@ window.Quarto = {
 </tbody>
 </table>
 <p>The <code>"percent"</code> mode is the most commonly reported in the EEG literature. It is easy to interpret: a value of 50 means power increased by 50% relative to baseline, and -30 means power decreased by 30%.</p>
-<div id="c30424d3" class="cell" data-execution_count="4">
+<div id="72437361" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Apply baseline correction in-place</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>tfr.apply_baseline(baseline<span class="op">=</span>(<span class="op">-</span><span class="fl">0.5</span>, <span class="dv">0</span>), mode<span class="op">=</span><span class="st">"percent"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -431,7 +431,7 @@ window.Quarto = {
 <section id="working-example" class="level2">
 <h2 class="anchored" data-anchor-id="working-example">Working example</h2>
 <p>The code below creates simulated epoched data with a clear alpha desynchronisation after stimulus onset, computes the time-frequency representation using Morlet wavelets, and plots the result.</p>
-<div id="cb994664" class="cell" data-execution_count="5">
+<div id="ad5bf678" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>

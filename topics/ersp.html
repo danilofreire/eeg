@@ -425,7 +425,7 @@ window.Quarto = {
 <section id="working-example-simulated-alpha-desynchronisation" class="level2">
 <h2 class="anchored" data-anchor-id="working-example-simulated-alpha-desynchronisation">Working example: simulated alpha desynchronisation</h2>
 <p>The code below simulates epochs where alpha power drops between 200 and 500 ms after an event. It computes the time-frequency representation using Morlet wavelets from scipy, applies baseline correction, and plots the ERSP map. We use numpy, scipy, and matplotlib directly rather than MNE’s <code>tfr_morlet</code>, since that function requires MNE <code>Epochs</code> objects.</p>
-<div id="7bde6451" class="cell" data-execution_count="1">
+<div id="3cd9ab29" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hilbert</span>

@@ -84,7 +84,7 @@ ul.task-list li input[type="checkbox"] {
     }
 
     const options = {
-      valueNames: ['listing-title','listing-description','listing-categories',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-title-sort'] }],
+      valueNames: ['listing-title','listing-module','listing-description','listing-categories',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-title-sort'] }],
       page: 30,
     pagination: { item: "<li class='page-item'><a class='page page-link' href='#'></a></li>" },
       searchColumns: ["listing-date","listing-title","listing-author"],
@@ -277,6 +277,10 @@ window.Quarto = {
 </th>
 
 <th>
+Module
+</th>
+
+<th>
 Description
 </th>
 
@@ -288,412 +292,12 @@ Categories
 </thead>
 <tbody class="list">
 
-<tr data-index="0" data-categories="YXJ0aWZhY3RzJTJDZXBvY2hz" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709920" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2110" data-listing-title-sort="Amplitude-based epoch rejection" data-listing-filename-sort="amplitude-rejection.qmd">
-<td>
-<a href="../topics/amplitude-rejection.html" class="title listing-title">Amplitude-based epoch rejection</a>
-</td>
-<td>
-<span class="listing-description">Peak-to-peak amplitude thresholds, flat channel detection, the reject and flat parameters in MNE’s Epochs, how to set thresholds, checking rejection statistics, and practical guidelines for choosing values.</span>
-</td>
-<td>
-<span class="listing-categories">artifacts, epochs</span>
-</td>
-
-</tr>
-
-<tr data-index="1" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbiUyQ2F1dG9tYXRpb24=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709924" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2362" data-listing-title-sort="Automated ICA labelling with ICLabel" data-listing-filename-sort="icalabel.qmd">
-<td>
-<a href="../topics/icalabel.html" class="title listing-title">Automated ICA labelling with ICLabel</a>
-</td>
-<td>
-<span class="listing-description">What ICLabel is, how it classifies ICA components into seven categories (brain, muscle, eye, heart, line noise, channel noise, other), using mne-icalabel in Python, interpreting confidence scores, and when to override automated labels.</span>
-</td>
-<td>
-<span class="listing-categories">artifacts, decomposition, automation</span>
-</td>
-
-</tr>
-
-<tr data-index="2" data-categories="YXJ0aWZhY3RzJTJDYXV0b21hdGlvbiUyQ2Vwb2Nocw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709921" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2125" data-listing-title-sort="Automated artifact rejection with autoreject" data-listing-filename-sort="autoreject.qmd">
-<td>
-<a href="../topics/autoreject.html" class="title listing-title">Automated artifact rejection with autoreject</a>
-</td>
-<td>
-<span class="listing-description">What autoreject does (learns channel-specific peak-to-peak thresholds), how it differs from simple amplitude rejection, the AutoReject and RejectLog classes, combining autoreject with ICA, and the RANSAC approach for bad channel detection.</span>
-</td>
-<td>
-<span class="listing-categories">artifacts, automation, epochs</span>
-</td>
-
-</tr>
-
-<tr data-index="3" data-categories="cHJlcHJvY2Vzc2luZyUyQ2ZpbHRlcmluZw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709921" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="9" data-listing-word-count-sort="1774" data-listing-title-sort="Band-pass filtering" data-listing-filename-sort="bandpass-filtering.qmd">
-<td>
-<a href="../topics/bandpass-filtering.html" class="title listing-title">Band-pass filtering</a>
-</td>
-<td>
-<span class="listing-description">What a band-pass filter does, typical EEG cutoff frequencies, FIR filter design in MNE-Python, transition bandwidth, filter order, edge artifacts, and zero-phase filtering.</span>
-</td>
-<td>
-<span class="listing-categories">preprocessing, filtering</span>
-</td>
-
-</tr>
-
-<tr data-index="4" data-categories="cHJlcHJvY2Vzc2luZyUyQ3F1YWxpdHktY29udHJvbA==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709921" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1441" data-listing-title-sort="Detecting and interpolating bad channels" data-listing-filename-sort="bad-channels.qmd">
-<td>
-<a href="../topics/bad-channels.html" class="title listing-title">Detecting and interpolating bad channels</a>
-</td>
-<td>
-<span class="listing-description">What makes an EEG channel ‘bad’ (noise, flat signal, drift), how to detect bad channels manually and automatically, interpolation via spherical splines, and when to interpolate vs exclude.</span>
-</td>
-<td>
-<span class="listing-categories">preprocessing, quality-control</span>
-</td>
-
-</tr>
-
-<tr data-index="5" data-categories="c3BlY3RyYWwlMkNmcmVxdWVuY3ktYmFuZHM=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709923" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1974" data-listing-title-sort="EEG frequency bands" data-listing-filename-sort="frequency-bands.qmd">
-<td>
-<a href="../topics/frequency-bands.html" class="title listing-title">EEG frequency bands</a>
-</td>
-<td>
-<span class="listing-description">The five classical EEG frequency bands (delta, theta, alpha, beta, gamma), their functional associations, how to compute band power in Python, relative vs absolute power, and common sub-band divisions.</span>
-</td>
-<td>
-<span class="listing-categories">spectral, frequency-bands</span>
-</td>
-
-</tr>
-
-<tr data-index="6" data-categories="c3BlY3RyYWwlMkNlcnA=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709922" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2063" data-listing-title-sort="Event-related potentials (ERPs)" data-listing-filename-sort="erp.qmd">
-<td>
-<a href="../topics/erp.html" class="title listing-title">Event-related potentials (ERPs)</a>
-</td>
-<td>
-<span class="listing-description">What ERPs are, the signal-to-noise logic behind averaging, classic ERP components (P100, N170, P300, N400), plotting ERPs in MNE, topographic maps, difference waves, and grand averages across subjects.</span>
-</td>
-<td>
-<span class="listing-categories">spectral, erp</span>
-</td>
-
-</tr>
-
-<tr data-index="7" data-categories="c3BlY3RyYWwlMkN0aW1lLWZyZXF1ZW5jeSUyQ2V2ZW50cw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709922" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2343" data-listing-title-sort="Event-related spectral perturbation (ERSP)" data-listing-filename-sort="ersp.qmd">
-<td>
-<a href="../topics/ersp.html" class="title listing-title">Event-related spectral perturbation (ERSP)</a>
-</td>
-<td>
-<span class="listing-description">What ERSP is, baseline correction modes (percent change, dB, z-score), computing ERSP from MNE AverageTFR objects, plotting time-frequency maps, and interpreting ERD/ERS patterns.</span>
-</td>
-<td>
-<span class="listing-categories">spectral, time-frequency, events</span>
-</td>
-
-</tr>
-
-<tr data-index="8" data-categories="cHJlcHJvY2Vzc2luZyUyQ2Vwb2Nocw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709922" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1436" data-listing-title-sort="Extracting epochs from continuous data" data-listing-filename-sort="epoching.qmd">
-<td>
-<a href="../topics/epoching.html" class="title listing-title">Extracting epochs from continuous data</a>
-</td>
-<td>
-<span class="listing-description">What epochs are, how event markers work, creating Epochs from Raw, baseline correction, rejecting noisy epochs by amplitude, and using metadata for condition labels.</span>
-</td>
-<td>
-<span class="listing-categories">preprocessing, epochs</span>
-</td>
-
-</tr>
-
-<tr data-index="9" data-categories="cHJlcHJvY2Vzc2luZyUyQ3NpZ25hbC1wcm9jZXNzaW5n" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709923" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1519" data-listing-title-sort="Filtering EEG signals" data-listing-filename-sort="filtering.qmd">
-<td>
-<a href="../topics/filtering.html" class="title listing-title">Filtering EEG signals</a>
-</td>
-<td>
-<span class="listing-description">FIR and IIR filters, band-pass design, cutoff frequencies for EEG bands, notch filters for line noise, filter order, transition bandwidth, and zero-phase filtering.</span>
-</td>
-<td>
-<span class="listing-categories">preprocessing, signal-processing</span>
-</td>
-
-</tr>
-
-<tr data-index="10" data-categories="c3RhdGlzdGljcyUyQ2dyb3VwLWFuYWx5c2lz" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709923" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="14" data-listing-word-count-sort="2634" data-listing-title-sort="Group-level statistics for EEG" data-listing-filename-sort="group-statistics.qmd">
-<td>
-<a href="../topics/group-statistics.html" class="title listing-title">Group-level statistics for EEG</a>
-</td>
-<td>
-<span class="listing-description">Comparing EEG metrics between groups, independent samples t-test, one-way ANOVA with pingouin, post-hoc tests, effect sizes (Cohen’s d, eta-squared), multiple comparisons correction, permutation tests, and reporting results.</span>
-</td>
-<td>
-<span class="listing-categories">statistics, group-analysis</span>
-</td>
-
-</tr>
-
-<tr data-index="11" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbiUyQ21uZQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709924" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2066" data-listing-title-sort="ICA in MNE-Python" data-listing-filename-sort="ica-mne.qmd">
-<td>
-<a href="../topics/ica-mne.html" class="title listing-title">ICA in MNE-Python</a>
-</td>
-<td>
-<span class="listing-description">A practical guide to MNE’s ICA class: fitting ICA, choosing n_components, selecting algorithms (FastICA, Infomax, Picard), plotting and inspecting components, excluding artifacts, applying corrections, and saving solutions.</span>
-</td>
-<td>
-<span class="listing-categories">artifacts, decomposition, mne</span>
-</td>
-
-</tr>
-
-<tr data-index="12" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbiUyQ3RoZW9yeQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709924" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="14" data-listing-word-count-sort="2677" data-listing-title-sort="ICA: mathematical foundations" data-listing-filename-sort="ica-theory.qmd">
-<td>
-<a href="../topics/ica-theory.html" class="title listing-title">ICA: mathematical foundations</a>
-</td>
-<td>
-<span class="listing-description">The cocktail party problem, the linear mixing model, statistical independence, non-Gaussianity, how ICA algorithms find the unmixing matrix using negentropy and mutual information, and the limitations of the approach.</span>
-</td>
-<td>
-<span class="listing-categories">artifacts, decomposition, theory</span>
-</td>
-
-</tr>
-
-<tr data-index="13" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbg==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709925" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2267" data-listing-title-sort="Identifying ICA components" data-listing-filename-sort="identifying-ica-components.qmd">
-<td>
-<a href="../topics/identifying-ica-components.html" class="title listing-title">Identifying ICA components</a>
-</td>
-<td>
-<span class="listing-description">How to tell artifact components from brain components: visual criteria for blinks, saccades, muscle, and heartbeat, automated detection with find_bads_eog() and find_bads_ecg(), and using proxy channels when dedicated EOG/ECG channels are unavailable.</span>
-</td>
-<td>
-<span class="listing-categories">artifacts, decomposition</span>
-</td>
-
-</tr>
-
-<tr data-index="14" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbg==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709924" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2057" data-listing-title-sort="Independent Component Analysis (ICA)" data-listing-filename-sort="ica.qmd">
-<td>
-<a href="../topics/ica.html" class="title listing-title">Independent Component Analysis (ICA)</a>
-</td>
-<td>
-<span class="listing-description">What ICA does conceptually, the unmixing matrix, FastICA vs Infomax, choosing the number of components, identifying artifact components, and reconstructing clean data.</span>
-</td>
-<td>
-<span class="listing-categories">artifacts, decomposition</span>
-</td>
-
-</tr>
-
-<tr data-index="15" data-categories="Z2V0dGluZy1zdGFydGVkJTJDc2V0dXA=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709925" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="4" data-listing-word-count-sort="751" data-listing-title-sort="Installing MNE-Python" data-listing-filename-sort="installing-mne.qmd">
-<td>
-<a href="../topics/installing-mne.html" class="title listing-title">Installing MNE-Python</a>
-</td>
-<td>
-<span class="listing-description">How to install MNE-Python with pip or conda, verify the installation, import the library, check the version, and install optional dependencies.</span>
-</td>
-<td>
-<span class="listing-categories">getting-started, setup</span>
-</td>
-
-</tr>
-
-<tr data-index="16" data-categories="Y29ubmVjdGl2aXR5JTJDbWV0YXN0YWJpbGl0eSUyQ2ludGVycHJldGF0aW9u" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709925" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="13" data-listing-word-count-sort="2567" data-listing-title-sort="Interpreting metastability values" data-listing-filename-sort="interpreting-metastability.qmd">
-<td>
-<a href="../topics/interpreting-metastability.html" class="title listing-title">Interpreting metastability values</a>
-</td>
-<td>
-<span class="listing-description">What high and low metastability mean for brain dynamics, the criticality hypothesis, metastability in health and disease, effect of frequency band and epoch length on values, and practical guidelines for reporting.</span>
-</td>
-<td>
-<span class="listing-categories">connectivity, metastability, interpretation</span>
-</td>
-
-</tr>
-
-<tr data-index="17" data-categories="Z2V0dGluZy1zdGFydGVkJTJDZGF0YS1pbXBvcnQ=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709926" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1538" data-listing-title-sort="Loading EEG data" data-listing-filename-sort="loading-eeg-data.qmd">
-<td>
-<a href="../topics/loading-eeg-data.html" class="title listing-title">Loading EEG data</a>
-</td>
-<td>
-<span class="listing-description">How to load EEG data from common file formats in MNE-Python: EDF, BrainVision, EEGLAB .set, and FIF. Function signatures, format differences, and common pitfalls.</span>
-</td>
-<td>
-<span class="listing-categories">getting-started, data-import</span>
-</td>
-
-</tr>
-
-<tr data-index="18" data-categories="Z2V0dGluZy1zdGFydGVkJTJDZGF0YS1zdHJ1Y3R1cmVz" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709927" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="6" data-listing-word-count-sort="1084" data-listing-title-sort="MNE data structures" data-listing-filename-sort="mne-data-structures.qmd">
-<td>
-<a href="../topics/mne-data-structures.html" class="title listing-title">MNE data structures</a>
-</td>
-<td>
-<span class="listing-description">The four main MNE-Python objects (Raw, Epochs, Evoked, Info), what each represents, when to use each, how they relate to each other, and code examples for creating them.</span>
-</td>
-<td>
-<span class="listing-categories">getting-started, data-structures</span>
-</td>
-
-</tr>
-
-<tr data-index="19" data-categories="bWV0YXN0YWJpbGl0eSUyQ2Nvbm5lY3Rpdml0eSUyQ2R5bmFtaWNz" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709926" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="13" data-listing-word-count-sort="2417" data-listing-title-sort="Metastability: theory and computation" data-listing-filename-sort="metastability.qmd">
-<td>
-<a href="../topics/metastability.html" class="title listing-title">Metastability: theory and computation</a>
-</td>
-<td>
-<span class="listing-description">What metastability means in neuroscience, the energy landscape analogy, computing metastability from EEG using the dominant eigenvector approach, regional vs global metastability, and clinical relevance for Parkinson’s disease.</span>
-</td>
-<td>
-<span class="listing-categories">metastability, connectivity, dynamics</span>
-</td>
-
-</tr>
-
-<tr data-index="20" data-categories="cHJlcHJvY2Vzc2luZyUyQ2ZpbHRlcmluZw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709927" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="7" data-listing-word-count-sort="1302" data-listing-title-sort="Notch filtering for line noise" data-listing-filename-sort="notch-filtering.qmd">
-<td>
-<a href="../topics/notch-filtering.html" class="title listing-title">Notch filtering for line noise</a>
-</td>
-<td>
-<span class="listing-description">What line noise is, where it comes from (50 Hz and 60 Hz power mains), harmonics, using MNE’s notch_filter(), spectrum interpolation as an alternative, and when a notch filter is needed.</span>
-</td>
-<td>
-<span class="listing-categories">preprocessing, filtering</span>
-</td>
-
-</tr>
-
-<tr data-index="21" data-categories="Y29ubmVjdGl2aXR5JTJDbWV0YXN0YWJpbGl0eSUyQ2NsaW5pY2Fs" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709927" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="13" data-listing-word-count-sort="2538" data-listing-title-sort="Parkinson's disease, Freezing of Gait, and EEG" data-listing-filename-sort="parkinsons-fog.qmd">
-<td>
-<a href="../topics/parkinsons-fog.html" class="title listing-title">Parkinson’s disease, Freezing of Gait, and EEG</a>
-</td>
-<td>
-<span class="listing-description">EEG findings in Parkinson’s disease, the role of pathological beta synchrony, what Freezing of Gait is, EEG biomarkers of FoG, and how metastability analysis connects to the study of PD motor symptoms.</span>
-</td>
-<td>
-<span class="listing-categories">connectivity, metastability, clinical</span>
-</td>
-
-</tr>
-
-<tr data-index="22" data-categories="Y29ubmVjdGl2aXR5JTJDbWV0YXN0YWJpbGl0eQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709927" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1857" data-listing-title-sort="Phase alignment and connectivity matrices" data-listing-filename-sort="phase-alignment.qmd">
-<td>
-<a href="../topics/phase-alignment.html" class="title listing-title">Phase alignment and connectivity matrices</a>
-</td>
-<td>
-<span class="listing-description">Phase-locking value (PLV), the cosine of phase difference, building the instantaneous connectivity matrix, interpreting positive and negative values, and sliding-window approaches.</span>
-</td>
-<td>
-<span class="listing-categories">connectivity, metastability</span>
-</td>
-
-</tr>
-
-<tr data-index="23" data-categories="Y29ubmVjdGl2aXR5JTJDcGhhc2UlMkN0aGVvcnk=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709928" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2143" data-listing-title-sort="Phase synchronisation" data-listing-filename-sort="phase-synchronisation.qmd">
-<td>
-<a href="../topics/phase-synchronisation.html" class="title listing-title">Phase synchronisation</a>
-</td>
-<td>
-<span class="listing-description">What phase synchronisation means for neural oscillations, the communication through coherence hypothesis, types of synchronisation (in-phase, anti-phase, phase lag), and why phase matters more than amplitude for studying brain connectivity.</span>
-</td>
-<td>
-<span class="listing-categories">connectivity, phase, theory</span>
-</td>
-
-</tr>
-
-<tr data-index="24" data-categories="Y29ubmVjdGl2aXR5JTJDcGhhc2U=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709928" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2191" data-listing-title-sort="Phase-locking value (PLV)" data-listing-filename-sort="plv.qmd">
-<td>
-<a href="../topics/plv.html" class="title listing-title">Phase-locking value (PLV)</a>
-</td>
-<td>
-<span class="listing-description">What PLV measures, the formula, computing PLV from instantaneous phase, interpreting values (0 = no coupling, 1 = perfect coupling), PLV vs coherence, limitations, connectivity matrices, and plotting.</span>
-</td>
-<td>
-<span class="listing-categories">connectivity, phase</span>
-</td>
-
-</tr>
-
-<tr data-index="25" data-categories="c3BlY3RyYWwlMkNwb3dlcg==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709928" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2168" data-listing-title-sort="Power spectral density (PSD)" data-listing-filename-sort="psd.qmd">
-<td>
-<a href="../topics/psd.html" class="title listing-title">Power spectral density (PSD)</a>
-</td>
-<td>
-<span class="listing-description">What PSD is, Welch’s method (windowing, overlap, FFT), computing PSD in MNE, plotting PSD, units (uV^2/Hz), comparing PSD between conditions or groups, and topographic PSD maps.</span>
-</td>
-<td>
-<span class="listing-categories">spectral, power</span>
-</td>
-
-</tr>
-
-<tr data-index="26" data-categories="cHJlcHJvY2Vzc2luZyUyQ3JlZmVyZW5jZQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709928" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="7" data-listing-word-count-sort="1268" data-listing-title-sort="Re-referencing EEG data" data-listing-filename-sort="re-referencing.qmd">
-<td>
-<a href="../topics/re-referencing.html" class="title listing-title">Re-referencing EEG data</a>
-</td>
-<td>
-<span class="listing-description">Why re-referencing matters, common reference schemes (average, linked mastoids, Cz, REST), how to re-reference in MNE-Python, and the difference between the projection approach and the data approach.</span>
-</td>
-<td>
-<span class="listing-categories">preprocessing, reference</span>
-</td>
-
-</tr>
-
-<tr data-index="27" data-categories="cHJlcHJvY2Vzc2luZyUyQ3NhbXBsaW5n" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1443" data-listing-title-sort="Resampling EEG data" data-listing-filename-sort="resampling.qmd">
-<td>
-<a href="../topics/resampling.html" class="title listing-title">Resampling EEG data</a>
-</td>
-<td>
-<span class="listing-description">Why and how to resample EEG data, the Nyquist theorem, anti-aliasing, using MNE’s raw.resample(), common target sampling rates, and where resampling fits in the preprocessing pipeline.</span>
-</td>
-<td>
-<span class="listing-categories">preprocessing, sampling</span>
-</td>
-
-</tr>
-
-<tr data-index="28" data-categories="ZXhwZXJpbWVudGFsLWRlc2lnbiUyQ3Jlc3Rpbmctc3RhdGU=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="9" data-listing-word-count-sort="1625" data-listing-title-sort="Resting-state EEG" data-listing-filename-sort="resting-state-eeg.qmd">
-<td>
-<a href="../topics/resting-state-eeg.html" class="title listing-title">Resting-state EEG</a>
-</td>
-<td>
-<span class="listing-description">What resting-state EEG is, eyes-open vs eyes-closed protocols, why it is used, what it reveals about brain organisation, alpha reactivity, the default mode network in EEG, and relevance for clinical populations.</span>
-</td>
-<td>
-<span class="listing-categories">experimental-design, resting-state</span>
-</td>
-
-</tr>
-
-<tr data-index="29" data-categories="Z2V0dGluZy1zdGFydGVkJTJDY2hhbm5lbHM=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="6" data-listing-word-count-sort="1151" data-listing-title-sort="Setting channel locations (montages)" data-listing-filename-sort="setting-montages.qmd">
-<td>
-<a href="../topics/setting-montages.html" class="title listing-title">Setting channel locations (montages)</a>
-</td>
-<td>
-<span class="listing-description">What a montage is, standard EEG montages (10-20, 10-10, 10-05), how to set and plot montages in MNE-Python, and how to create custom montages from CSV files.</span>
-</td>
-<td>
-<span class="listing-categories">getting-started, channels</span>
-</td>
-
-</tr>
-
-<tr data-index="30" data-categories="Z2V0dGluZy1zdGFydGVkJTJDc2ltdWxhdGlvbg==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1831" data-listing-title-sort="Simulating EEG data" data-listing-filename-sort="simulating-eeg-data.qmd">
-<td>
-<a href="../topics/simulating-eeg-data.html" class="title listing-title">Simulating EEG data</a>
-</td>
-<td>
-<span class="listing-description">Why simulate EEG data, how to build synthetic signals with numpy (pink noise, oscillations, artifacts), using MNE’s simulation functions, and creating realistic multi-channel data with spatial structure.</span>
-</td>
-<td>
-<span class="listing-categories">getting-started, simulation</span>
-</td>
-
-</tr>
-
-<tr data-index="31" data-categories="Z2V0dGluZy1zdGFydGVkJTJDZGF0YS1tYW5hZ2VtZW50" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709921" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1598" data-listing-title-sort="The BIDS format for EEG" data-listing-filename-sort="bids-format.qmd">
+<tr data-index="0" data-categories="Z2V0dGluZy1zdGFydGVkJTJDZGF0YS1tYW5hZ2VtZW50" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709921" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1598" data-listing-title-sort="The BIDS format for EEG" data-listing-filename-sort="bids-format.qmd">
 <td>
 <a href="../topics/bids-format.html" class="title listing-title">The BIDS format for EEG</a>
+</td>
+<td>
+<span class="listing-module">1</span>
 </td>
 <td>
 <span class="listing-description">The Brain Imaging Data Structure (BIDS) for EEG: folder hierarchy, file naming conventions, metadata sidecars, reading BIDS datasets with mne-bids, and converting existing datasets to BIDS.</span>
@@ -704,74 +308,236 @@ Categories
 
 </tr>
 
-<tr data-index="32" data-categories="Y29ubmVjdGl2aXR5JTJDcGhhc2UlMkNzaWduYWwtcHJvY2Vzc2luZw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709923" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1430" data-listing-title-sort="The Hilbert transform and instantaneous phase" data-listing-filename-sort="hilbert-transform.qmd">
+<tr data-index="1" data-categories="Z2V0dGluZy1zdGFydGVkJTJDc2V0dXA=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709925" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="4" data-listing-word-count-sort="751" data-listing-title-sort="Installing MNE-Python" data-listing-filename-sort="installing-mne.qmd">
 <td>
-<a href="../topics/hilbert-transform.html" class="title listing-title">The Hilbert transform and instantaneous phase</a>
+<a href="../topics/installing-mne.html" class="title listing-title">Installing MNE-Python</a>
 </td>
 <td>
-<span class="listing-description">The analytic signal, how the Hilbert transform works, extracting instantaneous phase and amplitude, phase wrapping, and why phase matters for connectivity analysis.</span>
+<span class="listing-module">1</span>
 </td>
 <td>
-<span class="listing-categories">connectivity, phase, signal-processing</span>
-</td>
-
-</tr>
-
-<tr data-index="33" data-categories="Y29ubmVjdGl2aXR5JTJDc3luY2hyb25pc2F0aW9u" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709926" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2031" data-listing-title-sort="The Kuramoto order parameter" data-listing-filename-sort="kuramoto.qmd">
-<td>
-<a href="../topics/kuramoto.html" class="title listing-title">The Kuramoto order parameter</a>
+<span class="listing-description">How to install MNE-Python with pip or conda, verify the installation, import the library, check the version, and install optional dependencies.</span>
 </td>
 <td>
-<span class="listing-description">What the Kuramoto model is, the order parameter R(t) and its formula, interpreting R (0 = desynchronised, 1 = fully synchronised), temporal variability of R as a measure of metastability, and the relationship to the dominant eigenvector approach.</span>
-</td>
-<td>
-<span class="listing-categories">connectivity, synchronisation</span>
+<span class="listing-categories">getting-started, setup</span>
 </td>
 
 </tr>
 
-<tr data-index="34" data-categories="Y29ubmVjdGl2aXR5JTJDbWV0YXN0YWJpbGl0eSUyQ2xpbmVhci1hbGdlYnJh" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709922" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2080" data-listing-title-sort="The dominant eigenvector" data-listing-filename-sort="dominant-eigenvector.qmd">
+<tr data-index="2" data-categories="Z2V0dGluZy1zdGFydGVkJTJDZGF0YS1pbXBvcnQ=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709926" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1538" data-listing-title-sort="Loading EEG data" data-listing-filename-sort="loading-eeg-data.qmd">
 <td>
-<a href="../topics/dominant-eigenvector.html" class="title listing-title">The dominant eigenvector</a>
+<a href="../topics/loading-eeg-data.html" class="title listing-title">Loading EEG data</a>
 </td>
 <td>
-<span class="listing-description">Extracting the dominant eigenvector from the phase alignment matrix, interpreting its elements as participation weights, sign conventions, tracking eigenvector dynamics over time, and linking eigenvector variability to metastability.</span>
+<span class="listing-module">1</span>
 </td>
 <td>
-<span class="listing-categories">connectivity, metastability, linear-algebra</span>
-</td>
-
-</tr>
-
-<tr data-index="35" data-categories="c3BlY3RyYWwlMkN0aW1lLWZyZXF1ZW5jeQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1988" data-listing-title-sort="Time-frequency decomposition" data-listing-filename-sort="time-frequency.qmd">
-<td>
-<a href="../topics/time-frequency.html" class="title listing-title">Time-frequency decomposition</a>
+<span class="listing-description">How to load EEG data from common file formats in MNE-Python: EDF, BrainVision, EEGLAB .set, and FIF. Function signatures, format differences, and common pitfalls.</span>
 </td>
 <td>
-<span class="listing-description">Why PSD loses temporal information, Morlet wavelets, multitaper method, computing time-frequency representations with MNE, plotting time-frequency maps, baseline correction, and event-related spectral perturbation (ERSP).</span>
-</td>
-<td>
-<span class="listing-categories">spectral, time-frequency</span>
+<span class="listing-categories">getting-started, data-import</span>
 </td>
 
 </tr>
 
-<tr data-index="36" data-categories="c3BlY3RyYWwlMkN2aXN1YWxpc2F0aW9u" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709930" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1831" data-listing-title-sort="Topographic maps" data-listing-filename-sort="topographic-maps.qmd">
+<tr data-index="3" data-categories="Z2V0dGluZy1zdGFydGVkJTJDZGF0YS1zdHJ1Y3R1cmVz" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709927" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="6" data-listing-word-count-sort="1084" data-listing-title-sort="MNE data structures" data-listing-filename-sort="mne-data-structures.qmd">
 <td>
-<a href="../topics/topographic-maps.html" class="title listing-title">Topographic maps</a>
+<a href="../topics/mne-data-structures.html" class="title listing-title">MNE data structures</a>
 </td>
 <td>
-<span class="listing-description">Plotting scalp topographies in MNE-Python: band-power maps, single-frequency maps, normalisation, interpolation, customisation, and comparing topographies between conditions.</span>
+<span class="listing-module">1</span>
 </td>
 <td>
-<span class="listing-categories">spectral, visualisation</span>
+<span class="listing-description">The four main MNE-Python objects (Raw, Epochs, Evoked, Info), what each represents, when to use each, how they relate to each other, and code examples for creating them.</span>
+</td>
+<td>
+<span class="listing-categories">getting-started, data-structures</span>
 </td>
 
 </tr>
 
-<tr data-index="37" data-categories="YXJ0aWZhY3RzJTJDcHJlcHJvY2Vzc2luZw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709920" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2065" data-listing-title-sort="Types of EEG artifacts" data-listing-filename-sort="artifact-types.qmd">
+<tr data-index="4" data-categories="Z2V0dGluZy1zdGFydGVkJTJDY2hhbm5lbHM=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="6" data-listing-word-count-sort="1151" data-listing-title-sort="Setting channel locations (montages)" data-listing-filename-sort="setting-montages.qmd">
+<td>
+<a href="../topics/setting-montages.html" class="title listing-title">Setting channel locations (montages)</a>
+</td>
+<td>
+<span class="listing-module">1</span>
+</td>
+<td>
+<span class="listing-description">What a montage is, standard EEG montages (10-20, 10-10, 10-05), how to set and plot montages in MNE-Python, and how to create custom montages from CSV files.</span>
+</td>
+<td>
+<span class="listing-categories">getting-started, channels</span>
+</td>
+
+</tr>
+
+<tr data-index="5" data-categories="Z2V0dGluZy1zdGFydGVkJTJDc2ltdWxhdGlvbg==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1831" data-listing-title-sort="Simulating EEG data" data-listing-filename-sort="simulating-eeg-data.qmd">
+<td>
+<a href="../topics/simulating-eeg-data.html" class="title listing-title">Simulating EEG data</a>
+</td>
+<td>
+<span class="listing-module">1</span>
+</td>
+<td>
+<span class="listing-description">Why simulate EEG data, how to build synthetic signals with numpy (pink noise, oscillations, artifacts), using MNE’s simulation functions, and creating realistic multi-channel data with spatial structure.</span>
+</td>
+<td>
+<span class="listing-categories">getting-started, simulation</span>
+</td>
+
+</tr>
+
+<tr data-index="6" data-categories="Z2V0dGluZy1zdGFydGVkJTJDcXVhbGl0eS1jb250cm9s" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709930" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="9" data-listing-word-count-sort="1625" data-listing-title-sort="Visual inspection of EEG data" data-listing-filename-sort="visual-inspection.qmd">
+<td>
+<a href="../topics/visual-inspection.html" class="title listing-title">Visual inspection of EEG data</a>
+</td>
+<td>
+<span class="listing-module">1</span>
+</td>
+<td>
+<span class="listing-description">Why visual inspection matters, using MNE’s interactive raw.plot() viewer, identifying common artifacts by eye (blinks, saccades, muscle, movement, electrode pops), and marking bad segments and channels.</span>
+</td>
+<td>
+<span class="listing-categories">getting-started, quality-control</span>
+</td>
+
+</tr>
+
+<tr data-index="7" data-categories="cHJlcHJvY2Vzc2luZyUyQ3F1YWxpdHktY29udHJvbA==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709921" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1441" data-listing-title-sort="Detecting and interpolating bad channels" data-listing-filename-sort="bad-channels.qmd">
+<td>
+<a href="../topics/bad-channels.html" class="title listing-title">Detecting and interpolating bad channels</a>
+</td>
+<td>
+<span class="listing-module">2</span>
+</td>
+<td>
+<span class="listing-description">What makes an EEG channel ‘bad’ (noise, flat signal, drift), how to detect bad channels manually and automatically, interpolation via spherical splines, and when to interpolate vs exclude.</span>
+</td>
+<td>
+<span class="listing-categories">preprocessing, quality-control</span>
+</td>
+
+</tr>
+
+<tr data-index="8" data-categories="cHJlcHJvY2Vzc2luZyUyQ2ZpbHRlcmluZw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709921" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="9" data-listing-word-count-sort="1774" data-listing-title-sort="Band-pass filtering" data-listing-filename-sort="bandpass-filtering.qmd">
+<td>
+<a href="../topics/bandpass-filtering.html" class="title listing-title">Band-pass filtering</a>
+</td>
+<td>
+<span class="listing-module">2</span>
+</td>
+<td>
+<span class="listing-description">What a band-pass filter does, typical EEG cutoff frequencies, FIR filter design in MNE-Python, transition bandwidth, filter order, edge artifacts, and zero-phase filtering.</span>
+</td>
+<td>
+<span class="listing-categories">preprocessing, filtering</span>
+</td>
+
+</tr>
+
+<tr data-index="9" data-categories="cHJlcHJvY2Vzc2luZyUyQ2Vwb2Nocw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709922" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1436" data-listing-title-sort="Extracting epochs from continuous data" data-listing-filename-sort="epoching.qmd">
+<td>
+<a href="../topics/epoching.html" class="title listing-title">Extracting epochs from continuous data</a>
+</td>
+<td>
+<span class="listing-module">2</span>
+</td>
+<td>
+<span class="listing-description">What epochs are, how event markers work, creating Epochs from Raw, baseline correction, rejecting noisy epochs by amplitude, and using metadata for condition labels.</span>
+</td>
+<td>
+<span class="listing-categories">preprocessing, epochs</span>
+</td>
+
+</tr>
+
+<tr data-index="10" data-categories="cHJlcHJvY2Vzc2luZyUyQ3NpZ25hbC1wcm9jZXNzaW5n" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709923" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1519" data-listing-title-sort="Filtering EEG signals" data-listing-filename-sort="filtering.qmd">
+<td>
+<a href="../topics/filtering.html" class="title listing-title">Filtering EEG signals</a>
+</td>
+<td>
+<span class="listing-module">2</span>
+</td>
+<td>
+<span class="listing-description">FIR and IIR filters, band-pass design, cutoff frequencies for EEG bands, notch filters for line noise, filter order, transition bandwidth, and zero-phase filtering.</span>
+</td>
+<td>
+<span class="listing-categories">preprocessing, signal-processing</span>
+</td>
+
+</tr>
+
+<tr data-index="11" data-categories="cHJlcHJvY2Vzc2luZyUyQ2ZpbHRlcmluZw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709927" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="7" data-listing-word-count-sort="1302" data-listing-title-sort="Notch filtering for line noise" data-listing-filename-sort="notch-filtering.qmd">
+<td>
+<a href="../topics/notch-filtering.html" class="title listing-title">Notch filtering for line noise</a>
+</td>
+<td>
+<span class="listing-module">2</span>
+</td>
+<td>
+<span class="listing-description">What line noise is, where it comes from (50 Hz and 60 Hz power mains), harmonics, using MNE’s notch_filter(), spectrum interpolation as an alternative, and when a notch filter is needed.</span>
+</td>
+<td>
+<span class="listing-categories">preprocessing, filtering</span>
+</td>
+
+</tr>
+
+<tr data-index="12" data-categories="cHJlcHJvY2Vzc2luZyUyQ3JlZmVyZW5jZQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709928" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="7" data-listing-word-count-sort="1268" data-listing-title-sort="Re-referencing EEG data" data-listing-filename-sort="re-referencing.qmd">
+<td>
+<a href="../topics/re-referencing.html" class="title listing-title">Re-referencing EEG data</a>
+</td>
+<td>
+<span class="listing-module">2</span>
+</td>
+<td>
+<span class="listing-description">Why re-referencing matters, common reference schemes (average, linked mastoids, Cz, REST), how to re-reference in MNE-Python, and the difference between the projection approach and the data approach.</span>
+</td>
+<td>
+<span class="listing-categories">preprocessing, reference</span>
+</td>
+
+</tr>
+
+<tr data-index="13" data-categories="cHJlcHJvY2Vzc2luZyUyQ3NhbXBsaW5n" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1443" data-listing-title-sort="Resampling EEG data" data-listing-filename-sort="resampling.qmd">
+<td>
+<a href="../topics/resampling.html" class="title listing-title">Resampling EEG data</a>
+</td>
+<td>
+<span class="listing-module">2</span>
+</td>
+<td>
+<span class="listing-description">Why and how to resample EEG data, the Nyquist theorem, anti-aliasing, using MNE’s raw.resample(), common target sampling rates, and where resampling fits in the preprocessing pipeline.</span>
+</td>
+<td>
+<span class="listing-categories">preprocessing, sampling</span>
+</td>
+
+</tr>
+
+<tr data-index="14" data-categories="YXJ0aWZhY3RzJTJDZXBvY2hz" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709920" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2110" data-listing-title-sort="Amplitude-based epoch rejection" data-listing-filename-sort="amplitude-rejection.qmd">
+<td>
+<a href="../topics/amplitude-rejection.html" class="title listing-title">Amplitude-based epoch rejection</a>
+</td>
+<td>
+<span class="listing-module">3</span>
+</td>
+<td>
+<span class="listing-description">Peak-to-peak amplitude thresholds, flat channel detection, the reject and flat parameters in MNE’s Epochs, how to set thresholds, checking rejection statistics, and practical guidelines for choosing values.</span>
+</td>
+<td>
+<span class="listing-categories">artifacts, epochs</span>
+</td>
+
+</tr>
+
+<tr data-index="15" data-categories="YXJ0aWZhY3RzJTJDcHJlcHJvY2Vzc2luZw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709920" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2065" data-listing-title-sort="Types of EEG artifacts" data-listing-filename-sort="artifact-types.qmd">
 <td>
 <a href="../topics/artifact-types.html" class="title listing-title">Types of EEG artifacts</a>
+</td>
+<td>
+<span class="listing-module">3</span>
 </td>
 <td>
 <span class="listing-description">Ocular artifacts (blinks, saccades), muscular artifacts (EMG), cardiac artifacts (ECG), and movement artifacts: what causes each type, what it looks like in the signal, which channels are most affected, and their frequency characteristics.</span>
@@ -782,9 +548,108 @@ Categories
 
 </tr>
 
-<tr data-index="38" data-categories="YXJ0aWZhY3RzJTJDcXVhbGl0eS1jb250cm9s" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709926" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1886" data-listing-title-sort="Visual inspection and manual rejection" data-listing-filename-sort="manual-rejection.qmd">
+<tr data-index="16" data-categories="YXJ0aWZhY3RzJTJDYXV0b21hdGlvbiUyQ2Vwb2Nocw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709921" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2125" data-listing-title-sort="Automated artifact rejection with autoreject" data-listing-filename-sort="autoreject.qmd">
+<td>
+<a href="../topics/autoreject.html" class="title listing-title">Automated artifact rejection with autoreject</a>
+</td>
+<td>
+<span class="listing-module">3</span>
+</td>
+<td>
+<span class="listing-description">What autoreject does (learns channel-specific peak-to-peak thresholds), how it differs from simple amplitude rejection, the AutoReject and RejectLog classes, combining autoreject with ICA, and the RANSAC approach for bad channel detection.</span>
+</td>
+<td>
+<span class="listing-categories">artifacts, automation, epochs</span>
+</td>
+
+</tr>
+
+<tr data-index="17" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbiUyQ21uZQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709924" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2066" data-listing-title-sort="ICA in MNE-Python" data-listing-filename-sort="ica-mne.qmd">
+<td>
+<a href="../topics/ica-mne.html" class="title listing-title">ICA in MNE-Python</a>
+</td>
+<td>
+<span class="listing-module">3</span>
+</td>
+<td>
+<span class="listing-description">A practical guide to MNE’s ICA class: fitting ICA, choosing n_components, selecting algorithms (FastICA, Infomax, Picard), plotting and inspecting components, excluding artifacts, applying corrections, and saving solutions.</span>
+</td>
+<td>
+<span class="listing-categories">artifacts, decomposition, mne</span>
+</td>
+
+</tr>
+
+<tr data-index="18" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbiUyQ3RoZW9yeQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709924" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="14" data-listing-word-count-sort="2677" data-listing-title-sort="ICA: mathematical foundations" data-listing-filename-sort="ica-theory.qmd">
+<td>
+<a href="../topics/ica-theory.html" class="title listing-title">ICA: mathematical foundations</a>
+</td>
+<td>
+<span class="listing-module">3</span>
+</td>
+<td>
+<span class="listing-description">The cocktail party problem, the linear mixing model, statistical independence, non-Gaussianity, how ICA algorithms find the unmixing matrix using negentropy and mutual information, and the limitations of the approach.</span>
+</td>
+<td>
+<span class="listing-categories">artifacts, decomposition, theory</span>
+</td>
+
+</tr>
+
+<tr data-index="19" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbg==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709924" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2057" data-listing-title-sort="Independent Component Analysis (ICA)" data-listing-filename-sort="ica.qmd">
+<td>
+<a href="../topics/ica.html" class="title listing-title">Independent Component Analysis (ICA)</a>
+</td>
+<td>
+<span class="listing-module">3</span>
+</td>
+<td>
+<span class="listing-description">What ICA does conceptually, the unmixing matrix, FastICA vs Infomax, choosing the number of components, identifying artifact components, and reconstructing clean data.</span>
+</td>
+<td>
+<span class="listing-categories">artifacts, decomposition</span>
+</td>
+
+</tr>
+
+<tr data-index="20" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbiUyQ2F1dG9tYXRpb24=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709924" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2362" data-listing-title-sort="Automated ICA labelling with ICLabel" data-listing-filename-sort="icalabel.qmd">
+<td>
+<a href="../topics/icalabel.html" class="title listing-title">Automated ICA labelling with ICLabel</a>
+</td>
+<td>
+<span class="listing-module">3</span>
+</td>
+<td>
+<span class="listing-description">What ICLabel is, how it classifies ICA components into seven categories (brain, muscle, eye, heart, line noise, channel noise, other), using mne-icalabel in Python, interpreting confidence scores, and when to override automated labels.</span>
+</td>
+<td>
+<span class="listing-categories">artifacts, decomposition, automation</span>
+</td>
+
+</tr>
+
+<tr data-index="21" data-categories="YXJ0aWZhY3RzJTJDZGVjb21wb3NpdGlvbg==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709925" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2267" data-listing-title-sort="Identifying ICA components" data-listing-filename-sort="identifying-ica-components.qmd">
+<td>
+<a href="../topics/identifying-ica-components.html" class="title listing-title">Identifying ICA components</a>
+</td>
+<td>
+<span class="listing-module">3</span>
+</td>
+<td>
+<span class="listing-description">How to tell artifact components from brain components: visual criteria for blinks, saccades, muscle, and heartbeat, automated detection with find_bads_eog() and find_bads_ecg(), and using proxy channels when dedicated EOG/ECG channels are unavailable.</span>
+</td>
+<td>
+<span class="listing-categories">artifacts, decomposition</span>
+</td>
+
+</tr>
+
+<tr data-index="22" data-categories="YXJ0aWZhY3RzJTJDcXVhbGl0eS1jb250cm9s" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709926" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1886" data-listing-title-sort="Visual inspection and manual rejection" data-listing-filename-sort="manual-rejection.qmd">
 <td>
 <a href="../topics/manual-rejection.html" class="title listing-title">Visual inspection and manual rejection</a>
+</td>
+<td>
+<span class="listing-module">3</span>
 </td>
 <td>
 <span class="listing-description">When manual rejection is appropriate, how to use MNE’s interactive data browsers for raw data and epochs, marking bad segments with annotations, marking bad epochs, and guidelines for deciding what to reject.</span>
@@ -795,15 +660,274 @@ Categories
 
 </tr>
 
-<tr data-index="39" data-categories="Z2V0dGluZy1zdGFydGVkJTJDcXVhbGl0eS1jb250cm9s" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709930" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="9" data-listing-word-count-sort="1625" data-listing-title-sort="Visual inspection of EEG data" data-listing-filename-sort="visual-inspection.qmd">
+<tr data-index="23" data-categories="c3BlY3RyYWwlMkNlcnA=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709922" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2063" data-listing-title-sort="Event-related potentials (ERPs)" data-listing-filename-sort="erp.qmd">
 <td>
-<a href="../topics/visual-inspection.html" class="title listing-title">Visual inspection of EEG data</a>
+<a href="../topics/erp.html" class="title listing-title">Event-related potentials (ERPs)</a>
 </td>
 <td>
-<span class="listing-description">Why visual inspection matters, using MNE’s interactive raw.plot() viewer, identifying common artifacts by eye (blinks, saccades, muscle, movement, electrode pops), and marking bad segments and channels.</span>
+<span class="listing-module">4</span>
 </td>
 <td>
-<span class="listing-categories">getting-started, quality-control</span>
+<span class="listing-description">What ERPs are, the signal-to-noise logic behind averaging, classic ERP components (P100, N170, P300, N400), plotting ERPs in MNE, topographic maps, difference waves, and grand averages across subjects.</span>
+</td>
+<td>
+<span class="listing-categories">spectral, erp</span>
+</td>
+
+</tr>
+
+<tr data-index="24" data-categories="c3BlY3RyYWwlMkN0aW1lLWZyZXF1ZW5jeSUyQ2V2ZW50cw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709922" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2343" data-listing-title-sort="Event-related spectral perturbation (ERSP)" data-listing-filename-sort="ersp.qmd">
+<td>
+<a href="../topics/ersp.html" class="title listing-title">Event-related spectral perturbation (ERSP)</a>
+</td>
+<td>
+<span class="listing-module">4</span>
+</td>
+<td>
+<span class="listing-description">What ERSP is, baseline correction modes (percent change, dB, z-score), computing ERSP from MNE AverageTFR objects, plotting time-frequency maps, and interpreting ERD/ERS patterns.</span>
+</td>
+<td>
+<span class="listing-categories">spectral, time-frequency, events</span>
+</td>
+
+</tr>
+
+<tr data-index="25" data-categories="c3BlY3RyYWwlMkNmcmVxdWVuY3ktYmFuZHM=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709923" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1974" data-listing-title-sort="EEG frequency bands" data-listing-filename-sort="frequency-bands.qmd">
+<td>
+<a href="../topics/frequency-bands.html" class="title listing-title">EEG frequency bands</a>
+</td>
+<td>
+<span class="listing-module">4</span>
+</td>
+<td>
+<span class="listing-description">The five classical EEG frequency bands (delta, theta, alpha, beta, gamma), their functional associations, how to compute band power in Python, relative vs absolute power, and common sub-band divisions.</span>
+</td>
+<td>
+<span class="listing-categories">spectral, frequency-bands</span>
+</td>
+
+</tr>
+
+<tr data-index="26" data-categories="c3BlY3RyYWwlMkNwb3dlcg==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709928" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2168" data-listing-title-sort="Power spectral density (PSD)" data-listing-filename-sort="psd.qmd">
+<td>
+<a href="../topics/psd.html" class="title listing-title">Power spectral density (PSD)</a>
+</td>
+<td>
+<span class="listing-module">4</span>
+</td>
+<td>
+<span class="listing-description">What PSD is, Welch’s method (windowing, overlap, FFT), computing PSD in MNE, plotting PSD, units (uV^2/Hz), comparing PSD between conditions or groups, and topographic PSD maps.</span>
+</td>
+<td>
+<span class="listing-categories">spectral, power</span>
+</td>
+
+</tr>
+
+<tr data-index="27" data-categories="ZXhwZXJpbWVudGFsLWRlc2lnbiUyQ3Jlc3Rpbmctc3RhdGU=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="9" data-listing-word-count-sort="1625" data-listing-title-sort="Resting-state EEG" data-listing-filename-sort="resting-state-eeg.qmd">
+<td>
+<a href="../topics/resting-state-eeg.html" class="title listing-title">Resting-state EEG</a>
+</td>
+<td>
+<span class="listing-module">4</span>
+</td>
+<td>
+<span class="listing-description">What resting-state EEG is, eyes-open vs eyes-closed protocols, why it is used, what it reveals about brain organisation, alpha reactivity, the default mode network in EEG, and relevance for clinical populations.</span>
+</td>
+<td>
+<span class="listing-categories">experimental-design, resting-state</span>
+</td>
+
+</tr>
+
+<tr data-index="28" data-categories="c3BlY3RyYWwlMkN0aW1lLWZyZXF1ZW5jeQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709929" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1988" data-listing-title-sort="Time-frequency decomposition" data-listing-filename-sort="time-frequency.qmd">
+<td>
+<a href="../topics/time-frequency.html" class="title listing-title">Time-frequency decomposition</a>
+</td>
+<td>
+<span class="listing-module">4</span>
+</td>
+<td>
+<span class="listing-description">Why PSD loses temporal information, Morlet wavelets, multitaper method, computing time-frequency representations with MNE, plotting time-frequency maps, baseline correction, and event-related spectral perturbation (ERSP).</span>
+</td>
+<td>
+<span class="listing-categories">spectral, time-frequency</span>
+</td>
+
+</tr>
+
+<tr data-index="29" data-categories="c3BlY3RyYWwlMkN2aXN1YWxpc2F0aW9u" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709930" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1831" data-listing-title-sort="Topographic maps" data-listing-filename-sort="topographic-maps.qmd">
+<td>
+<a href="../topics/topographic-maps.html" class="title listing-title">Topographic maps</a>
+</td>
+<td>
+<span class="listing-module">4</span>
+</td>
+<td>
+<span class="listing-description">Plotting scalp topographies in MNE-Python: band-power maps, single-frequency maps, normalisation, interpolation, customisation, and comparing topographies between conditions.</span>
+</td>
+<td>
+<span class="listing-categories">spectral, visualisation</span>
+</td>
+
+</tr>
+
+<tr data-index="30" data-categories="Y29ubmVjdGl2aXR5JTJDbWV0YXN0YWJpbGl0eSUyQ2xpbmVhci1hbGdlYnJh" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709922" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2080" data-listing-title-sort="The dominant eigenvector" data-listing-filename-sort="dominant-eigenvector.qmd">
+<td>
+<a href="../topics/dominant-eigenvector.html" class="title listing-title">The dominant eigenvector</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">Extracting the dominant eigenvector from the phase alignment matrix, interpreting its elements as participation weights, sign conventions, tracking eigenvector dynamics over time, and linking eigenvector variability to metastability.</span>
+</td>
+<td>
+<span class="listing-categories">connectivity, metastability, linear-algebra</span>
+</td>
+
+</tr>
+
+<tr data-index="31" data-categories="c3RhdGlzdGljcyUyQ2dyb3VwLWFuYWx5c2lz" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709923" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="14" data-listing-word-count-sort="2634" data-listing-title-sort="Group-level statistics for EEG" data-listing-filename-sort="group-statistics.qmd">
+<td>
+<a href="../topics/group-statistics.html" class="title listing-title">Group-level statistics for EEG</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">Comparing EEG metrics between groups, independent samples t-test, one-way ANOVA with pingouin, post-hoc tests, effect sizes (Cohen’s d, eta-squared), multiple comparisons correction, permutation tests, and reporting results.</span>
+</td>
+<td>
+<span class="listing-categories">statistics, group-analysis</span>
+</td>
+
+</tr>
+
+<tr data-index="32" data-categories="Y29ubmVjdGl2aXR5JTJDcGhhc2UlMkNzaWduYWwtcHJvY2Vzc2luZw==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709923" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="8" data-listing-word-count-sort="1430" data-listing-title-sort="The Hilbert transform and instantaneous phase" data-listing-filename-sort="hilbert-transform.qmd">
+<td>
+<a href="../topics/hilbert-transform.html" class="title listing-title">The Hilbert transform and instantaneous phase</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">The analytic signal, how the Hilbert transform works, extracting instantaneous phase and amplitude, phase wrapping, and why phase matters for connectivity analysis.</span>
+</td>
+<td>
+<span class="listing-categories">connectivity, phase, signal-processing</span>
+</td>
+
+</tr>
+
+<tr data-index="33" data-categories="Y29ubmVjdGl2aXR5JTJDbWV0YXN0YWJpbGl0eSUyQ2ludGVycHJldGF0aW9u" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709925" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="13" data-listing-word-count-sort="2567" data-listing-title-sort="Interpreting metastability values" data-listing-filename-sort="interpreting-metastability.qmd">
+<td>
+<a href="../topics/interpreting-metastability.html" class="title listing-title">Interpreting metastability values</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">What high and low metastability mean for brain dynamics, the criticality hypothesis, metastability in health and disease, effect of frequency band and epoch length on values, and practical guidelines for reporting.</span>
+</td>
+<td>
+<span class="listing-categories">connectivity, metastability, interpretation</span>
+</td>
+
+</tr>
+
+<tr data-index="34" data-categories="Y29ubmVjdGl2aXR5JTJDc3luY2hyb25pc2F0aW9u" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709926" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2031" data-listing-title-sort="The Kuramoto order parameter" data-listing-filename-sort="kuramoto.qmd">
+<td>
+<a href="../topics/kuramoto.html" class="title listing-title">The Kuramoto order parameter</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">What the Kuramoto model is, the order parameter R(t) and its formula, interpreting R (0 = desynchronised, 1 = fully synchronised), temporal variability of R as a measure of metastability, and the relationship to the dominant eigenvector approach.</span>
+</td>
+<td>
+<span class="listing-categories">connectivity, synchronisation</span>
+</td>
+
+</tr>
+
+<tr data-index="35" data-categories="bWV0YXN0YWJpbGl0eSUyQ2Nvbm5lY3Rpdml0eSUyQ2R5bmFtaWNz" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709926" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="13" data-listing-word-count-sort="2417" data-listing-title-sort="Metastability: theory and computation" data-listing-filename-sort="metastability.qmd">
+<td>
+<a href="../topics/metastability.html" class="title listing-title">Metastability: theory and computation</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">What metastability means in neuroscience, the energy landscape analogy, computing metastability from EEG using the dominant eigenvector approach, regional vs global metastability, and clinical relevance for Parkinson’s disease.</span>
+</td>
+<td>
+<span class="listing-categories">metastability, connectivity, dynamics</span>
+</td>
+
+</tr>
+
+<tr data-index="36" data-categories="Y29ubmVjdGl2aXR5JTJDbWV0YXN0YWJpbGl0eSUyQ2NsaW5pY2Fs" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709927" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="13" data-listing-word-count-sort="2538" data-listing-title-sort="Parkinson's disease, Freezing of Gait, and EEG" data-listing-filename-sort="parkinsons-fog.qmd">
+<td>
+<a href="../topics/parkinsons-fog.html" class="title listing-title">Parkinson’s disease, Freezing of Gait, and EEG</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">EEG findings in Parkinson’s disease, the role of pathological beta synchrony, what Freezing of Gait is, EEG biomarkers of FoG, and how metastability analysis connects to the study of PD motor symptoms.</span>
+</td>
+<td>
+<span class="listing-categories">connectivity, metastability, clinical</span>
+</td>
+
+</tr>
+
+<tr data-index="37" data-categories="Y29ubmVjdGl2aXR5JTJDbWV0YXN0YWJpbGl0eQ==" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709927" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="10" data-listing-word-count-sort="1857" data-listing-title-sort="Phase alignment and connectivity matrices" data-listing-filename-sort="phase-alignment.qmd">
+<td>
+<a href="../topics/phase-alignment.html" class="title listing-title">Phase alignment and connectivity matrices</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">Phase-locking value (PLV), the cosine of phase difference, building the instantaneous connectivity matrix, interpreting positive and negative values, and sliding-window approaches.</span>
+</td>
+<td>
+<span class="listing-categories">connectivity, metastability</span>
+</td>
+
+</tr>
+
+<tr data-index="38" data-categories="Y29ubmVjdGl2aXR5JTJDcGhhc2UlMkN0aGVvcnk=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709928" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2143" data-listing-title-sort="Phase synchronisation" data-listing-filename-sort="phase-synchronisation.qmd">
+<td>
+<a href="../topics/phase-synchronisation.html" class="title listing-title">Phase synchronisation</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">What phase synchronisation means for neural oscillations, the communication through coherence hypothesis, types of synchronisation (in-phase, anti-phase, phase lag), and why phase matters more than amplitude for studying brain connectivity.</span>
+</td>
+<td>
+<span class="listing-categories">connectivity, phase, theory</span>
+</td>
+
+</tr>
+
+<tr data-index="39" data-categories="Y29ubmVjdGl2aXR5JTJDcGhhc2U=" data-listing-date-sort="1774929600000" data-listing-file-modified-sort="1774945709928" data-listing-date-modified-sort="1774945709000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2191" data-listing-title-sort="Phase-locking value (PLV)" data-listing-filename-sort="plv.qmd">
+<td>
+<a href="../topics/plv.html" class="title listing-title">Phase-locking value (PLV)</a>
+</td>
+<td>
+<span class="listing-module">5</span>
+</td>
+<td>
+<span class="listing-description">What PLV measures, the formula, computing PLV from instantaneous phase, interpreting values (0 = no coupling, 1 = perfect coupling), PLV vs coherence, limitations, connectivity matrices, and plotting.</span>
+</td>
+<td>
+<span class="listing-categories">connectivity, phase</span>
 </td>
 
 </tr>

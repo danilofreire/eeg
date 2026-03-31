@@ -388,7 +388,7 @@ sub-02  30  M   patient</code></pre>
 <section id="the-bidspath-object" class="level3">
 <h3 class="anchored" data-anchor-id="the-bidspath-object">The <code>BIDSPath</code> object</h3>
 <p><code>BIDSPath</code> is the central object in <code>mne-bids</code>. It encodes all the BIDS entities (subject, session, task, run) and the root directory. You use it to point to a specific file in a BIDS dataset.</p>
-<div id="64680b11" class="cell" data-execution_count="1">
+<div id="575d2002" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne_bids</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>bids_path <span class="op">=</span> mne_bids.BIDSPath(</span>
@@ -404,7 +404,7 @@ sub-02  30  M   patient</code></pre>
 <section id="reading-a-bids-dataset" class="level3">
 <h3 class="anchored" data-anchor-id="reading-a-bids-dataset">Reading a BIDS dataset</h3>
 <p>Once you have a <code>BIDSPath</code>, reading the data is a single function call. <code>read_raw_bids()</code> returns an MNE <code>Raw</code> object with the montage, channel types, and event annotations already set from the BIDS metadata.</p>
-<div id="d4dd56ca" class="cell" data-execution_count="2">
+<div id="e0988b4b" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne_bids.read_raw_bids(bids_path)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(raw.info)</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(raw.annotations)  <span class="co"># events from *_events.tsv are loaded as annotations</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -414,7 +414,7 @@ sub-02  30  M   patient</code></pre>
 <section id="writing-data-to-bids-format" class="level3">
 <h3 class="anchored" data-anchor-id="writing-data-to-bids-format">Writing data to BIDS format</h3>
 <p><code>write_raw_bids()</code> takes an MNE <code>Raw</code> object and saves it in BIDS format, creating the folder structure and sidecar files automatically.</p>
-<div id="0a8c3831" class="cell" data-execution_count="3">
+<div id="dcdcadc5" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne_bids</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -447,7 +447,7 @@ sub-02  30  M   patient</code></pre>
 <li>Create a <code>BIDSPath</code> with the right subject label and task name.</li>
 <li>Call <code>write_raw_bids()</code>.</li>
 </ol>
-<div id="1c6a903e" class="cell" data-execution_count="4">
+<div id="7d184b35" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne_bids</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
@@ -484,7 +484,7 @@ sub-02  30  M   patient</code></pre>
 <section id="creating-bids-structure-manually-with-python" class="level2">
 <h2 class="anchored" data-anchor-id="creating-bids-structure-manually-with-python">Creating BIDS structure manually with Python</h2>
 <p>You do not always need <code>mne-bids</code>. If you want to understand what BIDS looks like under the hood, or if you need to set up the folder structure before you have any data, you can create it with pure Python.</p>
-<div id="106c9bf3" class="cell" data-execution_count="5">
+<div id="7bf4f0b2" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>

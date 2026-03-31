@@ -322,7 +322,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="automated-detection-with-find_bads_eog" class="level2">
 <h2 class="anchored" data-anchor-id="automated-detection-with-find_bads_eog">Automated detection with <code>find_bads_eog()</code></h2>
 <p>MNE can automatically identify blink and eye movement components by correlating them with an EOG (electrooculography) channel. If your recording includes dedicated EOG channels, this is fast and reliable.</p>
-<div id="09bf9d7a" class="cell" data-execution_count="1">
+<div id="aeda3dc9" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mne.preprocessing <span class="im">import</span> ICA</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -345,7 +345,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="using-a-proxy-channel" class="level3">
 <h3 class="anchored" data-anchor-id="using-a-proxy-channel">Using a proxy channel</h3>
 <p>Many EEG setups do not include dedicated EOG channels. In that case, you can use a frontal EEG channel (like Fp1) as a proxy. The blink artifact is so large at frontal channels that they work well as a substitute.</p>
-<div id="bea4239c" class="cell" data-execution_count="2">
+<div id="c03ad133" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Use Fp1 as an EOG proxy</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>eog_indices, eog_scores <span class="op">=</span> ica.find_bads_eog(raw, ch_name<span class="op">=</span><span class="st">"Fp1"</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"EOG components (using Fp1 as proxy): </span><span class="sc">{</span>eog_indices<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -356,7 +356,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="automated-detection-with-find_bads_ecg" class="level2">
 <h2 class="anchored" data-anchor-id="automated-detection-with-find_bads_ecg">Automated detection with <code>find_bads_ecg()</code></h2>
 <p>The same approach works for heartbeat artifacts:</p>
-<div id="a174c1e0" class="cell" data-execution_count="3">
+<div id="0c6fc468" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Find components that correlate with the ECG channel</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>ecg_indices, ecg_scores <span class="op">=</span> ica.find_bads_ecg(raw)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"ECG-related components: </span><span class="sc">{</span>ecg_indices<span class="sc">}</span><span class="ss">"</span>)</span>
@@ -377,7 +377,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Browse the remaining components with <code>ica.plot_sources()</code> and <code>ica.plot_components()</code> to check for artifacts the automated methods may have missed.</li>
 <li>Add or remove components from <code>ica.exclude</code> as needed.</li>
 </ol>
-<div id="77a28eb5" class="cell" data-execution_count="4">
+<div id="c37b9c31" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1: Automated detection</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>eog_idx, _ <span class="op">=</span> ica.find_bads_eog(raw, ch_name<span class="op">=</span><span class="st">"Fp1"</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>ecg_idx, _ <span class="op">=</span> ica.find_bads_ecg(raw)</span>
@@ -401,7 +401,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="working-example" class="level2">
 <h2 class="anchored" data-anchor-id="working-example">Working example</h2>
 <p>The code below simulates data with both blink and heartbeat artifacts, fits ICA, and demonstrates how to identify each artifact type using the frontal loading (for blinks) and periodicity (for heartbeat) of the recovered components.</p>
-<div id="a0b00669" class="cell" data-execution_count="5">
+<div id="91bcbe43" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.decomposition <span class="im">import</span> FastICA</span>

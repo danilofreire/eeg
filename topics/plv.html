@@ -316,7 +316,7 @@ window.Quarto = {
 <li><strong>Average the complex exponentials</strong> of the phase differences over the time window.</li>
 <li><strong>Take the magnitude</strong> of the average.</li>
 </ol>
-<div id="24fa0f35" class="cell" data-execution_count="1">
+<div id="e506a7ff" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hilbert, butter, filtfilt</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -351,7 +351,7 @@ window.Quarto = {
 <section id="vectorised-version" class="level3">
 <h3 class="anchored" data-anchor-id="vectorised-version">Vectorised version</h3>
 <p>The loop above is clear but slow for many channels. A vectorised version computes all pairs at once:</p>
-<div id="7c5c66cd" class="cell" data-execution_count="2">
+<div id="132f5c60" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Vectorised PLV computation</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>complex_phase <span class="op">=</span> np.exp(<span class="ot">1j</span> <span class="op">*</span> phases)  <span class="co"># shape: (n_channels, n_samples)</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -440,7 +440,7 @@ window.Quarto = {
 <section id="building-and-plotting-connectivity-matrices" class="level2">
 <h2 class="anchored" data-anchor-id="building-and-plotting-connectivity-matrices">Building and plotting connectivity matrices</h2>
 <p>A PLV connectivity matrix is an <span class="math inline">\(N \times N\)</span> symmetric matrix where each entry <span class="math inline">\((i, j)\)</span> is the PLV between channels <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. These matrices are the starting point for network analysis of brain connectivity.</p>
-<div id="81ee7d2a" class="cell" data-execution_count="3">
+<div id="d6e84bc0" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">7</span>))</span>
@@ -459,7 +459,7 @@ window.Quarto = {
 <section id="working-example" class="level2">
 <h2 class="anchored" data-anchor-id="working-example">Working example</h2>
 <p>The code below simulates two groups of channels with different levels of phase coupling, computes the PLV matrix, and visualises the results.</p>
-<div id="788febd2" class="cell" data-execution_count="4">
+<div id="08a9f824" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hilbert, butter, filtfilt</span>

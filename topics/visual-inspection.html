@@ -265,7 +265,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="using-raw.plot-interactively" class="level2">
 <h2 class="anchored" data-anchor-id="using-raw.plot-interactively">Using raw.plot() interactively</h2>
 <p>MNE’s <code>raw.plot()</code> method opens an interactive viewer that lets you scroll through the data, zoom in and out, and mark bad segments and channels.</p>
-<div id="69f1ccb4" class="cell" data-execution_count="1">
+<div id="13920105" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load data</span></span>
@@ -355,7 +355,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="adjusting-the-display" class="level3">
 <h3 class="anchored" data-anchor-id="adjusting-the-display">Adjusting the display</h3>
-<div id="aab0fabe" class="cell" data-execution_count="2">
+<div id="4ddbb029" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show more time per screen with fewer channels</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>raw.plot(duration<span class="op">=</span><span class="dv">30</span>, n_channels<span class="op">=</span><span class="dv">10</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -421,7 +421,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="programmatically" class="level3">
 <h3 class="anchored" data-anchor-id="programmatically">Programmatically</h3>
-<div id="a5bc08f8" class="cell" data-execution_count="3">
+<div id="95d3a128" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create annotations for known bad segments</span></span>
@@ -443,7 +443,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="marking-bad-channels" class="level2">
 <h2 class="anchored" data-anchor-id="marking-bad-channels">Marking bad channels</h2>
 <p>If a channel is noisy throughout the entire recording, you should mark it as bad rather than trying to fix it segment by segment.</p>
-<div id="79fb3c4a" class="cell" data-execution_count="4">
+<div id="064e8416" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Mark channels as bad</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>raw.info[<span class="st">"bads"</span>] <span class="op">=</span> [<span class="st">"F3"</span>, <span class="st">"T8"</span>]</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -454,7 +454,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Bad channels: </span><span class="sc">{</span>raw<span class="sc">.</span>info[<span class="st">'bads'</span>]<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Bad channels are excluded from most analyses by default (e.g., they are not included in the average reference calculation). Later, you can interpolate them using the montage:</p>
-<div id="04561a70" class="cell" data-execution_count="5">
+<div id="7fbea911" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Interpolate bad channels using neighbouring channels</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>raw.interpolate_bads(reset_bads<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -462,7 +462,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="a-practical-inspection-workflow" class="level2">
 <h2 class="anchored" data-anchor-id="a-practical-inspection-workflow">A practical inspection workflow</h2>
 <p>Here is a suggested workflow for visual inspection of a new dataset:</p>
-<div id="5c41055f" class="cell" data-execution_count="6">
+<div id="09ec0bd2" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Load and set up the data</span></span>

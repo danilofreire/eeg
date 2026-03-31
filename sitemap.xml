@@ -97,28 +97,48 @@
     <lastmod>2026-03-31T08:28:29.917Z</lastmod>
   </url>
   <url>
-    <loc>https://danilofreire.github.io/eeg/exercises/spectral-analysis-01.html</loc>
-    <lastmod>2026-03-31T08:28:29.917Z</lastmod>
-  </url>
-  <url>
-    <loc>https://danilofreire.github.io/eeg/exercises/artifacts-01.html</loc>
+    <loc>https://danilofreire.github.io/eeg/exercises/getting-started-01.html</loc>
     <lastmod>2026-03-31T08:28:29.916Z</lastmod>
   </url>
   <url>
-    <loc>https://danilofreire.github.io/eeg/index.html</loc>
-    <lastmod>2026-03-31T08:28:29.918Z</lastmod>
-  </url>
-  <url>
-    <loc>https://danilofreire.github.io/eeg/exercises/metastability-01.html</loc>
-    <lastmod>2026-03-31T08:28:29.917Z</lastmod>
+    <loc>https://danilofreire.github.io/eeg/exercises/getting-started-02.html</loc>
+    <lastmod>2026-03-31T21:53:16.641Z</lastmod>
   </url>
   <url>
     <loc>https://danilofreire.github.io/eeg/exercises/index.html</loc>
     <lastmod>2026-03-31T08:28:29.916Z</lastmod>
   </url>
   <url>
-    <loc>https://danilofreire.github.io/eeg/exercises/getting-started-01.html</loc>
+    <loc>https://danilofreire.github.io/eeg/exercises/metastability-01.html</loc>
+    <lastmod>2026-03-31T08:28:29.917Z</lastmod>
+  </url>
+  <url>
+    <loc>https://danilofreire.github.io/eeg/exercises/metastability-02.html</loc>
+    <lastmod>2026-03-31T21:59:24.245Z</lastmod>
+  </url>
+  <url>
+    <loc>https://danilofreire.github.io/eeg/index.html</loc>
+    <lastmod>2026-03-31T08:28:29.918Z</lastmod>
+  </url>
+  <url>
+    <loc>https://danilofreire.github.io/eeg/exercises/artifacts-02.html</loc>
+    <lastmod>2026-03-31T21:57:11.971Z</lastmod>
+  </url>
+  <url>
+    <loc>https://danilofreire.github.io/eeg/exercises/artifacts-01.html</loc>
     <lastmod>2026-03-31T08:28:29.916Z</lastmod>
+  </url>
+  <url>
+    <loc>https://danilofreire.github.io/eeg/exercises/spectral-analysis-01.html</loc>
+    <lastmod>2026-03-31T08:28:29.917Z</lastmod>
+  </url>
+  <url>
+    <loc>https://danilofreire.github.io/eeg/exercises/spectral-analysis-02.html</loc>
+    <lastmod>2026-03-31T21:57:34.496Z</lastmod>
+  </url>
+  <url>
+    <loc>https://danilofreire.github.io/eeg/exercises/preprocessing-02.html</loc>
+    <lastmod>2026-03-31T21:55:26.063Z</lastmod>
   </url>
   <url>
     <loc>https://danilofreire.github.io/eeg/modules/03-artifacts.html</loc>
@@ -166,7 +186,7 @@
   </url>
   <url>
     <loc>https://danilofreire.github.io/eeg/topics/index.html</loc>
-    <lastmod>2026-03-31T08:28:29.925Z</lastmod>
+    <lastmod>2026-03-31T21:50:32.061Z</lastmod>
   </url>
   <url>
     <loc>https://danilofreire.github.io/eeg/topics/installing-mne.html</loc>

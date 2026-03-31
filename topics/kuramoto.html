@@ -413,7 +413,7 @@ window.Quarto = {
 <section id="working-example" class="level2">
 <h2 class="anchored" data-anchor-id="working-example">Working example</h2>
 <p>The code below simulates a system of coupled oscillators, computes <span class="math inline">\(R(t)\)</span>, and shows how the order parameter reflects the level of synchronisation. We simulate three scenarios: low coupling (desynchronised), medium coupling (partially synchronised), and high coupling (strongly synchronised).</p>
-<div id="55700cca" class="cell" data-execution_count="1">
+<div id="3ca67472" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -514,7 +514,7 @@ window.Quarto = {
 <section id="computing-rt-from-eeg-data" class="level2">
 <h2 class="anchored" data-anchor-id="computing-rt-from-eeg-data">Computing <span class="math inline">\(R(t)\)</span> from EEG data</h2>
 <p>In real EEG analysis, you do not simulate the Kuramoto model. Instead, you extract instantaneous phases from band-pass filtered EEG and compute <span class="math inline">\(R(t)\)</span> directly:</p>
-<div id="f3b3bff8" class="cell" data-execution_count="2">
+<div id="01e40026" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> hilbert, butter, filtfilt</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>

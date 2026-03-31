@@ -345,7 +345,7 @@ window.Quarto = {
 <section id="creating-erps-in-mne" class="level2">
 <h2 class="anchored" data-anchor-id="creating-erps-in-mne">Creating ERPs in MNE</h2>
 <p>The basic workflow in MNE is: create epochs from events, then average to get an <code>Evoked</code> object.</p>
-<div id="d3f01b16" class="cell" data-execution_count="1">
+<div id="d2e32455" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load data</span></span>
@@ -369,7 +369,7 @@ window.Quarto = {
 </div>
 <section id="plotting-erps" class="level3">
 <h3 class="anchored" data-anchor-id="plotting-erps">Plotting ERPs</h3>
-<div id="9159b131" class="cell" data-execution_count="2">
+<div id="e8648eb9" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the ERP waveform at a single channel</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>erp_target.plot(picks<span class="op">=</span><span class="st">"Pz"</span>, titles<span class="op">=</span><span class="st">"Target ERP at Pz"</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -384,7 +384,7 @@ window.Quarto = {
 <section id="topographic-maps-at-specific-time-points" class="level3">
 <h3 class="anchored" data-anchor-id="topographic-maps-at-specific-time-points">Topographic maps at specific time points</h3>
 <p>Topographic maps show the voltage distribution across the scalp at a particular moment. This is useful for verifying that an ERP component has the expected spatial distribution:</p>
-<div id="09911349" class="cell" data-execution_count="3">
+<div id="9b6ed1da" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Topographic maps at P300 latency</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>erp_target.plot_topomap(times<span class="op">=</span>[<span class="fl">0.1</span>, <span class="fl">0.2</span>, <span class="fl">0.3</span>, <span class="fl">0.4</span>, <span class="fl">0.5</span>],</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                         title<span class="op">=</span><span class="st">"Target ERP topography"</span>)</span>
@@ -397,7 +397,7 @@ window.Quarto = {
 <section id="difference-waves" class="level2">
 <h2 class="anchored" data-anchor-id="difference-waves">Difference waves</h2>
 <p>A difference wave is computed by subtracting the ERP for one condition from the ERP for another. This isolates the neural activity that differs between conditions and removes any shared activity (e.g., sensory processing common to both stimulus types).</p>
-<div id="182b19fe" class="cell" data-execution_count="4">
+<div id="beddefed" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute the difference wave</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>diff <span class="op">=</span> mne.combine_evoked([erp_target, erp_standard], weights<span class="op">=</span>[<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>])</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -411,7 +411,7 @@ window.Quarto = {
 <section id="grand-averages-across-subjects" class="level2">
 <h2 class="anchored" data-anchor-id="grand-averages-across-subjects">Grand averages across subjects</h2>
 <p>A grand average is the average of individual subjects’ ERPs. It provides a summary of the group-level response and is the standard way to present ERP results in publications.</p>
-<div id="589e4957" class="cell" data-execution_count="5">
+<div id="c2900529" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Assume evokeds_list is a list of Evoked objects, one per subject</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>grand_avg <span class="op">=</span> mne.grand_average(evokeds_list)</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>grand_avg.plot(picks<span class="op">=</span><span class="st">"Pz"</span>, titles<span class="op">=</span><span class="st">"Grand average (N=20)"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -422,7 +422,7 @@ window.Quarto = {
 <section id="working-example-simulated-p300" class="level2">
 <h2 class="anchored" data-anchor-id="working-example-simulated-p300">Working example: simulated P300</h2>
 <p>The code below simulates an oddball experiment with standard and target tones, generates ERPs for both conditions, and plots the comparison.</p>
-<div id="4854be01" class="cell" data-execution_count="6">
+<div id="e256a150" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
