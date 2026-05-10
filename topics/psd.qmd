@@ -245,9 +245,9 @@ import numpy as np
 # Extract alpha power (8-13 Hz) for each participant in each group
 alpha_idx = np.logical_and(freqs >= 8, freqs <= 13)
 
-alpha_group1 = np.array([np.trapz(p[alpha_idx], freqs[alpha_idx])
+alpha_group1 = np.array([np.trapezoid(p[alpha_idx], freqs[alpha_idx])
                           for p in psds_group1])
-alpha_group2 = np.array([np.trapz(p[alpha_idx], freqs[alpha_idx])
+alpha_group2 = np.array([np.trapezoid(p[alpha_idx], freqs[alpha_idx])
                           for p in psds_group2])
 
 t_stat, p_value = ttest_ind(alpha_group1, alpha_group2)
@@ -302,7 +302,7 @@ bands = {
 band_power = {}
 for name, (lo, hi) in bands.items():
     idx = np.logical_and(freqs >= lo, freqs <= hi)
-    band_power[name] = np.trapz(psd[idx], freqs[idx])
+    band_power[name] = np.trapezoid(psd[idx], freqs[idx])
 
 # ── Plot ────────────────────────────────────────────────────
 fig, axes = plt.subplots(1, 2, figsize=(13, 4.5))

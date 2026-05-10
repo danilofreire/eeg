@@ -70,7 +70,7 @@ You should see the characteristic 1/f slope of the pink noise with two peaks ris
 Create a simulated signal with a strong alpha peak (similar to Exercise 1) and compute the absolute power in each of the five standard EEG frequency bands: delta (0.5--4 Hz), theta (4--8 Hz), alpha (8--13 Hz), beta (13--30 Hz), and gamma (30--45 Hz). Then compute the relative power of each band as a percentage of the total power across all bands. Print a table of results.
 
 ::: {.callout-tip collapse="true" title="Hint"}
-After computing the PSD with `scipy.signal.welch`, use `np.trapz()` (or `scipy.integrate.trapezoid()`) to integrate the PSD over each frequency range. To select the right frequencies, create a boolean mask: `mask = (freqs >= f_low) & (freqs < f_high)`. Relative power is simply `band_power / total_power * 100`. Total power is the sum of all five bands (or the integral over the full range).
+After computing the PSD with `scipy.signal.welch`, use `np.trapezoid()` (or `scipy.integrate.trapezoid()`) to integrate the PSD over each frequency range. To select the right frequencies, create a boolean mask: `mask = (freqs >= f_low) & (freqs < f_high)`. Relative power is simply `band_power / total_power * 100`. Total power is the sum of all five bands (or the integral over the full range).
 :::
 
 ::: {.callout-note collapse="true" title="Solution"}
@@ -114,7 +114,7 @@ bands = {
 band_powers = {}
 for name, (f_low, f_high) in bands.items():
     mask = (freqs_psd >= f_low) & (freqs_psd < f_high)
-    band_powers[name] = np.trapz(psd[mask], freqs_psd[mask])
+    band_powers[name] = np.trapezoid(psd[mask], freqs_psd[mask])
 
 total_power = sum(band_powers.values())
 
@@ -256,13 +256,13 @@ for i in range(n_subjects):
     freqs_psd, psd_a = simulate_subject(amp_a, rng)
     psds_a.append(psd_a)
     mask_alpha = (freqs_psd >= 8) & (freqs_psd < 13)
-    alpha_powers_a.append(np.trapz(psd_a[mask_alpha], freqs_psd[mask_alpha]))
+    alpha_powers_a.append(np.trapezoid(psd_a[mask_alpha], freqs_psd[mask_alpha]))
 
     # Group B: weak alpha (mean amplitude 0.5, sd 0.2)
     amp_b = rng.normal(0.5, 0.2)
     freqs_psd, psd_b = simulate_subject(amp_b, rng)
     psds_b.append(psd_b)
-    alpha_powers_b.append(np.trapz(psd_b[mask_alpha], freqs_psd[mask_alpha]))
+    alpha_powers_b.append(np.trapezoid(psd_b[mask_alpha], freqs_psd[mask_alpha]))
 
 alpha_powers_a = np.array(alpha_powers_a)
 alpha_powers_b = np.array(alpha_powers_b)
@@ -320,7 +320,7 @@ You should see a highly significant p-value (well below 0.05) because the two gr
 Write a function `compute_band_powers(data, sfreq)` that takes a 2D NumPy array (channels x samples) and a sampling rate, and returns a dictionary where each key is a band name (`"delta"`, `"theta"`, `"alpha"`, `"beta"`, `"gamma"`) and each value is a 1D array of band powers (one value per channel). Test it on a simulated multi-channel signal and print the results.
 
 ::: {.callout-tip collapse="true" title="Hint"}
-Inside the function, loop over channels and compute the PSD for each one using `scipy.signal.welch`. Then, for each band, integrate the PSD between the band's frequency limits using `np.trapz`. Return a dictionary of arrays. You could also compute the PSD for all channels at once by passing a 2D array to `scipy.signal.welch` (it operates along the last axis by default, so you may need to handle the axis parameter).
+Inside the function, loop over channels and compute the PSD for each one using `scipy.signal.welch`. Then, for each band, integrate the PSD between the band's frequency limits using `np.trapezoid`. Return a dictionary of arrays. You could also compute the PSD for all channels at once by passing a 2D array to `scipy.signal.welch` (it operates along the last axis by default, so you may need to handle the axis parameter).
 :::
 
 ::: {.callout-note collapse="true" title="Solution"}
@@ -367,7 +367,7 @@ def compute_band_powers(data, sfreq, nperseg=1024):
         )
         for name, (f_low, f_high) in BANDS.items():
             mask = (freqs_psd >= f_low) & (freqs_psd < f_high)
-            band_powers[name][ch] = np.trapz(psd[mask], freqs_psd[mask])
+            band_powers[name][ch] = np.trapezoid(psd[mask], freqs_psd[mask])
 
     return band_powers
 
@@ -688,8 +688,8 @@ for ch in range(n_channels):
                                   noverlap=512)
     alpha_mask = (freqs_psd >= 8) & (freqs_psd < 13)
     beta_mask = (freqs_psd >= 13) & (freqs_psd < 30)
-    alpha_power[ch] = np.trapz(psd[alpha_mask], freqs_psd[alpha_mask])
-    beta_power[ch] = np.trapz(psd[beta_mask], freqs_psd[beta_mask])
+    alpha_power[ch] = np.trapezoid(psd[alpha_mask], freqs_psd[alpha_mask])
+    beta_power[ch] = np.trapezoid(psd[beta_mask], freqs_psd[beta_mask])
 
 # Plot topographic maps
 fig, axes = plt.subplots(1, 2, figsize=(10, 5))
@@ -1339,8 +1339,8 @@ _, psd_open = signal.welch(eeg_open, fs=sfreq, nperseg=1024, noverlap=512)
 
 # Compute alpha band power
 alpha_mask = (freqs_psd >= 8) & (freqs_psd < 13)
-alpha_closed = np.trapz(psd_closed[alpha_mask], freqs_psd[alpha_mask])
-alpha_open = np.trapz(psd_open[alpha_mask], freqs_psd[alpha_mask])
+alpha_closed = np.trapezoid(psd_closed[alpha_mask], freqs_psd[alpha_mask])
+alpha_open = np.trapezoid(psd_open[alpha_mask], freqs_psd[alpha_mask])
 alpha_diff = alpha_closed - alpha_open
 
 print(f"Alpha power (eyes closed): {alpha_closed:.4f}")
@@ -1423,8 +1423,8 @@ for ch in range(n_channels):
                                   noverlap=512)
     theta_mask = (freqs_psd >= 4) & (freqs_psd < 8)
     beta_mask = (freqs_psd >= 13) & (freqs_psd < 30)
-    theta_powers[ch] = np.trapz(psd[theta_mask], freqs_psd[theta_mask])
-    beta_powers[ch] = np.trapz(psd[beta_mask], freqs_psd[beta_mask])
+    theta_powers[ch] = np.trapezoid(psd[theta_mask], freqs_psd[theta_mask])
+    beta_powers[ch] = np.trapezoid(psd[beta_mask], freqs_psd[beta_mask])
 
 tbr = theta_powers / beta_powers
 
@@ -1494,8 +1494,8 @@ _, psd_f4 = signal.welch(f4_data, fs=sfreq, nperseg=1024, noverlap=512)
 
 # Alpha band power
 alpha_mask = (freqs_psd >= 8) & (freqs_psd < 13)
-alpha_f3 = np.trapz(psd_f3[alpha_mask], freqs_psd[alpha_mask])
-alpha_f4 = np.trapz(psd_f4[alpha_mask], freqs_psd[alpha_mask])
+alpha_f3 = np.trapezoid(psd_f3[alpha_mask], freqs_psd[alpha_mask])
+alpha_f4 = np.trapezoid(psd_f4[alpha_mask], freqs_psd[alpha_mask])
 
 # Asymmetry index
 asymmetry = np.log(alpha_f4) - np.log(alpha_f3)
@@ -1668,7 +1668,7 @@ def simulate_subject_alpha(alpha_amp, rng_local):
 
     freqs_psd, psd = signal.welch(eeg, fs=sfreq, nperseg=1024, noverlap=512)
     mask = (freqs_psd >= 8) & (freqs_psd < 13)
-    return np.trapz(psd[mask], freqs_psd[mask])
+    return np.trapezoid(psd[mask], freqs_psd[mask])
 
 # Simulate all subjects
 group_data = {}

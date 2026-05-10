@@ -104,7 +104,7 @@ band_power = {}
 for band_name, (low, high) in bands.items():
     idx = np.logical_and(freqs >= low, freqs <= high)
     # Integrate PSD over the band using the trapezoidal rule
-    band_power[band_name] = np.trapz(psd[idx], freqs[idx])
+    band_power[band_name] = np.trapezoid(psd[idx], freqs[idx])
 
 for band_name, power in band_power.items():
     print(f"{band_name}: {power:.4e} V^2")
@@ -138,7 +138,7 @@ bands = {
 for band_name, (low, high) in bands.items():
     idx = np.logical_and(freqs >= low, freqs <= high)
     # Average across channels, integrate across frequencies
-    mean_power = np.trapz(psd_data[:, idx], freqs[idx], axis=1).mean()
+    mean_power = np.trapezoid(psd_data[:, idx], freqs[idx], axis=1).mean()
     print(f"{band_name}: {mean_power:.4e} V^2")
 ```
 
@@ -168,11 +168,11 @@ bands = {
 absolute = {}
 for name, (low, high) in bands.items():
     idx = np.logical_and(freqs >= low, freqs <= high)
-    absolute[name] = np.trapz(psd[idx], freqs[idx])
+    absolute[name] = np.trapezoid(psd[idx], freqs[idx])
 
 # Compute total power (1-45 Hz)
 total_idx = np.logical_and(freqs >= 1, freqs <= 45)
-total_power = np.trapz(psd[total_idx], freqs[total_idx])
+total_power = np.trapezoid(psd[total_idx], freqs[total_idx])
 
 # Relative power
 relative = {name: power / total_power for name, power in absolute.items()}
@@ -242,10 +242,10 @@ bands = {
 absolute = {}
 for name, (low, high) in bands.items():
     idx = np.logical_and(freqs >= low, freqs <= high)
-    absolute[name] = np.trapz(psd[idx], freqs[idx])
+    absolute[name] = np.trapezoid(psd[idx], freqs[idx])
 
 total_idx = np.logical_and(freqs >= 1, freqs <= 45)
-total_power = np.trapz(psd[total_idx], freqs[total_idx])
+total_power = np.trapezoid(psd[total_idx], freqs[total_idx])
 relative = {name: power / total_power * 100 for name, power in absolute.items()}
 
 # ── Plot ─────────────────────────────────────────────────────
@@ -288,6 +288,6 @@ plt.show()
 - EEG activity is conventionally divided into five frequency bands: delta (1--4 Hz), theta (4--8 Hz), alpha (8--13 Hz), beta (13--30 Hz), and gamma (30--100+ Hz). Each band has different functional associations and topographic distributions.
 - Alpha is the dominant rhythm in relaxed, eyes-closed wakefulness. It was the first EEG rhythm discovered and remains the most studied. It is strongest at posterior electrodes and decreases when the brain region is engaged in active processing.
 - Sub-bands (low alpha vs high alpha, low beta vs high beta) can have different functional profiles. The boundary between low and high alpha is often set at each participant's individual alpha frequency.
-- Band power is computed by estimating the PSD (e.g., with Welch's method) and integrating over the frequency range of interest. Use `np.trapz()` for numerical integration.
+- Band power is computed by estimating the PSD (e.g., with Welch's method) and integrating over the frequency range of interest. Use `np.trapezoid()` for numerical integration.
 - Absolute power measures total energy in a band but is sensitive to individual differences in skull thickness and impedance. Relative power normalises these differences but can be misleading when total power changes. Reporting both is good practice.
 - Gamma (30--100+ Hz) overlaps with muscle artifact, so any gamma findings from scalp EEG should be interpreted carefully and only after thorough artifact rejection.

@@ -90,6 +90,10 @@ The core MNE package handles most tasks, but some features require additional pa
 | `mne-icalabel` | Automatic ICA component classification | `pip install mne-icalabel` |
 | `h5py` | Reading HDF5 files (used by some data formats) | `pip install h5py` |
 | `pyedflib` | Reading/writing EDF+ files | `pip install pyedflib` |
+| `mat73` | Reading MATLAB v7.3 (HDF5-based) `.mat` files | `pip install mat73` |
+| `pymatreader` | Alternative reader for MATLAB `.mat` files (all versions) | `pip install pymatreader` |
+| `pingouin` | Statistics (ANOVA, post-hoc tests, effect sizes) | `pip install pingouin` |
+| `seaborn` | Higher-level plotting on top of matplotlib | `pip install seaborn` |
 
 The `mne-icalabel` package deserves special mention. It uses pre-trained classifiers to automatically label ICA components as brain, eye, muscle, heart, line noise, channel noise, or other. This can save a lot of time compared to manually inspecting each component.
 

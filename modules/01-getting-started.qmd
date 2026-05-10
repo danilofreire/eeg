@@ -55,6 +55,67 @@ raw = mne.io.read_raw_brainvision("subject01.vhdr", preload=True)
 print(raw.info)
 ```
 
+### Reading MATLAB recordings
+
+EEG data preprocessed in EEGLAB or older MATLAB pipelines often arrives as a `.mat` file rather than one of the formats above. MATLAB has gone through several save formats over the years, and which Python loader you need depends on the version.
+
+- **MATLAB v5, v6, v7** (the default for many years): a flat binary format that `scipy.io.loadmat` reads directly. No extra package is needed beyond the SciPy stack.
+- **MATLAB v7.3 and later**: an HDF5-based format that `scipy.io.loadmat` cannot read. For these you need [`mat73`](https://github.com/skjerns/mat7.3) or [`pymatreader`](https://gitlab.com/obob/pymatreader). Both wrap the file as a Python dict and handle nested structs.
+
+Install both so you do not have to guess in advance:
+
+```bash
+pip install mat73 pymatreader
+```
+
+To detect the version of an unfamiliar file, read the first 116 bytes of the header. A v7.3 file announces itself there.
+
+```python
+with open("recording.mat", "rb") as f:
+    header = f.read(116)
+print(header.decode("latin-1", errors="replace"))
+```
+
+If the printed string contains `"7.3"`, use `mat73.loadmat`. Otherwise, use `scipy.io.loadmat`. Once loaded, the file is a Python dict whose keys are the MATLAB variable names. EEGLAB-exported files typically contain a single struct called `EEG` with fields like `data`, `srate`, `chanlocs`, and `nbchan`. From there you can wrap the array in an `mne.io.RawArray` and continue with the rest of the pipeline.
+
+### A reproducible environment
+
+When a project starts to use MNE alongside several supporting libraries (statistics, machine learning, MATLAB readers), it pays to capture the whole stack in one file so collaborators can recreate it with a single command. A conda `environment.yml` is the most portable way to do this:
+
+```yaml
+name: eeg-project
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - mne
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - seaborn
+  - scikit-learn
+  - h5py
+  - jupyterlab
+  - ipykernel
+  - ipywidgets
+  - pip
+  - pip:
+      - pingouin
+      - mat73
+      - pymatreader
+      - mne-icalabel
+```
+
+Save this as `environment.yml` at the root of your project, then anyone (including future you on a different machine) can rebuild the environment with:
+
+```bash
+conda env create -f environment.yml
+conda activate eeg-project
+```
+
+The pip block at the bottom handles the few packages that are easier to install from PyPI than from conda-forge. This is a common and accepted pattern.
+
 ### Creating simulated EEG data
 
 When you are learning, it helps to work with data you fully control. MNE's `mne.simulation` module lets you create realistic multi-channel EEG signals with known properties. This means you can add a known artifact, remove it with ICA, and check whether the procedure worked, something you cannot do with real data where the "ground truth" is unknown.
