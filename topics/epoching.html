@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.36">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -76,7 +76,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7fde21fbbed941212ff23fc867eda995.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -230,7 +230,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">31 March 2026</p>
+      <p class="date-modified">9 May 2026</p>
     </div>
   </div>
     
@@ -278,7 +278,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 <p>You can extract events from annotations or from a trigger channel:</p>
-<div id="2de8c2af" class="cell" data-execution_count="1">
+<div id="97b52721" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># From annotations (common for EDF+, BrainVision)</span></span>
@@ -291,7 +291,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="creating-epochs-from-raw" class="level2">
 <h2 class="anchored" data-anchor-id="creating-epochs-from-raw">Creating epochs from Raw</h2>
 <p>Here is a complete example that simulates a continuous recording with embedded events, then cuts epochs around those events.</p>
-<div id="0db9400a" class="cell" data-execution_count="2">
+<div id="1f3a5530" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -358,7 +358,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="baseline-correction">Baseline correction</h2>
 <p>Baseline correction removes slow voltage drifts that vary from trial to trial. Without it, some epochs might be shifted up or down relative to others simply because of electrode drift, not because of any difference in brain activity.</p>
 <p>The baseline period is typically the pre-stimulus interval (the time before the event). MNE computes the mean voltage during this period for each channel and each epoch, then subtracts it.</p>
-<div id="cd5fd1a6" class="cell" data-execution_count="3">
+<div id="b161bc15" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Baseline correction using the pre-stimulus period (-0.2 to 0 seconds)</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>epochs <span class="op">=</span> mne.Epochs(</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    raw, events, event_id,</span>
@@ -388,7 +388,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="epoch-rejection-by-amplitude" class="level2">
 <h2 class="anchored" data-anchor-id="epoch-rejection-by-amplitude">Epoch rejection by amplitude</h2>
 <p>Some epochs contain large artifacts (blinks, muscle bursts, electrode pops) that would distort the average. You can reject these by setting an amplitude threshold: any epoch where any EEG channel exceeds the threshold is dropped.</p>
-<div id="3a93e337" class="cell" data-execution_count="4">
+<div id="2f1b1bf0" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reject epochs where any EEG channel exceeds 100 microvolts (peak-to-peak)</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>reject <span class="op">=</span> <span class="bu">dict</span>(eeg<span class="op">=</span><span class="fl">100e-6</span>)  <span class="co"># 100 uV in volts (MNE uses SI units)</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -404,7 +404,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(epochs.drop_log_stats())  <span class="co"># percentage of dropped epochs</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>You can also set a <strong>flat</strong> threshold to catch channels that are dead (not recording any signal):</p>
-<div id="5d1552c6" class="cell" data-execution_count="5">
+<div id="22b4d6e7" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Reject epochs that are too large OR too flat</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>reject <span class="op">=</span> <span class="bu">dict</span>(eeg<span class="op">=</span><span class="fl">100e-6</span>)   <span class="co"># reject if &gt; 100 uV</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>flat <span class="op">=</span> <span class="bu">dict</span>(eeg<span class="op">=</span><span class="fl">0.5e-6</span>)     <span class="co"># reject if &lt; 0.5 uV (likely a dead channel)</span></span>
@@ -424,7 +424,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="using-metadata">Using metadata</h2>
 <p>MNE allows you to attach a pandas DataFrame as metadata to your Epochs object. Each row of the DataFrame corresponds to one epoch and can contain any trial-level information: reaction time, accuracy, stimulus category, participant condition, and so on.</p>
 <p>This is powerful because you can then select epochs using pandas-style queries.</p>
-<div id="f3408b73" class="cell" data-execution_count="6">
+<div id="77307bf5" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
@@ -457,7 +457,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="selecting-and-indexing-epochs" class="level2">
 <h2 class="anchored" data-anchor-id="selecting-and-indexing-epochs">Selecting and indexing epochs</h2>
 <p>You can select subsets of epochs by condition name, index, or metadata query:</p>
-<div id="778b1fab" class="cell" data-execution_count="7">
+<div id="20d491b2" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># By condition name (from event_id)</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>targets <span class="op">=</span> epochs[<span class="st">"target"</span>]</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>standards <span class="op">=</span> epochs[<span class="st">"standard"</span>]</span>
@@ -564,7 +564,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

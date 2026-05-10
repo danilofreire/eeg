@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.36">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -76,7 +76,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7fde21fbbed941212ff23fc867eda995.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -275,7 +275,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">31 March 2026</p>
+      <p class="date-modified">9 May 2026</p>
     </div>
   </div>
     
@@ -325,7 +325,7 @@ window.Quarto = {
 </section>
 <section id="computing-psd-with-scipy" class="level2">
 <h2 class="anchored" data-anchor-id="computing-psd-with-scipy">Computing PSD with SciPy</h2>
-<div id="150cd9f9" class="cell" data-execution_count="1">
+<div id="93f2a461" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> welch</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -344,7 +344,7 @@ window.Quarto = {
 <section id="computing-psd-with-mne" class="level2">
 <h2 class="anchored" data-anchor-id="computing-psd-with-mne">Computing PSD with MNE</h2>
 <p>MNE-Python provides a higher-level interface through the <code>compute_psd()</code> method on Raw and Epochs objects. This method handles the details of windowing and averaging, and returns a <code>Spectrum</code> object with built-in plotting methods.</p>
-<div id="c3cc5572" class="cell" data-execution_count="2">
+<div id="69c98400" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load data</span></span>
@@ -373,7 +373,7 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="units-uv2hz">Units: uV^2/Hz</h2>
 <p>EEG signals are typically measured in microvolts (<span class="math inline">\(\mu V\)</span>). The PSD therefore has units of <span class="math inline">\(\mu V^2 / Hz\)</span>. This means that if you integrate the PSD over a frequency range (say, 8–13 Hz for alpha), you get the total power in that band in units of <span class="math inline">\(\mu V^2\)</span>.</p>
 <p>When MNE computes PSD, it works internally in volts (V), so the PSD values will be in <span class="math inline">\(V^2 / Hz\)</span>. These are very small numbers (on the order of <span class="math inline">\(10^{-12}\)</span>). To convert to <span class="math inline">\(\mu V^2 / Hz\)</span>, multiply by <span class="math inline">\(10^{12}\)</span>. Alternatively, many researchers work with log-transformed PSD (using <code>10 * np.log10(psd)</code>) in decibels, which compresses the range and makes plots easier to read.</p>
-<div id="6ac65d34" class="cell" data-execution_count="3">
+<div id="b682c863" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert V^2/Hz to uV^2/Hz</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>psd_uv <span class="op">=</span> psd_data <span class="op">*</span> <span class="fl">1e12</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -385,7 +385,7 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="plotting-psd">Plotting PSD</h2>
 <section id="basic-psd-plot" class="level3">
 <h3 class="anchored" data-anchor-id="basic-psd-plot">Basic PSD plot</h3>
-<div id="88d7442b" class="cell" data-execution_count="4">
+<div id="04be066e" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">4</span>))</span>
@@ -402,7 +402,7 @@ window.Quarto = {
 <section id="mnes-built-in-psd-plots" class="level3">
 <h3 class="anchored" data-anchor-id="mnes-built-in-psd-plots">MNE’s built-in PSD plots</h3>
 <p>MNE provides several plotting methods through the <code>Spectrum</code> object:</p>
-<div id="067dd77f" class="cell" data-execution_count="5">
+<div id="aefde51d" class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Standard PSD plot (all channels)</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>spectrum.plot()</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -421,7 +421,7 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="topographic-psd-maps">Topographic PSD maps</h2>
 <p>A topographic PSD map shows how power in a given frequency band is distributed across the scalp. Each electrode position is coloured according to the power at that location, and the values are interpolated to produce a smooth map.</p>
 <p>These maps are useful for checking whether the spatial distribution of power matches what you expect. For example, alpha power should be strongest over posterior electrodes (Oz, O1, O2, Pz). If your alpha topography shows a frontal maximum, something may be wrong (e.g., residual eye-movement artefact contaminating the alpha band).</p>
-<div id="efe23960" class="cell" data-execution_count="6">
+<div id="50b0e899" class="cell" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -446,7 +446,7 @@ window.Quarto = {
 <section id="overlay-psd-curves" class="level3">
 <h3 class="anchored" data-anchor-id="overlay-psd-curves">Overlay PSD curves</h3>
 <p>Plot the mean PSD for each condition on the same axes, with shaded areas for the standard error or confidence interval:</p>
-<div id="e7b564e0" class="cell" data-execution_count="7">
+<div id="ace663df" class="cell" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> welch</span>
@@ -491,16 +491,16 @@ window.Quarto = {
 <section id="statistical-comparison-of-band-power" class="level3">
 <h3 class="anchored" data-anchor-id="statistical-comparison-of-band-power">Statistical comparison of band power</h3>
 <p>To test whether power in a specific band differs between groups, extract the band power for each participant (by integrating the PSD over the band) and run a statistical test:</p>
-<div id="4a40af92" class="cell" data-execution_count="8">
+<div id="27d985e6" class="cell" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> ttest_ind</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract alpha power (8-13 Hz) for each participant in each group</span></span>
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>alpha_idx <span class="op">=</span> np.logical_and(freqs <span class="op">&gt;=</span> <span class="dv">8</span>, freqs <span class="op">&lt;=</span> <span class="dv">13</span>)</span>
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>alpha_group1 <span class="op">=</span> np.array([np.trapz(p[alpha_idx], freqs[alpha_idx])</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>alpha_group1 <span class="op">=</span> np.array([np.trapezoid(p[alpha_idx], freqs[alpha_idx])</span>
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>                          <span class="cf">for</span> p <span class="kw">in</span> psds_group1])</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>alpha_group2 <span class="op">=</span> np.array([np.trapz(p[alpha_idx], freqs[alpha_idx])</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>alpha_group2 <span class="op">=</span> np.array([np.trapezoid(p[alpha_idx], freqs[alpha_idx])</span>
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>                          <span class="cf">for</span> p <span class="kw">in</span> psds_group2])</span>
 <span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>t_stat, p_value <span class="op">=</span> ttest_ind(alpha_group1, alpha_group2)</span>
@@ -511,7 +511,7 @@ window.Quarto = {
 <section id="working-example" class="level2">
 <h2 class="anchored" data-anchor-id="working-example">Working example</h2>
 <p>The code below generates a simulated EEG signal with a clear alpha peak, computes the PSD using both SciPy and MNE, and produces a multi-panel figure.</p>
-<div id="967da5a2" class="cell" data-execution_count="9">
+<div id="e5c1b913" class="cell" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> welch</span>
@@ -552,7 +552,7 @@ window.Quarto = {
 <span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>band_power <span class="op">=</span> {}</span>
 <span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, (lo, hi) <span class="kw">in</span> bands.items():</span>
 <span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> np.logical_and(freqs <span class="op">&gt;=</span> lo, freqs <span class="op">&lt;=</span> hi)</span>
-<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>    band_power[name] <span class="op">=</span> np.trapz(psd[idx], freqs[idx])</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>    band_power[name] <span class="op">=</span> np.trapezoid(psd[idx], freqs[idx])</span>
 <span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Plot ────────────────────────────────────────────────────</span></span>
 <span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">13</span>, <span class="fl">4.5</span>))</span>
@@ -580,14 +580,10 @@ window.Quarto = {
 <span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
 <span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_10252/3071206886.py:41: DeprecationWarning: `trapz` is deprecated. Use `trapezoid` instead, or one of the numerical integration functions in `scipy.integrate`.
-  band_power[name] = np.trapz(psd[idx], freqs[idx])</code></pre>
-</div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="psd_files/figure-html/cell-10-output-2.png" width="1235" height="420" class="figure-img"></p>
+<p><img src="psd_files/figure-html/cell-10-output-1.png" width="1235" height="420" class="figure-img"></p>
 <figcaption>PSD analysis of a simulated EEG signal. Left: the PSD computed with Welch’s method shows a clear 1/f background with an alpha peak at 10 Hz. Right: absolute band power extracted by integrating the PSD over each frequency band.</figcaption>
 </figure>
 </div>
@@ -683,7 +679,7 @@ window.Quarto = {
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

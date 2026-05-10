@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.36">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -76,7 +76,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7fde21fbbed941212ff23fc867eda995.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -193,6 +193,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#installing-mne-python" id="toc-installing-mne-python" class="nav-link" data-scroll-target="#installing-mne-python">Installing MNE-Python</a></li>
   <li><a href="#mne-data-structures" id="toc-mne-data-structures" class="nav-link" data-scroll-target="#mne-data-structures">MNE data structures</a></li>
   <li><a href="#loading-eeg-data" id="toc-loading-eeg-data" class="nav-link" data-scroll-target="#loading-eeg-data">Loading EEG data</a></li>
+  <li><a href="#reading-matlab-recordings" id="toc-reading-matlab-recordings" class="nav-link" data-scroll-target="#reading-matlab-recordings">Reading MATLAB recordings</a></li>
+  <li><a href="#a-reproducible-environment" id="toc-a-reproducible-environment" class="nav-link" data-scroll-target="#a-reproducible-environment">A reproducible environment</a></li>
   <li><a href="#creating-simulated-eeg-data" id="toc-creating-simulated-eeg-data" class="nav-link" data-scroll-target="#creating-simulated-eeg-data">Creating simulated EEG data</a></li>
   <li><a href="#setting-channel-locations-montages" id="toc-setting-channel-locations-montages" class="nav-link" data-scroll-target="#setting-channel-locations-montages">Setting channel locations (montages)</a></li>
   <li><a href="#visual-inspection-of-raw-data" id="toc-visual-inspection-of-raw-data" class="nav-link" data-scroll-target="#visual-inspection-of-raw-data">Visual inspection of raw data</a></li>
@@ -231,7 +233,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">31 March 2026</p>
+      <p class="date-modified">9 May 2026</p>
     </div>
   </div>
     
@@ -313,6 +315,51 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.read_raw_brainvision(<span class="st">"subject01.vhdr"</span>, preload<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(raw.info)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
+<section id="reading-matlab-recordings" class="level3">
+<h3 class="anchored" data-anchor-id="reading-matlab-recordings">Reading MATLAB recordings</h3>
+<p>EEG data preprocessed in EEGLAB or older MATLAB pipelines often arrives as a <code>.mat</code> file rather than one of the formats above. MATLAB has gone through several save formats over the years, and which Python loader you need depends on the version.</p>
+<ul>
+<li><strong>MATLAB v5, v6, v7</strong> (the default for many years): a flat binary format that <code>scipy.io.loadmat</code> reads directly. No extra package is needed beyond the SciPy stack.</li>
+<li><strong>MATLAB v7.3 and later</strong>: an HDF5-based format that <code>scipy.io.loadmat</code> cannot read. For these you need <a href="https://github.com/skjerns/mat7.3"><code>mat73</code></a> or <a href="https://gitlab.com/obob/pymatreader"><code>pymatreader</code></a>. Both wrap the file as a Python dict and handle nested structs.</li>
+</ul>
+<p>Install both so you do not have to guess in advance:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install mat73 pymatreader</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>To detect the version of an unfamiliar file, read the first 116 bytes of the header. A v7.3 file announces itself there.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">"recording.mat"</span>, <span class="st">"rb"</span>) <span class="im">as</span> f:</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    header <span class="op">=</span> f.read(<span class="dv">116</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(header.decode(<span class="st">"latin-1"</span>, errors<span class="op">=</span><span class="st">"replace"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>If the printed string contains <code>"7.3"</code>, use <code>mat73.loadmat</code>. Otherwise, use <code>scipy.io.loadmat</code>. Once loaded, the file is a Python dict whose keys are the MATLAB variable names. EEGLAB-exported files typically contain a single struct called <code>EEG</code> with fields like <code>data</code>, <code>srate</code>, <code>chanlocs</code>, and <code>nbchan</code>. From there you can wrap the array in an <code>mne.io.RawArray</code> and continue with the rest of the pipeline.</p>
+</section>
+<section id="a-reproducible-environment" class="level3">
+<h3 class="anchored" data-anchor-id="a-reproducible-environment">A reproducible environment</h3>
+<p>When a project starts to use MNE alongside several supporting libraries (statistics, machine learning, MATLAB readers), it pays to capture the whole stack in one file so collaborators can recreate it with a single command. A conda <code>environment.yml</code> is the most portable way to do this:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">name</span><span class="kw">:</span><span class="at"> eeg-project</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">channels</span><span class="kw">:</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> conda-forge</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fu">dependencies</span><span class="kw">:</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> python=3.12</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> mne</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> numpy</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> scipy</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> matplotlib</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> pandas</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> seaborn</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> scikit-learn</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> h5py</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> jupyterlab</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> ipykernel</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> ipywidgets</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> pip</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">pip</span><span class="kw">:</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> pingouin</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> mat73</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> pymatreader</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> mne-icalabel</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Save this as <code>environment.yml</code> at the root of your project, then anyone (including future you on a different machine) can rebuild the environment with:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> env create <span class="at">-f</span> environment.yml</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate eeg-project</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The pip block at the bottom handles the few packages that are easier to install from PyPI than from conda-forge. This is a common and accepted pattern.</p>
+</section>
 <section id="creating-simulated-eeg-data" class="level3">
 <h3 class="anchored" data-anchor-id="creating-simulated-eeg-data">Creating simulated EEG data</h3>
 <p>When you are learning, it helps to work with data you fully control. MNE’s <code>mne.simulation</code> module lets you create realistic multi-channel EEG signals with known properties. This means you can add a known artifact, remove it with ICA, and check whether the procedure worked, something you cannot do with real data where the “ground truth” is unknown.</p>
@@ -322,14 +369,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="setting-channel-locations-montages">Setting channel locations (montages)</h3>
 <p>EEG channels have physical positions on the scalp. MNE needs to know these positions to draw topographic maps, to interpolate bad channels from their neighbours, and to compute average references correctly. A <strong>montage</strong> is a mapping from channel names to 3D coordinates.</p>
 <p>MNE ships with standard montages like <code>standard_1020</code> (the international 10-20 system) and <code>biosemi64</code>. You apply a montage to your data with <code>raw.set_montage()</code>. See <a href="../topics/setting-montages.html">Setting channel locations</a> for worked examples.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>montage <span class="op">=</span> mne.channels.make_standard_montage(<span class="st">"standard_1020"</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>raw.set_montage(montage)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>montage <span class="op">=</span> mne.channels.make_standard_montage(<span class="st">"standard_1020"</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>raw.set_montage(montage)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="visual-inspection-of-raw-data" class="level3">
 <h3 class="anchored" data-anchor-id="visual-inspection-of-raw-data">Visual inspection of raw data</h3>
 <p>Before any automated processing, you should always look at your data. MNE’s <code>raw.plot()</code> opens an interactive browser where you can scroll through the recording, mark bad channels, and annotate noisy segments. This step catches problems that no algorithm will flag: a loose electrode, a participant moving during the recording, or a channel that drifted steadily throughout the session.</p>
 <p>See <a href="../topics/visual-inspection.html">Visual inspection of raw data</a> for tips on what to look for and how to annotate bad segments.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>raw.plot(n_channels<span class="op">=</span><span class="dv">30</span>, scalings<span class="op">=</span><span class="st">"auto"</span>, title<span class="op">=</span><span class="st">"Raw EEG"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>raw.plot(n_channels<span class="op">=</span><span class="dv">30</span>, scalings<span class="op">=</span><span class="st">"auto"</span>, title<span class="op">=</span><span class="st">"Raw EEG"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="the-bids-format-for-eeg" class="level3">
 <h3 class="anchored" data-anchor-id="the-bids-format-for-eeg">The BIDS format for EEG</h3>
@@ -340,65 +387,57 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="working-example-simulated-64-channel-eeg" class="level2">
 <h2 class="anchored" data-anchor-id="working-example-simulated-64-channel-eeg">Working example: simulated 64-channel EEG</h2>
 <p>The code below creates a 64-channel EEG recording lasting 10 seconds, adds some simulated brain activity, and plots it. You can run this without any external data files.</p>
-<div id="bdeac214" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproducibility</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a 64-channel montage and Info object</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>montage <span class="op">=</span> mne.channels.make_standard_montage(<span class="st">"biosemi64"</span>)</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>ch_names <span class="op">=</span> montage.ch_names[:<span class="dv">64</span>]</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>sfreq <span class="op">=</span> <span class="dv">256</span>  <span class="co"># Hz</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>info <span class="op">=</span> mne.create_info(ch_names<span class="op">=</span>ch_names, sfreq<span class="op">=</span>sfreq, ch_types<span class="op">=</span><span class="st">"eeg"</span>)</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate 10 seconds of simulated data</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Mix of alpha (10 Hz) and pink noise to look roughly like resting-state EEG</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> <span class="bu">int</span>(<span class="dv">10</span> <span class="op">*</span> sfreq)</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>times <span class="op">=</span> np.arange(n_samples) <span class="op">/</span> sfreq</span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Pink noise (1/f): generate white noise and shape the spectrum</span></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>white <span class="op">=</span> rng.standard_normal((<span class="bu">len</span>(ch_names), n_samples))</span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>freqs <span class="op">=</span> np.fft.rfftfreq(n_samples, d<span class="op">=</span><span class="dv">1</span> <span class="op">/</span> sfreq)</span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>freqs[<span class="dv">0</span>] <span class="op">=</span> <span class="dv">1</span>  <span class="co"># avoid division by zero</span></span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>pink_filter <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> np.sqrt(freqs)</span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>pink <span class="op">=</span> np.fft.irfft(np.fft.rfft(white) <span class="op">*</span> pink_filter, n<span class="op">=</span>n_samples)</span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a 10 Hz alpha oscillation (stronger in posterior channels)</span></span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> np.sin(<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> <span class="dv">10</span> <span class="op">*</span> times)</span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>posterior <span class="op">=</span> [i <span class="cf">for</span> i, ch <span class="kw">in</span> <span class="bu">enumerate</span>(ch_names) <span class="cf">if</span> ch.startswith((<span class="st">"O"</span>, <span class="st">"P"</span>))]</span>
-<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> idx <span class="kw">in</span> posterior:</span>
-<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    pink[idx] <span class="op">+=</span> <span class="dv">3</span> <span class="op">*</span> alpha</span>
-<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Scale to realistic microvolts (roughly 20-50 uV peak-to-peak)</span></span>
-<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>pink <span class="op">*=</span> <span class="fl">20e-6</span> <span class="op">/</span> pink.std()</span>
-<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Build the Raw object</span></span>
-<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.RawArray(pink, info)</span>
-<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>raw.set_montage(montage)</span>
-<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot a 5-second window</span></span>
-<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> raw.plot(</span>
-<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>    duration<span class="op">=</span><span class="dv">5</span>,</span>
-<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>    n_channels<span class="op">=</span><span class="dv">20</span>,</span>
-<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>    scalings<span class="op">=</span>{<span class="st">"eeg"</span>: <span class="fl">50e-6</span>},</span>
-<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Simulated 64-channel EEG"</span>,</span>
-<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>    show<span class="op">=</span><span class="va">True</span></span>
-<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="61267c55" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproducibility</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">42</span>)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a 64-channel montage and Info object</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>montage <span class="op">=</span> mne.channels.make_standard_montage(<span class="st">"biosemi64"</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>ch_names <span class="op">=</span> montage.ch_names[:<span class="dv">64</span>]</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>sfreq <span class="op">=</span> <span class="dv">256</span>  <span class="co"># Hz</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>info <span class="op">=</span> mne.create_info(ch_names<span class="op">=</span>ch_names, sfreq<span class="op">=</span>sfreq, ch_types<span class="op">=</span><span class="st">"eeg"</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate 10 seconds of simulated data</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Mix of alpha (10 Hz) and pink noise to look roughly like resting-state EEG</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> <span class="bu">int</span>(<span class="dv">10</span> <span class="op">*</span> sfreq)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>times <span class="op">=</span> np.arange(n_samples) <span class="op">/</span> sfreq</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Pink noise (1/f): generate white noise and shape the spectrum</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>white <span class="op">=</span> rng.standard_normal((<span class="bu">len</span>(ch_names), n_samples))</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>freqs <span class="op">=</span> np.fft.rfftfreq(n_samples, d<span class="op">=</span><span class="dv">1</span> <span class="op">/</span> sfreq)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>freqs[<span class="dv">0</span>] <span class="op">=</span> <span class="dv">1</span>  <span class="co"># avoid division by zero</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>pink_filter <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> np.sqrt(freqs)</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>pink <span class="op">=</span> np.fft.irfft(np.fft.rfft(white) <span class="op">*</span> pink_filter, n<span class="op">=</span>n_samples)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a 10 Hz alpha oscillation (stronger in posterior channels)</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> np.sin(<span class="dv">2</span> <span class="op">*</span> np.pi <span class="op">*</span> <span class="dv">10</span> <span class="op">*</span> times)</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>posterior <span class="op">=</span> [i <span class="cf">for</span> i, ch <span class="kw">in</span> <span class="bu">enumerate</span>(ch_names) <span class="cf">if</span> ch.startswith((<span class="st">"O"</span>, <span class="st">"P"</span>))]</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> idx <span class="kw">in</span> posterior:</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>    pink[idx] <span class="op">+=</span> <span class="dv">3</span> <span class="op">*</span> alpha</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="co"># Scale to realistic microvolts (roughly 20-50 uV peak-to-peak)</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>pink <span class="op">*=</span> <span class="fl">20e-6</span> <span class="op">/</span> pink.std()</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Build the Raw object</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>raw <span class="op">=</span> mne.io.RawArray(pink, info)</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>raw.set_montage(montage)</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot a 5-second window</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> raw.plot(</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>    duration<span class="op">=</span><span class="dv">5</span>,</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>    n_channels<span class="op">=</span><span class="dv">20</span>,</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>    scalings<span class="op">=</span>{<span class="st">"eeg"</span>: <span class="fl">50e-6</span>},</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Simulated 64-channel EEG"</span>,</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>    show<span class="op">=</span><span class="va">True</span></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Creating RawArray with float64 data, n_channels=64, n_times=2560
     Range : 0 ... 2559 =      0.000 ...     9.996 secs
 Ready.
-Using matplotlib as 2D backend.</code></pre>
-</div>
-<div class="cell-output cell-output-display">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="01-getting-started_files/figure-html/cell-2-output-2.png" width="739" height="761" class="figure-img"></p>
-<figcaption>Simulated 64-channel EEG data using the BioSemi montage.</figcaption>
-</figure>
-</div>
+Using qt as 2D backend.</code></pre>
 </div>
 </div>
 <p>The plot shows 20 channels over 5 seconds. Posterior channels (O1, O2, Oz, Pz, etc.) show a clear 10 Hz alpha rhythm, while frontal channels have mostly broadband noise. This is a rough approximation of what resting-state EEG looks like when a person sits with their eyes closed.</p>
@@ -484,7 +523,7 @@ Using matplotlib as 2D backend.</code></pre>
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.36">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -76,7 +76,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7fde21fbbed941212ff23fc867eda995.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -231,7 +231,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">31 March 2026</p>
+      <p class="date-modified">9 May 2026</p>
     </div>
   </div>
     
@@ -342,7 +342,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="working-example-filter-notch-and-re-reference" class="level2">
 <h2 class="anchored" data-anchor-id="working-example-filter-notch-and-re-reference">Working example: filter, notch, and re-reference</h2>
 <p>The code below creates simulated EEG data, applies a band-pass filter, adds a notch filter, and re-references to average. It plots the power spectral density before and after filtering so you can see the effect.</p>
-<div id="3ffd46dd" class="cell" data-execution_count="1">
+<div id="2293eb5e" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -436,29 +436,33 @@ Designing a one-pass, zero-phase, non-causal bandstop filter:
 - Upper passband edge: 50.62 Hz
 - Upper transition bandwidth: 0.50 Hz (-6 dB cutoff frequency: 50.88 Hz)
 - Filter length: 3381 samples (6.604 s)
-
-EEG channel type selected for re-referencing
+</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/Users/dafreir/miniconda3/envs/natalia/lib/python3.12/site-packages/mne/viz/utils.py:160: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  (fig or plt).show(**kwargs)
+/var/folders/js/0t3m7wt179vgcb7nz8zwz9d40000gq/T/ipykernel_96720/471749207.py:42: UserWarning: The figure layout has changed to tight
+  fig_before.tight_layout()
+/var/folders/js/0t3m7wt179vgcb7nz8zwz9d40000gq/T/ipykernel_96720/471749207.py:46: RuntimeWarning: filter_length (16897) is longer than the signal (5120), distortion is likely. Reduce filter length or filter a longer signal.
+  raw.filter(l_freq=0.1, h_freq=40.0)</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>EEG channel type selected for re-referencing
 Applying average reference.
 Applying a custom ('EEG',) reference.
 Effective window size : 4.000 (s)
 Plotting power spectral density (dB=True).</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>/opt/miniconda3/lib/python3.13/site-packages/mne/viz/utils.py:160: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+<pre><code>/Users/dafreir/miniconda3/envs/natalia/lib/python3.12/site-packages/mne/viz/utils.py:160: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
   (fig or plt).show(**kwargs)
-/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_9086/471749207.py:42: UserWarning: The figure layout has changed to tight
-  fig_before.tight_layout()
-/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_9086/471749207.py:46: RuntimeWarning: filter_length (16897) is longer than the signal (5120), distortion is likely. Reduce filter length or filter a longer signal.
-  raw.filter(l_freq=0.1, h_freq=40.0)
-/opt/miniconda3/lib/python3.13/site-packages/mne/viz/utils.py:160: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
-  (fig or plt).show(**kwargs)
-/var/folders/_t/0zvl8h2j3fv5__973dlfsvgw0000gq/T/ipykernel_9086/471749207.py:60: UserWarning: The figure layout has changed to tight
+/var/folders/js/0t3m7wt179vgcb7nz8zwz9d40000gq/T/ipykernel_96720/471749207.py:60: UserWarning: The figure layout has changed to tight
   fig_after.tight_layout()</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="02-preprocessing_files/figure-html/cell-2-output-3.png" width="948" height="332" class="figure-img"></p>
+<p><img src="02-preprocessing_files/figure-html/cell-2-output-5.png" width="948" height="332" class="figure-img"></p>
 <figcaption>Power spectral density before and after preprocessing.</figcaption>
 </figure>
 </div>
@@ -466,7 +470,7 @@ Plotting power spectral density (dB=True).</code></pre>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="02-preprocessing_files/figure-html/cell-2-output-4.png" width="948" height="332" class="figure-img"></p>
+<p><img src="02-preprocessing_files/figure-html/cell-2-output-6.png" width="948" height="332" class="figure-img"></p>
 </figure>
 </div>
 </div>
@@ -554,7 +558,7 @@ Plotting power spectral density (dB=True).</code></pre>
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }

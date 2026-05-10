@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-GB" xml:lang="en-GB"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.36">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -76,7 +76,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-49c9dac6fae8e09f4ca8bec003b153f0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7fde21fbbed941212ff23fc867eda995.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-6d7a3b90a981ae871a7384f9d09a32f5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -249,7 +249,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">31 March 2026</p>
+      <p class="date-modified">9 May 2026</p>
     </div>
   </div>
     
@@ -372,7 +372,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Band power is the amount of energy in a specific frequency range. There are several ways to compute it, but the most common approach is to estimate the power spectral density (PSD) and then integrate over the frequency range of interest.</p>
 <section id="using-welchs-method" class="level3">
 <h3 class="anchored" data-anchor-id="using-welchs-method">Using Welch’s method</h3>
-<div id="9e1264bc" class="cell" data-execution_count="1">
+<div id="5860373d" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> welch</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -394,7 +394,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> band_name, (low, high) <span class="kw">in</span> bands.items():</span>
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> np.logical_and(freqs <span class="op">&gt;=</span> low, freqs <span class="op">&lt;=</span> high)</span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Integrate PSD over the band using the trapezoidal rule</span></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    band_power[band_name] <span class="op">=</span> np.trapz(psd[idx], freqs[idx])</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    band_power[band_name] <span class="op">=</span> np.trapezoid(psd[idx], freqs[idx])</span>
 <span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> band_name, power <span class="kw">in</span> band_power.items():</span>
 <span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>band_name<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>power<span class="sc">:.4e}</span><span class="ss"> V^2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -402,7 +402,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="using-mnes-compute_psd" class="level3">
 <h3 class="anchored" data-anchor-id="using-mnes-compute_psd">Using MNE’s compute_psd()</h3>
-<div id="93c18447" class="cell" data-execution_count="2">
+<div id="e626abf3" class="cell" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -427,7 +427,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> band_name, (low, high) <span class="kw">in</span> bands.items():</span>
 <span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> np.logical_and(freqs <span class="op">&gt;=</span> low, freqs <span class="op">&lt;=</span> high)</span>
 <span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Average across channels, integrate across frequencies</span></span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    mean_power <span class="op">=</span> np.trapz(psd_data[:, idx], freqs[idx], axis<span class="op">=</span><span class="dv">1</span>).mean()</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    mean_power <span class="op">=</span> np.trapezoid(psd_data[:, idx], freqs[idx], axis<span class="op">=</span><span class="dv">1</span>).mean()</span>
 <span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>band_name<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>mean_power<span class="sc">:.4e}</span><span class="ss"> V^2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
@@ -436,7 +436,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="absolute-vs-relative-power">Absolute vs relative power</h2>
 <p><strong>Absolute power</strong> is the total power in a frequency band, measured in units of V^2 (or V^2/Hz if you are working with power spectral density rather than integrated power). It tells you how much energy there is in that band.</p>
 <p><strong>Relative power</strong> is the power in a band divided by the total power across all bands. It is expressed as a proportion (0 to 1) or a percentage. Relative power tells you what fraction of the total signal energy falls in a particular band.</p>
-<div id="08534ef4" class="cell" data-execution_count="3">
+<div id="28611d26" class="cell" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.signal <span class="im">import</span> welch</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -455,11 +455,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>absolute <span class="op">=</span> {}</span>
 <span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, (low, high) <span class="kw">in</span> bands.items():</span>
 <span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> np.logical_and(freqs <span class="op">&gt;=</span> low, freqs <span class="op">&lt;=</span> high)</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    absolute[name] <span class="op">=</span> np.trapz(psd[idx], freqs[idx])</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    absolute[name] <span class="op">=</span> np.trapezoid(psd[idx], freqs[idx])</span>
 <span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute total power (1-45 Hz)</span></span>
 <span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>total_idx <span class="op">=</span> np.logical_and(freqs <span class="op">&gt;=</span> <span class="dv">1</span>, freqs <span class="op">&lt;=</span> <span class="dv">45</span>)</span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>total_power <span class="op">=</span> np.trapz(psd[total_idx], freqs[total_idx])</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>total_power <span class="op">=</span> np.trapezoid(psd[total_idx], freqs[total_idx])</span>
 <span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Relative power</span></span>
 <span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>relative <span class="op">=</span> {name: power <span class="op">/</span> total_power <span class="cf">for</span> name, power <span class="kw">in</span> absolute.items()}</span>
@@ -478,7 +478,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="complete-example-computing-and-visualising-band-powers" class="level2">
 <h2 class="anchored" data-anchor-id="complete-example-computing-and-visualising-band-powers">Complete example: computing and visualising band powers</h2>
-<div id="81e1b640" class="cell" data-execution_count="4">
+<div id="63395fee" class="cell" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mne</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
@@ -526,10 +526,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>absolute <span class="op">=</span> {}</span>
 <span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, (low, high) <span class="kw">in</span> bands.items():</span>
 <span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>    idx <span class="op">=</span> np.logical_and(freqs <span class="op">&gt;=</span> low, freqs <span class="op">&lt;=</span> high)</span>
-<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    absolute[name] <span class="op">=</span> np.trapz(psd[idx], freqs[idx])</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    absolute[name] <span class="op">=</span> np.trapezoid(psd[idx], freqs[idx])</span>
 <span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>total_idx <span class="op">=</span> np.logical_and(freqs <span class="op">&gt;=</span> <span class="dv">1</span>, freqs <span class="op">&lt;=</span> <span class="dv">45</span>)</span>
-<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>total_power <span class="op">=</span> np.trapz(psd[total_idx], freqs[total_idx])</span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>total_power <span class="op">=</span> np.trapezoid(psd[total_idx], freqs[total_idx])</span>
 <span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>relative <span class="op">=</span> {name: power <span class="op">/</span> total_power <span class="op">*</span> <span class="dv">100</span> <span class="cf">for</span> name, power <span class="kw">in</span> absolute.items()}</span>
 <span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Plot ─────────────────────────────────────────────────────</span></span>
@@ -573,7 +573,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>EEG activity is conventionally divided into five frequency bands: delta (1–4 Hz), theta (4–8 Hz), alpha (8–13 Hz), beta (13–30 Hz), and gamma (30–100+ Hz). Each band has different functional associations and topographic distributions.</li>
 <li>Alpha is the dominant rhythm in relaxed, eyes-closed wakefulness. It was the first EEG rhythm discovered and remains the most studied. It is strongest at posterior electrodes and decreases when the brain region is engaged in active processing.</li>
 <li>Sub-bands (low alpha vs high alpha, low beta vs high beta) can have different functional profiles. The boundary between low and high alpha is often set at each participant’s individual alpha frequency.</li>
-<li>Band power is computed by estimating the PSD (e.g., with Welch’s method) and integrating over the frequency range of interest. Use <code>np.trapz()</code> for numerical integration.</li>
+<li>Band power is computed by estimating the PSD (e.g., with Welch’s method) and integrating over the frequency range of interest. Use <code>np.trapezoid()</code> for numerical integration.</li>
 <li>Absolute power measures total energy in a band but is sensitive to individual differences in skull thickness and impedance. Relative power normalises these differences but can be misleading when total power changes. Reporting both is good practice.</li>
 <li>Gamma (30–100+ Hz) overlaps with muscle artifact, so any gamma findings from scalp EEG should be interpreted carefully and only after thorough artifact rejection.</li>
 </ul>
@@ -655,7 +655,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/danilofreire\.github\.io\/eeg\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
